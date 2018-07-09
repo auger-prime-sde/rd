@@ -1,0 +1,7 @@
+TODO:
+
+- CI builder for testing code with GHDL
+- Adding remaining modules with tests
+- Add Lattice project and build scripts
+- Add documentation
+- Complete design
