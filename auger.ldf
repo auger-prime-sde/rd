@@ -1,6 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <BaliProject version="3.2" title="auger" device="LFE5U-12F-6BG381I" default_implementation="impl1">
-    <Options/>
+    <Options>
+        <Option name="HDL type" value="VHDL"/>
+    </Options>
     <Implementation title="impl1" dir="impl1" description="impl1" synthesis="lse" default_strategy="Strategy1">
         <Options def_top="settable_counter"/>
         <Source name="rtl/settable_counter.vhd" type="VHDL" type_short="VHDL">
