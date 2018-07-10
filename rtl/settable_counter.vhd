@@ -42,7 +42,8 @@ begin
         end if; -- if i_en = '1'
       end if; -- if i_set
     end if; -- rising edge(i_clk)
+  o_data <= r_counter;
   end process;
 
-  o_data <= r_counter;
+
 end behave;
