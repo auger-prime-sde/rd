@@ -7,7 +7,7 @@ use IEEE.numeric_std.all;
 entity data_buffer is
   generic (
     g_DATA_WIDTH : natural := 26;
-    g_ADDRESS_WIDTH : natural := 12);
+    g_ADDRESS_WIDTH : natural := 11);
 	port (
     -- Write port
 		i_wclk : in std_logic;
