@@ -3,6 +3,7 @@
 settable_counter_tb: rtl/settable_counter.vhd test/settable_counter_tb.vhd
 	ghdl -a rtl/settable_counter.vhd
 	ghdl -a test/settable_counter_tb.vhd
+	ghdl -e settable_counter_tb
 	ghdl -r settable_counter_tb --assert-level=warning
 
 wave.vcd:
