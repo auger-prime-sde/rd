@@ -4,7 +4,7 @@ use ieee.numeric_std.all;
 
 entity settable_counter is
   generic (
-    g_SIZE : natural := 12
+    g_SIZE : natural := 11
   );
   port (
     -- inputs

@@ -59,7 +59,6 @@ begin
     wait for 100 ns;
     assert out_data = x"013" report "Counting continuation error" severity error;
 
-    assert false report "Test passed" severity note;
     stop <= '1';
     wait;
   end process;
