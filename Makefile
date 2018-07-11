@@ -1,6 +1,6 @@
 .PHONY: settable_counter_tb clean wave.vcd all data_buffer_tb simple_counter_tb
 
-all: data_buffer_tb settable_counter_tb simple_counter_tb
+all: data_buffer_tb settable_counter_tb simple_counter_tb uart_tb
 
 settable_counter_tb: rtl/settable_counter.vhd test/settable_counter_tb.vhd
 	ghdl -a rtl/settable_counter.vhd
@@ -21,8 +21,17 @@ data_buffer_tb: rtl/data_buffer.vhd test/data_buffer_tb.vhd
 	## Disable IEEE warnings as RAM lookup operation gives problems during initialization
 	ghdl -r data_buffer_tb --assert-level=warning --ieee-asserts=disable
 
+uart_tb: rtl/uart.vhd test/uart_tb.vhd
+	ghdl -a rtl/uart.vhd
+	ghdl -a test/uart_tb.vhd
+	ghdl -e uart_tb
+	ghdl -r uart_tb --assert-level=warning
+
 wave.vcd:
 	ghdl -r settable_counter_tb --vcd=wave.vcd
+
+uart.vcd:
+	ghdl -r uart_tb --vcd=uart.vcd
 
 clean:
 	rm -f work-obj93.cf
