@@ -11,4 +11,5 @@ pipelines:
         script:
           - apt-get install make
           - make settable_counter_tb
+          - make simple_counter_tb
           - make data_buffer_tb
