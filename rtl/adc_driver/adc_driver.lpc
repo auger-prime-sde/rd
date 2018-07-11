@@ -17,7 +17,7 @@ ModuleName=adc_driver
 SourceFormat=vhdl
 ParameterFileVersion=1.0
 Date=07/11/2018
-Time=11:42:48
+Time=14:37:28
 
 [Parameters]
 Verilog=0
