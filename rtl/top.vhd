@@ -16,7 +16,8 @@ end top;
 architecture behaviour of top is
   signal adc_data : std_logic_vector(25 downto 0);
   signal clk_intern : std_logic;
-  signal address : std_logic_vector(10 downto 0);
+  signal write_address : std_logic_vector(10 downto 0);
+  signal read_address : std_logic_vector(10 downto 0);
   signal debug_q : std_logic;
 
   component adc_driver
@@ -46,6 +47,16 @@ architecture behaviour of top is
       o_q: out std_logic_vector(10 downto 0)
     );
   end component;
+
+  component settable_counter
+    port (
+      i_en     : in std_logic;
+      i_clk    : in std_logic;
+      i_set    : in std_logic;
+      i_data   : in std_logic_vector(10 downto 0);
+      o_data   : out std_logic_vector(10 downto 0)
+    );
+  end component;
 begin
 
 adc_driver_1 : adc_driver
@@ -60,16 +71,24 @@ adc_driver_1 : adc_driver
 write_index_counter : simple_counter
   port map (
     i_clk => clk_intern,
-    o_q(10 downto 0) => address);
+    o_q => write_address);
+
+read_index_counter : settable_counter
+  port map (
+    i_clk => clk_intern,
+  o_data => read_address,
+  i_en => '1',
+  i_set => '0',
+  i_data => (others => '0'));
 
 data_buffer_1 : data_buffer
   port map (
     i_wclk => clk_intern,
     i_we => '1',
-    i_waddr => address,
+    i_waddr => write_address,
     i_rclk => clk_intern,
     i_re => '1',
-    i_raddr => address,
+    i_raddr => read_address,
     i_wdata => adc_data,
     o_rdata(25 downto 1) => open,
     o_rdata(0) => debug_q);
