@@ -30,3 +30,8 @@ archiv
 *.xml
 *.zip
 rtl/adc_driver/*
+**/#*
+**/.#*
+**/*.o
+*_tb
+
