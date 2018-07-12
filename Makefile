@@ -1,4 +1,4 @@
-.PHONY: settable_counter_tb clean wave.vcd all data_buffer_tb simple_counter_tb
+.PHONY: settable_counter_tb clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb
 
 all: data_buffer_tb settable_counter_tb simple_counter_tb uart_tb
 
@@ -30,8 +30,8 @@ uart_tb: rtl/uart.vhd test/uart_tb.vhd
 wave.vcd:
 	ghdl -r settable_counter_tb --vcd=wave.vcd
 
-uart.vcd:
+uart.vcd: uart_tb
 	ghdl -r uart_tb --vcd=uart.vcd
 
 clean:
-	rm -f work-obj93.cf
+	rm -f work-obj93.cf uart.vcd
