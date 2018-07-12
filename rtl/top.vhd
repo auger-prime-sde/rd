@@ -8,7 +8,9 @@ entity top is
     -- Number of data bits from the ADC channels
     g_ADC_BITS : natural := 12;
     -- Number of bits in index counters (11 gives 2048 samples stored)
-    g_BUFFER_INDEXSIZE : natural := 11);
+    g_BUFFER_INDEXSIZE : natural := 11;
+    -- Number of bits in serial words
+    g_UART_WORDSIZE : natural := 7  );
   port (
     dataIn : in std_logic_vector (g_ADC_BITS-1 downto 0);
     dataOvIn : in std_logic;
@@ -70,6 +72,17 @@ architecture behaviour of top is
       o_data   : out std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0)
     );
   end component;
+
+  component uart_expander
+    generic (g_WORDSIZE: natural; g_WORDCOUNT : natural);
+    port (
+      i_data      : in std_logic_vector(g_WORDCOUNT*g_WORDSIZE-1 downto 0);
+      i_dataready : in std_logic;
+      i_clk       : in std_logic;
+      o_data      : out std_logic := '1';
+      o_ready     : out std_logic := '1'
+    );
+  end component;
 begin
 
   adc_input_bus <= dataOvIn & dataIn;
@@ -109,5 +122,20 @@ data_buffer_1 : data_buffer
     i_wdata => adc_data,
     o_rdata => data_output_bus);
 
-  o_led <= data_output_bus(0);
+
+uart_1 : uart_expander
+  generic map (g_WORDSIZE => g_UART_WORDSIZE, g_WORDCOUNT => 4)
+  port map (
+    -- TODO: do this more generic:
+    i_data(12 downto 0)   => data_output_bus(12 downto 0),
+    i_data(26 downto 14)  => data_output_bus(25 downto 13),
+    i_data(13)            => '0',
+    i_data(27)            => '0',
+    i_dataready => '0',
+    i_clk       => '0',
+    o_data      => o_led,
+    o_ready     => open
+    );
+
+  --o_led <= data_output_bus(0);
 end;
