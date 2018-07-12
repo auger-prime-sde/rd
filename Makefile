@@ -1,6 +1,6 @@
-.PHONY: settable_counter_tb clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb
+.PHONY: settable_counter_tb clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb uart_expander_tb
 
-all: data_buffer_tb settable_counter_tb simple_counter_tb uart_tb
+all: data_buffer_tb settable_counter_tb simple_counter_tb uart_tb uart_expander_tb
 
 settable_counter_tb: rtl/settable_counter.vhd test/settable_counter_tb.vhd
 	ghdl -a rtl/settable_counter.vhd
@@ -27,8 +27,17 @@ uart_tb: rtl/uart.vhd test/uart_tb.vhd
 	ghdl -e uart_tb
 	ghdl -r uart_tb --assert-level=warning
 
+uart_expander_tb: rtl/uart_expander.vhd test/uart_expander_tb.vhd
+	ghdl -a rtl/uart_expander.vhd
+	ghdl -a test/uart_expander_tb.vhd
+	ghdl -e uart_expander_tb
+	ghdl -r uart_expander_tb --assert-level=warning
+
 wave.vcd:
 	ghdl -r settable_counter_tb --vcd=wave.vcd
+
+uart_expander.vcd: uart_expander_tb
+	ghdl -r uart_expander_tb --vcd=uart_expander.vcd
 
 uart.vcd: uart_tb
 	ghdl -r uart_tb --vcd=uart.vcd
