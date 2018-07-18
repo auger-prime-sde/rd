@@ -7,7 +7,7 @@ end write_controller_tb;
 
 architecture behavior of write_controller_tb is
   constant address_width : natural := 5; -- 32 entries in test buffer
-  constant start_offset : integer := -7; -- start at trigger address - 7
+  constant start_offset : natural := 7; -- start at trigger address - 7
   constant clk_period : time := 10 ns;
 
   signal clk, stop, trigger, arm : std_logic := '0';
@@ -19,7 +19,7 @@ architecture behavior of write_controller_tb is
   component write_controller is
     generic (
       g_ADDRESS_BITS : natural;
-      g_START_OFFSET : integer
+      g_START_OFFSET : natural
     );
     port (
       -- inputs
@@ -81,24 +81,40 @@ begin
 
     -- Check if arming works
     arm <= '1';
-    wait for 10 ns;
+    wait for 20 ns;
     assert write_en = '1' report "Buffer not writing when armed" severity error;
 
     -- Stays armed when signal is removed?
     arm <= '0';
-    wait for 100 ns;
+    wait for 90 ns;
     assert write_en = '1' report "Buffer not writing when armed" severity error;
 
     -- Generates start address when triggered
     trigger <= '1';
     wait for 15 ns;
+    trigger <= '0';
     -- Currently starting the 18th clock cycle, check if offset was calculated correctly
-    assert unsigned(start_addr) = 18+start_offset report "Wrong start address generated" severity error;
+    assert unsigned(start_addr) = 18-start_offset report "Wrong start address generated" severity error;
 
     -- Check trigger finish
-    wait for 300 ns;
+    wait for 340 ns;
     assert write_en = '0' report "Buffer still writing when done" severity error;
     assert trigger_done = '1' report "Trigger done signal not asserted when finished" severity error;
+
+    -- Check for correct wrap-around in start address calculation
+    -- Arm
+    arm <= '1';
+    wait for 20 ns;
+    arm <= '0';
+
+    wait for 100 ns;
+    -- Trigger
+    trigger <= '1';
+    wait for 10 ns;
+    trigger <= '0';
+    wait for 300 ns;
+    -- Finish
+    assert unsigned(start_addr) = 33-start_offset report "Wrong start address generated (wraparound)" severity error;
 
     wait for 10 ns;
     stop <= '1';
