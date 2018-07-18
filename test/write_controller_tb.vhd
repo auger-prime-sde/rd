@@ -6,8 +6,8 @@ entity write_controller_tb is
 end write_controller_tb;
 
 architecture behavior of write_controller_tb is
-  constant address_width : natural := 5;
-  constant start_offset : integer := -7;
+  constant address_width : natural := 5; -- 32 entries in test buffer
+  constant start_offset : integer := -7; -- start at trigger address - 7
   constant clk_period : time := 10 ns;
 
   signal clk, stop, trigger, arm : std_logic := '0';
@@ -92,7 +92,8 @@ begin
     -- Generates start address when triggered
     trigger <= '1';
     wait for 15 ns;
-    assert unsigned(start_addr) = 17+start_offset report "Wrong start address generated" severity error;
+    -- Currently starting the 18th clock cycle, check if offset was calculated correctly
+    assert unsigned(start_addr) = 18+start_offset report "Wrong start address generated" severity error;
 
     -- Check trigger finish
     wait for 300 ns;

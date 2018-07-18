@@ -21,7 +21,8 @@ entity write_controller is
 end write_controller;
 
 architecture behavior of write_controller is
-  constant c_delay_count : natural := 2**(g_ADDRESS_BITS) + g_START_OFFSET;
+  -- Number of bytes to read, block size - 1, minus start offset
+  constant c_delay_count : natural := 2**(g_ADDRESS_BITS) + g_START_OFFSET - 1;
   -- state machine type:
   type t_controller_state is (s_Idle, s_Armed, s_Triggered);
   -- variables
@@ -51,7 +52,7 @@ begin
           o_trigger_done <= '0';
           o_write_en <= '1';
           if i_trigger = '1' then
-            r_start_addr <= std_logic_vector(signed(i_curr_addr) + g_START_OFFSET);
+            r_start_addr <= std_logic_vector(signed(i_curr_addr) + g_START_OFFSET + 1);
             r_controller_state <= s_Triggered;
             r_count <= 0;
           end if;
