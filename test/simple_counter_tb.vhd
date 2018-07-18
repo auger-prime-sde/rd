@@ -6,7 +6,7 @@ entity simple_counter_tb is
 end simple_counter_tb;
 
 architecture behavior of simple_counter_tb is
-  constant width: natural := 12;
+  constant width: natural := 4;
   constant clk_period : time := 10 ns;
 
   signal clk, stop : std_logic := '0';
@@ -42,6 +42,9 @@ begin
   begin
     wait for 50 ns;
     assert unsigned(q) = 5 report "Unexpected count" severity error;
+
+    wait for 130 ns;
+    assert unsigned(q) = 3 report "Wraparound problem" severity error;
 
     stop <= '1';
     wait;
