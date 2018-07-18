@@ -44,7 +44,7 @@ begin
     assert unsigned(q) = 5 report "Unexpected count" severity error;
 
     wait for 130 ns;
-    assert unsigned(q) = 3 report "Wraparound problem" severity error;
+    assert unsigned(q) = 2 report "Wraparound problem" severity error;
 
     stop <= '1';
     wait;
