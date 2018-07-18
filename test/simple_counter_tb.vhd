@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity simple_counter_tb is
 end simple_counter_tb;
@@ -40,7 +41,7 @@ begin
   p_test : process is
   begin
     wait for 50 ns;
-    assert q = x"005" report "Unexpected count" severity error;
+    assert unsigned(q) = 5 report "Unexpected count" severity error;
 
     stop <= '1';
     wait;

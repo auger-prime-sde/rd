@@ -14,17 +14,13 @@ end simple_counter;
 architecture behavior of simple_counter is
 	constant maxCount : integer := 2**g_SIZE-1;
 
-	signal r_count : integer range 0 to maxCount-1;
+	signal r_count : natural range 0 to maxCount-1 := 0;
 
 begin
 	process(i_clk, r_count)
 	begin
 		if rising_edge(i_clk) then
-			if r_count < maxCount then
-				r_count <= r_count + 1;
-			else
-				r_count <= 0;
-			end if;
+			r_count <= (r_count + 1) mod maxCount;
 		end if;
 	end process;
 
