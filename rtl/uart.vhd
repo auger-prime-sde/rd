@@ -25,7 +25,7 @@ architecture behave of uart is
 	-- variables:
 	signal r_UART_State : t_UART_State := s_Idle;
 	signal r_Databuffer : std_logic_vector(g_WORDSIZE-1 downto 0);-- := (others => '1');
-	signal r_Count : natural range 0 to g_WORDSIZE-1;
+	signal r_Count : natural range 0 to g_WORDSIZE-1 := g_WORDSIZE-1;
  begin
 
 -- main program
