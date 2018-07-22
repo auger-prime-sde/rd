@@ -20,13 +20,13 @@ end uart_expander;
 
 
 architecture behave of uart_expander is
-	-- variables:
-	signal r_Databuffer : std_logic_vector(g_WORDCOUNT*g_WORDSIZE-1 downto 0);
-	signal r_Index : natural range 0 to g_WORDCOUNT-1;
+	-- Variables:
+	signal r_Index : natural range 0 to g_WORDCOUNT-1 := 0;
 	signal r_internal_dataready : std_logic := '0';
 	signal r_internal_outputready : std_logic;
-	signal r_internal_data : std_logic_vector(g_WORDSIZE-1 downto 0);
+	signal r_internal_data : std_logic_vector(g_WORDSIZE-1 downto 0) := (others=> '0');
 
+	-- internal 7 bit uart
 	component uart
 		generic (
 			g_WORDSIZE : natural
@@ -52,12 +52,31 @@ begin
 		);
 
 
--- main program
-	p_transmit : process (i_clk) is
+	-- whenever internal uart outputready flag goes up, we increment the index
+	p_wordcount : process (r_internal_outputready) is
 	begin
-		null;
-
+		if rising_edge (r_internal_outputready) then
+			r_Index <= (r_Index + 1) mod g_wordcount;
+		end if;
 	end process;
+	
+
+	-- the following qualifies as a "hack". By setting dataready '1'
+	-- when index!=0 it is ensured that the internal uart sees it high
+	-- for all bytes that are not the first. By adding a '1' also when
+	-- i_dataready is '1' it is also seen high for the first byte. It
+	-- toggles low for a while inbetween but the interface of the
+	-- internal uart is such that this does not matter.	
+	r_internal_dataready <= '1' when i_dataready='1' or (r_Index /= 0) else '0';
+
+	-- data fed to the internal uart is just a portion of the larger data muxed
+	-- with the index
+	r_internal_data(g_WORDSIZE-1 downto 0) <= i_data((r_Index+1)*g_WORDSIZE-1 downto r_Index*g_WORDSIZE);
+
+	-- this aggregate uart is busy as long as the internal uart is busy. The
+	-- extra condition on the index keeps the output ready low in the short
+	-- intervals between internal words
+	o_ready <= '0' when (r_internal_outputready='0') or (r_Index /= 0) else '1';
 
 end behave;
 
