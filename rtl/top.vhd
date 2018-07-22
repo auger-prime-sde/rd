@@ -16,6 +16,8 @@ entity top is
     dataOvIn : in std_logic;
     clk : in std_logic;
     rst : in std_logic;
+    trigger : in std_logic;
+    arm : in std_logic;
 
     o_led : out std_logic);
 end top;
@@ -28,9 +30,11 @@ architecture behaviour of top is
   signal adc_data : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
   signal data_output_bus : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
 
+  signal buffer_write_en : std_logic;
   signal clk_intern : std_logic;
   signal write_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
   signal read_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
+  signal read_set_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
 
   component adc_driver
     port (
@@ -79,8 +83,21 @@ architecture behaviour of top is
       i_data      : in std_logic_vector(g_WORDCOUNT*g_WORDSIZE-1 downto 0);
       i_dataready : in std_logic;
       i_clk       : in std_logic;
-      o_data      : out std_logic := '1';
-      o_ready     : out std_logic := '1'
+      o_data      : out std_logic;
+      o_ready     : out std_logic
+    );
+  end component;
+
+  component write_controller
+    generic (g_ADDRESS_BITS : natural; g_START_OFFSET : natural);
+    port (
+      i_clk          : in std_logic;
+      i_trigger      : in std_logic;
+      i_curr_addr    : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
+      i_arm          : in std_logic;
+      o_write_en     : out std_logic;
+      o_trigger_done : out std_logic;
+      o_start_addr   : out std_logic_vector(g_ADDRESS_BITS-1 downto 0)
     );
   end component;
 begin
@@ -108,20 +125,19 @@ read_index_counter : settable_counter
   o_data => read_address,
   i_en => '1',
   i_set => '0',
-  i_data => (others => '0'));
+  i_data => read_set_address);
 
 data_buffer_1 : data_buffer
   generic map (g_ADDRESS_WIDTH => g_BUFFER_INDEXSIZE, g_DATA_WIDTH => c_STORAGE_WIDTH)
   port map (
     i_wclk => clk_intern,
-    i_we => '1',
+    i_we => buffer_write_en,
     i_waddr => write_address,
     i_rclk => clk_intern,
     i_re => '1',
     i_raddr => read_address,
     i_wdata => adc_data,
     o_rdata => data_output_bus);
-
 
 uart_1 : uart_expander
   generic map (g_WORDSIZE => g_UART_WORDSIZE, g_WORDCOUNT => 4)
@@ -133,9 +149,22 @@ uart_1 : uart_expander
     i_data(27)            => '0',
     i_dataready => '0',
     i_clk       => '0',
-    o_data      => o_led,
+    o_data      => open,
     o_ready     => open
     );
 
-  --o_led <= data_output_bus(0);
+  o_led <= data_output_bus(0);
+
+write_controller_1 : write_controller
+  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 2047)
+  port map (
+    i_clk => clk_intern,
+    i_trigger => trigger,
+    i_curr_addr => write_address,
+    i_arm => arm,
+    o_write_en => buffer_write_en,
+    o_start_addr => read_set_address,
+    o_trigger_done => open
+  );
+
 end;
