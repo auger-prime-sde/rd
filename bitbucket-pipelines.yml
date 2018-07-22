@@ -13,3 +13,6 @@ pipelines:
           - make settable_counter_tb
           - make simple_counter_tb
           - make data_buffer_tb
+	  - make uart_tb
+	  - make uart_expander_tb
+	  
