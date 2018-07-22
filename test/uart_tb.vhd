@@ -120,6 +120,22 @@ begin
 		assert o_ready = '1' report "uart not ready after transmission was finished";
 
 
+		-- test with a ready signal that arrives right on the clock edge
+		wait for 53 ns;
+		in_data <= "1100110";
+		dataready <= '1';
+		wait for clk_period;
+		assert o_data = '0' report "Start bit not received";
+		dataready <= '0';
+		for I in 0 to wordsize-1 loop
+			wait for clk_period;
+			assert o_data = in_data(I) report "Wrong data bit";
+		end loop;
+		wait for clk_period;
+		assert o_data = '1' report "Stop bit not received";
+		assert o_ready = '1' report "uart not ready after transmission was finished";
+		wait for 2 ns;
+
 		-- let's try some words back-to-back:
 		wait for 40 ns;
 		in_data <= std_logic_vector(to_unsigned(25, wordsize));
