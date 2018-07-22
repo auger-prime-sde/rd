@@ -16,7 +16,7 @@ with open(sys.argv[1], "r") as f:
 
 		isbad = False
 		for s in bad_signals:
-			if line.strip().endswith(s):
+			if line.strip().endswith(" "+s):
 				isbad = True
 				break
 		if not isbad:
