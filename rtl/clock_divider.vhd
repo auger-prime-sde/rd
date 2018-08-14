@@ -8,7 +8,7 @@ entity clock_divider is
   );
   port (
     -- clocks
-    i_clk     : in std_logic;
+    i_clk     : in std_logic := '0';
     o_clk     : out std_logic := '0';
     -- config input: this many clock cycles on input will become one 
     -- clock cycle on the output clock
@@ -24,7 +24,7 @@ architecture behave of clock_divider is
 begin
   p_counter : process (i_clk) is
   begin
-    if rising_edge(i_clk) or falling_edge(i_clk) then
+--    if i_clk'event then
       if unsigned(r_counter) < unsigned(i_ratio) - 1 then
         r_counter <= std_logic_vector(unsigned(r_counter) + 1);
         r_clk <= r_clk;
@@ -32,7 +32,8 @@ begin
         r_counter <= (others=>'0');
         r_clk <= not r_clk;
       end if;
-    end if;
+--    end if;
   end process;
   o_clk <= r_clk;
 end behave;
+ 

@@ -9,7 +9,8 @@ architecture behavior of clock_divider_tb is
   constant width: natural := 12;
   constant clk_period : time := 10 ns;
 
-  signal i_clk, o_clk : std_logic := '0';
+  signal i_clk : std_logic := '0';
+  signal o_clk : std_logic := '0';
   signal stop : std_logic := '0';
   signal ratio : std_logic_vector(width-1 downto 0) := std_logic_vector(to_unsigned(5, width));
 
@@ -39,14 +40,16 @@ begin
       wait;
     end if;
 
-    i_clk <= '0';
     wait for clk_period / 2;
     i_clk <= '1';
     wait for clk_period / 2;
+    i_clk <= '0';
   end process;
 
   p_test : process is
   begin
+    wait for clk_period * 4.5; -- due to weird behaviour of simultor the first
+                             -- clock cycle is 0.5 a clk period short
     for a in 0 to 10 loop
       for i in 0 to 4 loop
         wait for clk_period/2;
