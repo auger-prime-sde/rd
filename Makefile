@@ -1,6 +1,12 @@
 .PHONY: settable_counter_tb clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb
 
-all: data_buffer_tb settable_counter_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb
+all: data_buffer_tb settable_counter_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb clock_divider_tb
+
+clock_divider_tb: rtl/clock_divider.vhd test/clock_divider_tb.vhd
+	ghdl -a rtl/clock_divider.vhd
+	ghdl -a test/clock_divider_tb.vhd
+	ghdl -e clock_divider_tb
+	ghdl -r clock_divider_tb --assert-level=warning
 
 settable_counter_tb: rtl/settable_counter.vhd test/settable_counter_tb.vhd
 	ghdl -a rtl/settable_counter.vhd
@@ -48,6 +54,9 @@ uart_expander.vcd: uart_expander_tb
 
 uart.vcd: uart_tb
 	ghdl -r uart_tb --vcd=uart.vcd
+
+clock_divider.vcd: clock_divider_tb
+	ghdl -r clock_divider_tb --vcd=clock_divider.vcd
 
 clean:
 	rm -f work-obj93.cf uart.vcd
