@@ -8,12 +8,14 @@ entity top is
   generic (
     -- Number of data bits from the ADC channels
     g_ADC_BITS : natural := 12;
+    -- ADC interface width
+    g_ADC_DRIVER_BITS : natural := 14;
     -- Number of bits in index counters (11 gives 2048 samples stored)
     g_BUFFER_INDEXSIZE : natural := 11;
     -- Number of bits in serial words
     g_UART_WORDSIZE : natural := 7  );
   port (
-    dataIn : in std_logic_vector (g_ADC_BITS-1 downto 0);
+    dataIn : in std_logic_vector (g_ADC_DRIVER_BITS-1 downto 0);
     dataOvIn : in std_logic;
     clk : in std_logic;
     rst : in std_logic;
@@ -27,9 +29,12 @@ architecture behaviour of top is
   constant c_STORAGE_WIDTH : natural := 2*c_SAMPLE_WIDTH;
   constant c_CLOCK_DIVIDER : natural := 1736;
   constant c_CLOCK_SIZE    : natural := 11;
+  constant c_ADC_DRIVER_WIDTH : natural := g_ADC_DRIVER_BITS+1;
+  constant c_ADC_DRIVER_OUTPUT_WIDTH : natural := 2*c_ADC_DRIVER_WIDTH;
 
-  signal adc_input_bus : std_logic_vector(c_SAMPLE_WIDTH-1 downto 0);
-  signal adc_data : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
+  signal adc_input_bus : std_logic_vector(c_ADC_DRIVER_WIDTH-1 downto 0);
+  signal adc_data : std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0);
+  signal adc_data_selected : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
   signal data_output_bus : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
 
   signal buffer_write_en : std_logic;
@@ -44,12 +49,12 @@ architecture behaviour of top is
 
   signal uart_ready : std_logic;
   signal uart_dataready : std_logic;
-  
+
   component adc_driver
     port (
       clkin: in  std_logic; reset: in  std_logic; sclk: out  std_logic;
-      datain: in  std_logic_vector(c_SAMPLE_WIDTH-1 downto 0);
-      q: out  std_logic_vector(c_STORAGE_WIDTH-1 downto 0)
+      datain: in  std_logic_vector(c_ADC_DRIVER_WIDTH-1 downto 0);
+      q: out  std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0)
     );
   end component;
 
@@ -75,7 +80,6 @@ architecture behaviour of top is
     );
   end component;
 
-  
   --component settable_counter
   --  generic ( g_SIZE : natural );
   --  port (
@@ -86,7 +90,6 @@ architecture behaviour of top is
   --    o_data   : out std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0)
   --  );
   --end component;
-  
 
   component uart_expander
     generic (g_WORDSIZE: natural; g_WORDCOUNT : natural);
@@ -127,7 +130,6 @@ architecture behaviour of top is
       i_tx_start     : in std_logic
     );
   end component;
-    
 
   component clock_divider
     generic (g_SIZE: natural);
@@ -148,6 +150,11 @@ adc_driver_1 : adc_driver
     sclk => clk_intern,
     datain =>  adc_input_bus,
     q => adc_data);
+
+  adc_data_selected <=
+    adc_data(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto c_ADC_DRIVER_OUTPUT_WIDTH-g_ADC_BITS-1) &
+    adc_data(c_ADC_DRIVER_OUTPUT_WIDTH/2-1 downto g_ADC_DRIVER_BITS - g_ADC_BITS);
+
 
 write_index_counter : simple_counter
   generic map (g_SIZE => g_BUFFER_INDEXSIZE)
@@ -173,7 +180,7 @@ data_buffer_1 : data_buffer
     i_rclk => clk_intern,
     i_re => '1',
     i_raddr => read_address,
-    i_wdata => adc_data,
+    i_wdata => adc_data_selected,
     o_rdata => data_output_bus);
 
 uart_1 : uart_expander
