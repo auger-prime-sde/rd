@@ -48,16 +48,16 @@ begin
 
   p_test : process is
   begin
-    wait for clk_period * 4.5; -- due to weird behaviour of simultor the first
+    wait for clk_period * 9.5; -- due to weird behaviour of simultor the first
                              -- clock cycle is 0.5 a clk period short
     for a in 0 to 10 loop
       for i in 0 to 4 loop
-        wait for clk_period/2;
+        wait for clk_period;
         assert o_clk = '0' report "clock went high too soon";
       end loop;
     
       for i in 0 to 4 loop
-        wait for clk_period/2;
+        wait for clk_period;
         assert o_clk = '1' report "clock went low too soon";
       end loop;
     end loop;
