@@ -2,6 +2,7 @@
 
 library ieee;
 use ieee.std_logic_1164.all;
+use ieee.numeric_std.all;
 
 entity top is
   generic (
@@ -17,14 +18,15 @@ entity top is
     clk : in std_logic;
     rst : in std_logic;
     trigger : in std_logic;
-    arm : in std_logic;
-
-    o_led : out std_logic);
+    i_start_transfer : in std_logic;
+    o_data : out std_logic);
 end top;
 
 architecture behaviour of top is
   constant c_SAMPLE_WIDTH : natural := g_ADC_BITS+1;
   constant c_STORAGE_WIDTH : natural := 2*c_SAMPLE_WIDTH;
+  constant c_CLOCK_DIVIDER : natural := 1736;
+  constant c_CLOCK_SIZE    : natural := 11;
 
   signal adc_input_bus : std_logic_vector(c_SAMPLE_WIDTH-1 downto 0);
   signal adc_data : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
@@ -32,10 +34,17 @@ architecture behaviour of top is
 
   signal buffer_write_en : std_logic;
   signal clk_intern : std_logic;
+  signal clk_uart : std_logic;
   signal write_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
   signal read_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
   signal read_set_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
 
+  signal write_trigger_done : std_logic;
+  signal write_arm : std_logic;
+
+  signal uart_ready : std_logic;
+  signal uart_dataready : std_logic;
+  
   component adc_driver
     port (
       clkin: in  std_logic; reset: in  std_logic; sclk: out  std_logic;
@@ -66,16 +75,18 @@ architecture behaviour of top is
     );
   end component;
 
-  component settable_counter
-    generic ( g_SIZE : natural );
-    port (
-      i_en     : in std_logic;
-      i_clk    : in std_logic;
-      i_set    : in std_logic;
-      i_data   : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
-      o_data   : out std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0)
-    );
-  end component;
+  
+  --component settable_counter
+  --  generic ( g_SIZE : natural );
+  --  port (
+  --    i_en     : in std_logic;
+  --    i_clk    : in std_logic;
+  --    i_set    : in std_logic;
+  --    i_data   : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
+  --    o_data   : out std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0)
+  --  );
+  --end component;
+  
 
   component uart_expander
     generic (g_WORDSIZE: natural; g_WORDCOUNT : natural);
@@ -100,6 +111,32 @@ architecture behaviour of top is
       o_start_addr   : out std_logic_vector(g_ADDRESS_BITS-1 downto 0)
     );
   end component;
+
+  component readout_controller
+    generic (g_ADDRESS_BITS : natural);
+    port (
+      i_clk          : in std_logic;
+      i_trigger_done : in std_logic;
+      i_start_addr   : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
+      o_arm          : out std_logic := '1';
+      o_read_enable  : out std_logic := '1';
+      o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
+      i_word_ready   : in std_logic;
+      o_tx_enable    : out std_logic := '0';
+      o_tx_ready     : out std_logic := '1';
+      i_tx_start     : in std_logic
+    );
+  end component;
+    
+
+  component clock_divider
+    generic (g_SIZE: natural);
+    port (
+      i_clk     : in std_logic := '0';
+      o_clk     : out std_logic := '0';
+      i_ratio   : in std_logic_vector(g_SIZE-1 downto 0)
+    );
+   end component;
 begin
 
   adc_input_bus <= dataOvIn & dataIn;
@@ -118,14 +155,14 @@ write_index_counter : simple_counter
     i_clk => clk_intern,
     o_q => write_address);
 
-read_index_counter : settable_counter
-  generic map (g_SIZE => g_BUFFER_INDEXSIZE)
-  port map (
-    i_clk => clk_intern,
-  o_data => read_address,
-  i_en => '1',
-  i_set => '0',
-  i_data => read_set_address);
+--read_index_counter : settable_counter
+--  generic map (g_SIZE => g_BUFFER_INDEXSIZE)
+--  port map (
+--    i_clk => clk_intern,
+--  o_data => read_address,
+--  i_en => '1',
+--  i_set => '0',
+-- i_data => read_set_address);
 
 data_buffer_1 : data_buffer
   generic map (g_ADDRESS_WIDTH => g_BUFFER_INDEXSIZE, g_DATA_WIDTH => c_STORAGE_WIDTH)
@@ -147,13 +184,15 @@ uart_1 : uart_expander
     i_data(26 downto 14)  => data_output_bus(25 downto 13),
     i_data(13)            => '0',
     i_data(27)            => '0',
-    i_dataready => '0',
-    i_clk       => '0',
-    o_data      => open,
-    o_ready     => open
+    i_dataready => uart_dataready,
+    i_clk       => clk_uart,
+    o_data      => o_data,
+    o_ready     => uart_ready
     );
 
-  o_led <= data_output_bus(0);
+
+
+--  o_led <= data_output_bus(0);
 
 write_controller_1 : write_controller
   generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 2047)
@@ -161,10 +200,33 @@ write_controller_1 : write_controller
     i_clk => clk_intern,
     i_trigger => trigger,
     i_curr_addr => write_address,
-    i_arm => arm,
+    i_arm => write_arm,
     o_write_en => buffer_write_en,
     o_start_addr => read_set_address,
     o_trigger_done => open
-  );
+    );
+
+  readout_controller_1 : readout_controller
+    generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE)
+    port map (
+      i_clk => clk_uart,
+      i_trigger_done => write_trigger_done,
+      i_start_addr   => read_set_address,
+      o_arm          => write_arm,
+      o_read_enable  => open,
+      o_read_addr    => open,
+      i_word_ready   => uart_ready,
+      o_tx_enable    => uart_dataready,
+      o_tx_ready     => open,
+      i_tx_start     => i_start_transfer
+   );
+
+  clock_divider_1 : clock_divider
+    generic map (g_SIZE => c_CLOCK_SIZE)
+    port map (
+      i_clk => clk_intern,
+      o_clk => clk_uart,
+      i_ratio => std_logic_vector(to_unsigned(c_CLOCK_DIVIDER, c_CLOCK_SIZE))
+    );
 
 end;
