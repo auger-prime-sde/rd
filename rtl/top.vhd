@@ -33,6 +33,7 @@ architecture behaviour of top is
   signal data_output_bus : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
 
   signal buffer_write_en : std_logic;
+  signal buffer_read_en : std_logic;
   signal clk_intern : std_logic;
   signal clk_uart : std_logic;
   signal write_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
@@ -171,7 +172,7 @@ data_buffer_1 : data_buffer
     i_we => buffer_write_en,
     i_waddr => write_address,
     i_rclk => clk_intern,
-    i_re => '1',
+    i_re => buffer_read_en,
     i_raddr => read_address,
     i_wdata => adc_data,
     o_rdata => data_output_bus);
@@ -203,7 +204,7 @@ write_controller_1 : write_controller
     i_arm => write_arm,
     o_write_en => buffer_write_en,
     o_start_addr => read_set_address,
-    o_trigger_done => open
+    o_trigger_done => write_trigger_done
     );
 
   readout_controller_1 : readout_controller
@@ -213,8 +214,8 @@ write_controller_1 : write_controller
       i_trigger_done => write_trigger_done,
       i_start_addr   => read_set_address,
       o_arm          => write_arm,
-      o_read_enable  => open,
-      o_read_addr    => open,
+      o_read_enable  => buffer_read_en,
+      o_read_addr    => read_address,
       i_word_ready   => uart_ready,
       o_tx_enable    => uart_dataready,
       o_tx_ready     => open,
