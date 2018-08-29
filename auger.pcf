@@ -1,0 +1,811 @@
+[[Info]]
+_PARENT: none
+_FAMILY: sa5p00
+_FILE_FORMAT: 1.00
+_DATA_VALUES: 1.00
+_STATUS: Advanced
+
+[[Project]]
+DesignName: top
+Family: ECP5U
+Device: LFE5U-12F
+Package: CABGA381
+Operating: Industrial
+Version: 8.0
+Performance: -6
+PartName: LFE5U-12F-6BG381I
+
+[[Settings]]
+EstimationMode: Medium
+ProcessType: Typical
+SoftwareMode: Calculation
+SectionY: Total Power
+SectionX: Vcc
+SectionLowerLimit: 1.0450
+SectionUpperLimit: 1.1650
+SectionResolution: 0.0240
+TempAmbY: Total Power
+TempAmbX: Ambient Temperature
+TempAmbLowerLimit: -40.0000
+TempAmbUpperLimit: 125.0000
+TempAmbResolution: 33.0000
+FreqY: Total Power
+FreqX: clk_intern
+FreqLowerLimit: 0.0000
+FreqUpperLimit: 100.0000
+FreqAmbResolution: 20.0000
+PowerMode: Normal
+DisableBandgap: false
+DisablePor: false
+DisableDll: false
+DisableOsc: false
+DisableMACOMAC2EMACA0: false
+DisableMACOMAC2EMACA1: false
+DisableMACOMAC2EMACA2: false
+DisableMACOMAC2EMACA3: false
+DisableMACOMAC2EMACB0: false
+DisableMACOMAC2EMACB1: false
+DisableMACOMAC2EMACB2: false
+DisableMACOMAC2EMACB3: false
+DisableMACOMAC2XMAC: false
+DisableMACOMAC3EMACA0: false
+DisableMACOMAC3EMACA1: false
+DisableMACOMAC3EMACA2: false
+DisableMACOMAC3EMACA3: false
+DisableMACOMAC3EMACB0: false
+DisableMACOMAC3EMACB1: false
+DisableMACOMAC3EMACB2: false
+DisableMACOMAC3EMACB3: false
+DisableMACOMAC3XMAC: false
+DisableMACOPCIEPCIE: false
+DisableMACOSRIOEMAC0: false
+DisableMACOSRIOEMAC1: false
+DisableMACOSRIOEMAC2: false
+DisableMACOSRIOEMAC3: false
+DisableMACOSRIOSRIO: false
+DisablePUSL0: false
+DisablePUSL1: false
+DisablePUSL2: false
+DisablePUSL3: false
+DisablePUSL4: false
+DisablePUSL5: false
+DisablePUSL6: false
+DisablePUSL7: false
+DisableDDRDLLBL0: false
+DisableDDRDLLBL1: false
+DisableDDRDLLBR0: false
+DisableDDRDLLBR1: false
+DisableDDRDLLTL0: false
+DisableDDRDLLTL1: false
+DisableDDRDLLTR0: false
+DisableDDRDLLTR1: false
+DisablePLLBL0: false
+DisablePLLBL1: false
+DisablePLLBR0: false
+DisablePLLBR1: false
+DisablePLLTL0: false
+DisablePLLTL1: false
+DisablePLLTR0: false
+DisablePLLTR1: false
+DisableInRd0: false
+DisableInRd1: false
+DisableInRd2: false
+DisableInRd3: false
+DisableInRd4: false
+DisableInRd5: false
+DisableInRd6: false
+DisableInRd7: false
+EnablePg0: false
+EnablePg1: false
+EnablePg2: false
+EnablePg3: false
+EnablePg4: false
+EnablePg5: false
+EnablePg6: false
+EnablePg7: false
+DisableLVDS: false
+DisableLVDS1: false
+DisableLVDS2: false
+DisableLVDS3: false
+DisableLVDS4: false
+DisableLVDS5: false
+DisableLVDS6: false
+DisableLVDS7: false
+
+[[Thermal]]
+Airflow: 200 LFM
+AmbientTemperature: 25
+CustomThetaSA: -1
+JunctionTemperature: 26.49
+MaxSafeAmbient: 97.20
+ThetaBA: 10.0
+ThetaCS: 0
+ThetaEffective: 11.51279826
+ThetaJA: 20.59
+ThetaJB: 12.88
+ThetaJC: 0
+ThetaSA: -1
+UserThetaBA: No
+UserThetaCS: No
+UserThetaEffective: No
+UserThetaJA: No
+UserThetaJB: No
+UserThetaJC: No
+UserThetaSA: No
+thetaBoard: Medium Board
+thetaHeatSink: No Heat Sink
+thetaOption: ThermalModels
+
+[[VDPM]]
+Supply = Voltage, DPM
+Vcc = 1.100, 1.00
+Vccaux = 2.500, 1.00
+Vccio 3.3 = 3.300, 1.00
+Vccio 2.5 = 2.500, 1.00
+Vccio 1.8 = 1.800, 1.00
+Vccio 1.5 = 1.500, 1.00
+Vccio 1.35 = 1.350, 1.00
+Vccio 1.2 = 1.200, 1.00
+Vcchtx = 1.100, 1.00
+Vcchrx = 1.100, 1.00
+Vcca = 1.100, 1.00
+Vccauxa = 2.500, 1.00
+
+[[Logic]]
+Clk = F, AF, LUT, RAM, RIPPLE, REG, X0, X1, X2, X6, ISB, ISBLUT, ISBCE, ISBLSR, ISBM, ISBCLK
+COMBINATORIAL = 40.0000, 10.0000^d^, 104, 0, 10, 0, 37, 11, 120, 42, 72, 31, 23, 14, 0, 0
+uart_1/r_internal_outputready = 20.0000, 10.0000^d^, 2, 0, 0, 2, 7, 0, 20, 10, 31, 12, 0, 0, 18, 2
+clk_intern = 200.0000, 10.0000^d^, 2, 0, 12, 61, 82, 54, 313, 181, 278, 93, 0, 10, 38, 61
+clk_uart_c = 40.0000, 10.0000^d^, 34, 0, 0, 41, 84, 56, 318, 75, 474, 402, 0, 1, 42, 47
+
+[[Clocks]]
+Clk = F, Duty, DCC, Pfeed, Ptrunk, Pspine, Ptap, Etb, Ebg, Elr
+clk_intern = 200.0000, 100, None, f51_1, t19_1_t31_1, s59_2, p65_18, 0, 0, 0
+clk_uart_c = 40.0000, 100, None, f16_1, t31_1, s59_1, p65_8, 0, 0, 0
+
+[[Input Output]]
+Clk = _Type, _Mode, F, AF, IP, OP, Cload, Bank, _ActualMode, _Pull, X0, X1, X2, X6, ISB
+COMBINATORIAL = LVCMOS25, none, 40.0000, 10.0000^d^, 1, 0, 5, 3, none, DOWN, 0, 0, 0, 0, 0
+COMBINATORIAL = LVCMOS33, none, 40.0000, 10.0000^d^, 2, 0, 5, 8, none, DOWN, 0, 0, 0, 0, 0
+clk_intern = LVDS, none, 200.0000, 10.0000^d^, 16, 0, 5, 3, none, NONE, 0, 0, 0, 0, 0
+clk_intern = LVDS, none, 200.0000, 10.0000^d^, 12, 0, 5, 2, none, NONE, 0, 0, 0, 0, 0
+clk_uart_c = LVCMOS33-8mA-SLEW:SLOW, none, 40.0000, 10.0000^d^, 0, 1, 5, 8, none, NONE, 0, 0, 0, 0, 0
+clk_uart_c = LVCMOS33, none, 40.0000, 10.0000^d^, 1, 0, 5, 7, none, DOWN, 0, 0, 0, 0, 0
+
+[[Bidi]]
+ClkInpName = _Type, _Mode, InpF, InpAF, Bidi, ClkOutName, OutF, OutAF, Duty, Cload, Bank, _ActualMode, _Pull, X0, X1, X2, X6, ISB
+COMBINATORIAL = LVCMOS33-8mA-SLEW:SLOW, none, 40.0000, 10.0000^d^, 1, N/A, 0.0000^d^, 10.0000^d^, 50, 5, 8, none, UP, 0, 0, 0, 0, 0
+COMBINATORIAL = LVCMOS33-8mA-SLEW:SLOW, none, 40.0000, 10.0000^d^, 2, N/A, 0.0000^d^, 10.0000^d^, 50, 5, 8, none, NONE, 0, 0, 0, 0, 0
+
+[[Bank Voltage]]
+Bank = Voltage, InRD, LVDSO
+0 = Vccio 1.8, N/A, N/A
+1 = Vccio 1.8, N/A, N/A
+2 = Vccio 2.5, No, No
+3 = Vccio 2.5, No, No
+6 = Vccio 2.5, No, No
+7 = Vccio 3.3, No, No
+8 = Vccio 3.3, N/A, N/A
+
+[[Termination]]
+_Type = IP, OP, Bidi, Duty, Bank, Rth, Vth
+LVCMOS25 = 1, 0, 0, 0.0, 3, 1.0E12, 0
+LVCMOS33 = 2, 0, 0, 0.0, 8, 1.0E12, 0
+LVDS = 16, 0, 0, 0.0, 3, 1.0E12, 0
+LVDS = 12, 0, 0, 0.0, 2, 1.0E12, 0
+LVCMOS33-8mA-SLEW:SLOW = 0, 1, 3, 35.0, 8, 1.0E12, 0
+LVCMOS33 = 1, 0, 0, 0.0, 7, 1.0E12, 0
+
+[[PRADD9]]
+Clk = F, AF, PRADD9, X0, X1, X2, X6, ISB
+
+[[PRADD18]]
+Clk = F, AF, PRADD18, Type, X0, X1, X2, X6, ISB
+
+[[M9X9]]
+Clk = F, AF, M9X9, X0, X1, X2, X6, ISB
+COMBINATORIAL = 40.0000, 10.0000^d^, 1, 0, 0, 0, 0, 0
+
+[[M18X18]]
+Clk = F, AF, M18X18, Type, X0, X1, X2, X6, ISB
+
+[[ALU24]]
+Clk = F, AF, ALU24, X0, X1, X2, X6, ISB
+
+[[ALU54]]
+Clk = F, AF, ALU54, Type, X0, X1, X2, X6, ISB
+
+[[PLL]]
+OutClk = inF, N, V, M, PLL, PLLID, STANDBY
+
+[[DP RAM]]
+RdClk = RdF, RdAF, EBR, WrClk, WrF, WrAF, _TypeA, _TypeB, X0, X1, X2, X6, ISB
+clk_uart_c = 40.0000, 90.0000, 4, clk_intern, 200.0000, 10.0000^d^, PDPW16KD_READ, PDPW16KD_WRITE, 0, 0, 0, 0, 0
+
+[[DP RAM True]]
+ClkA = aF, aAF, EBR, ClkB, bF, bAF, _TypeA, _TypeB, X0, X1, X2, X6, ISB
+
+[[DDRDLL]]
+Clk = F, DDRDLLID, STANDBY, DDRDLL
+
+[[DQS]]
+Clk = F, DQS
+
+[[DLLDEL]]
+Clk = F, DLLDEL
+
+[[CLKDIV]]
+Clk = F, AF, CLKDIV
+
+[[CIBTEST]]
+CIBTEST = 
+0 = 
+
+[[MCLK]]
+Clk = F, AF, MCLK, MCLKF, SEDF
+_CLKNAME = 310.0000, 100.0000, 1, 2.4000, 2.4000
+
+[[JTAG]]
+Clk = F, AF, Input, Output
+COMBINATORIAL = 40.0000, 100.0000, 3, 1
+
+[[SED]]
+_Mode = SED, STATUS
+
+[[DTR]]
+Clk = F, AF, DTR
+
+[[PLL Clock]]
+Out = In
+
+[[Connections]]
+Clock = Comp, Type
+COMBINATORIAL = SLICE_0, 0
+COMBINATORIAL = SYSCONFIG_PIN_D1, 1
+COMBINATORIAL = SYSCONFIG_PIN_D0, 1
+COMBINATORIAL = SYSCONFIG_PIN_HOLDN, 1
+uart_1/r_internal_outputready = uart_1/SLICE_56, 0
+clk_intern = clk, 1
+clk_uart_c = clk_uart, 1
+clk_uart_c = o_data, 1
+
+[[Hierarchical Connections]]
+Key = Name, Type
+SIGNAL = COMBINATORIAL, DUMMY
+INPUT = SLICE_0, SLICE
+INPUT = SLICE_1, SLICE
+INPUT = SLICE_2, SLICE
+INPUT = SLICE_4, SLICE
+INPUT = SLICE_6, SLICE
+INPUT = SLICE_7, SLICE
+INPUT = data_buffer_1/SLICE_12, SLICE
+INPUT = data_buffer_1/SLICE_13, SLICE
+INPUT = data_buffer_1/SLICE_14, SLICE
+INPUT = data_buffer_1/SLICE_15, SLICE
+INPUT = uart_1/internal_uart/i1431/SLICE_79, SLICE
+INPUT = uart_1/internal_uart/i1458/SLICE_80, SLICE
+INPUT = uart_1/internal_uart/i1459/SLICE_81, SLICE
+INPUT = uart_1/internal_uart/i1437/SLICE_82, SLICE
+INPUT = uart_1/internal_uart/i1350/SLICE_83, SLICE
+INPUT = uart_1/internal_uart/i1438/SLICE_84, SLICE
+INPUT = uart_1/internal_uart/i1465/SLICE_85, SLICE
+INPUT = uart_1/internal_uart/i1466/SLICE_86, SLICE
+INPUT = uart_1/internal_uart/i1444/SLICE_87, SLICE
+INPUT = uart_1/internal_uart/i1445/SLICE_88, SLICE
+INPUT = uart_1/internal_uart/i1472/SLICE_89, SLICE
+INPUT = uart_1/internal_uart/i1451/SLICE_90, SLICE
+INPUT = uart_1/internal_uart/i1473/SLICE_91, SLICE
+INPUT = uart_1/internal_uart/i1351/SLICE_92, SLICE
+INPUT = uart_1/internal_uart/i1430/SLICE_93, SLICE
+INPUT = uart_1/internal_uart/i1452/SLICE_94, SLICE
+INPUT = data_buffer_1/i1376/SLICE_95, SLICE
+INPUT = data_buffer_1/i1379/SLICE_96, SLICE
+INPUT = data_buffer_1/i1388/SLICE_97, SLICE
+INPUT = data_buffer_1/i1412/SLICE_98, SLICE
+INPUT = data_buffer_1/i1415/SLICE_99, SLICE
+INPUT = data_buffer_1/i1367/SLICE_100, SLICE
+INPUT = data_buffer_1/i1418/SLICE_101, SLICE
+INPUT = data_buffer_1/i1370/SLICE_102, SLICE
+INPUT = data_buffer_1/i1355/SLICE_103, SLICE
+INPUT = data_buffer_1/i1391/SLICE_104, SLICE
+INPUT = data_buffer_1/i1373/SLICE_105, SLICE
+INPUT = data_buffer_1/i1364/SLICE_106, SLICE
+INPUT = data_buffer_1/i1421/SLICE_107, SLICE
+INPUT = data_buffer_1/i1358/SLICE_108, SLICE
+INPUT = data_buffer_1/i1394/SLICE_109, SLICE
+INPUT = data_buffer_1/i1424/SLICE_110, SLICE
+INPUT = data_buffer_1/i1361/SLICE_111, SLICE
+INPUT = data_buffer_1/i1382/SLICE_112, SLICE
+INPUT = data_buffer_1/i1397/SLICE_113, SLICE
+INPUT = data_buffer_1/i1400/SLICE_114, SLICE
+INPUT = data_buffer_1/i1385/SLICE_115, SLICE
+INPUT = data_buffer_1/i1403/SLICE_116, SLICE
+INPUT = data_buffer_1/i1406/SLICE_117, SLICE
+INPUT = data_buffer_1/i1409/SLICE_118, SLICE
+INPUT = SLICE_119, SLICE
+INPUT = uart_1/SLICE_120, SLICE
+INPUT = uart_1/SLICE_121, SLICE
+INPUT = SLICE_122, SLICE
+INPUT = uart_1/SLICE_123, SLICE
+INPUT = write_controller_1/SLICE_124, SLICE
+INPUT = write_controller_1/SLICE_125, SLICE
+INPUT = uart_1/SLICE_126, SLICE
+INPUT = uart_1/internal_uart/SLICE_127, SLICE
+INPUT = readout_controller_1/SLICE_128, SLICE
+INPUT = readout_controller_1/SLICE_129, SLICE
+INPUT = uart_1/SLICE_130, SLICE
+INPUT = uart_1/SLICE_131, SLICE
+INPUT = write_controller_1/SLICE_132, SLICE
+INPUT = write_controller_1/SLICE_133, SLICE
+INPUT = rst, PIO
+INPUT = trigger, PIO
+INPUT = i_start_transfer, PIO
+INPUT = uart_1/mult_11, MULT9
+INPUT = GSR_INST, GSR
+INPUT = SYSCONFIG_PIN_D1, PIO
+INPUT = SYSCONFIG_PIN_D0, PIO
+INPUT = SYSCONFIG_PIN_HOLDN, PIO
+SIGNAL = uart_1/r_internal_outputready, DUMMY
+OUTPUT = uart_1/SLICE_56, SLICE
+OUTPORT = uart_1/r_Index_1_N_23_0, F0
+OUTPORT = r_Index_0, Q0
+OUTPORT = uart_1/r_Index_1_N_23_1, F1
+OUTPORT = r_Index_1, Q1
+SIGNAL = clk_intern, DUMMY
+INPUT = clk, PIO
+OUTPUT = SLICE_3, SLICE
+OUTPORT = n24, F0
+OUTPORT = read_set_address_10, Q0
+OUTPUT = SLICE_5, SLICE
+OUTPORT = n30, F0
+OUTPORT = read_set_address_8, Q0
+OUTPORT = n27, F1
+OUTPORT = read_set_address_9, Q1
+OUTPORT = n1728, FCO
+OUTPUT = SLICE_8, SLICE
+OUTPORT = n36, F0
+OUTPORT = read_set_address_6, Q0
+OUTPORT = n33, F1
+OUTPORT = read_set_address_7, Q1
+OUTPORT = n1727, FCO
+OUTPUT = SLICE_9, SLICE
+OUTPORT = n42, F0
+OUTPORT = read_set_address_4, Q0
+OUTPORT = n39, F1
+OUTPORT = read_set_address_5, Q1
+OUTPORT = n1726, FCO
+OUTPUT = SLICE_10, SLICE
+OUTPORT = n48, F0
+OUTPORT = read_set_address_2, Q0
+OUTPORT = n45, F1
+OUTPORT = read_set_address_3, Q1
+OUTPORT = n1725, FCO
+OUTPUT = SLICE_11, SLICE
+OUTPORT = n51, F1
+OUTPORT = read_set_address_1, Q1
+OUTPORT = n1724, FCO
+OUTPUT = write_index_counter/SLICE_16, SLICE
+OUTPORT = write_index_counter/n53, F0
+OUTPORT = write_address_7, Q0
+OUTPORT = write_index_counter/n52, F1
+OUTPORT = write_address_8, Q1
+OUTPORT = write_index_counter/n1722, FCO
+OUTPUT = write_index_counter/SLICE_17, SLICE
+OUTPORT = write_index_counter/n55, F0
+OUTPORT = write_address_5, Q0
+OUTPORT = write_index_counter/n54, F1
+OUTPORT = write_address_6, Q1
+OUTPORT = write_index_counter/n1721, FCO
+OUTPUT = write_index_counter/SLICE_18, SLICE
+OUTPORT = write_index_counter/n57, F0
+OUTPORT = write_address_3, Q0
+OUTPORT = write_index_counter/n56, F1
+OUTPORT = write_address_4, Q1
+OUTPORT = write_index_counter/n1720, FCO
+OUTPUT = write_index_counter/SLICE_19, SLICE
+OUTPORT = write_index_counter/n59, F0
+OUTPORT = write_address_1, Q0
+OUTPORT = write_index_counter/n58, F1
+OUTPORT = write_address_2, Q1
+OUTPORT = write_index_counter/n1719, FCO
+OUTPUT = write_index_counter/SLICE_20, SLICE
+OUTPORT = write_index_counter/n60, F1
+OUTPORT = write_address_0, Q1
+OUTPORT = write_index_counter/n1718, FCO
+OUTPUT = write_index_counter/SLICE_21, SLICE
+OUTPORT = write_index_counter/n51, F0
+OUTPORT = write_address_9, Q0
+OUTPORT = write_index_counter/n50, F1
+OUTPORT = write_address_10, Q1
+OUTPUT = data_buffer_1/SLICE_22, SLICE
+OUTPORT = data_buffer_1/n460, Q0
+OUTPUT = data_buffer_1/SLICE_24, SLICE
+OUTPORT = data_buffer_1/n462, Q0
+OUTPUT = data_buffer_1/SLICE_26, SLICE
+OUTPORT = data_buffer_1/n464, Q0
+OUTPUT = data_buffer_1/SLICE_28, SLICE
+OUTPORT = data_buffer_1/n466, Q0
+OUTPUT = data_buffer_1/SLICE_30, SLICE
+OUTPORT = data_buffer_1/n468, Q0
+OUTPUT = data_buffer_1/SLICE_32, SLICE
+OUTPORT = data_buffer_1/n470, Q0
+OUTPUT = data_buffer_1/SLICE_34, SLICE
+OUTPORT = data_buffer_1/n472, Q0
+OUTPUT = data_buffer_1/SLICE_36, SLICE
+OUTPORT = data_buffer_1/n474, Q0
+OUTPUT = data_buffer_1/SLICE_38, SLICE
+OUTPORT = data_buffer_1/n476, Q0
+OUTPUT = data_buffer_1/SLICE_40, SLICE
+OUTPORT = data_buffer_1/n478, Q0
+OUTPORT = data_buffer_1/n480, Q1
+OUTPUT = data_buffer_1/SLICE_42, SLICE
+OUTPORT = data_buffer_1/n486, Q0
+OUTPORT = data_buffer_1/n488, Q1
+OUTPUT = data_buffer_1/SLICE_43, SLICE
+OUTPORT = data_buffer_1/n490, Q0
+OUTPORT = data_buffer_1/n492, Q1
+OUTPUT = data_buffer_1/SLICE_44, SLICE
+OUTPORT = data_buffer_1/n494, Q0
+OUTPORT = data_buffer_1/n496, Q1
+OUTPUT = data_buffer_1/SLICE_45, SLICE
+OUTPORT = data_buffer_1/n500, Q0
+OUTPORT = data_buffer_1/n502, Q1
+OUTPUT = data_buffer_1/SLICE_46, SLICE
+OUTPORT = data_buffer_1/n504, Q0
+OUTPORT = data_buffer_1/n506, Q1
+OUTPUT = data_buffer_1/SLICE_47, SLICE
+OUTPORT = data_buffer_1/n508, Q0
+OUTPORT = data_buffer_1/n510, Q1
+OUTPUT = data_buffer_1/SLICE_48, SLICE
+OUTPORT = data_buffer_1/n512, Q0
+OUTPORT = data_buffer_1/n514, Q1
+OUTPUT = data_buffer_1/SLICE_49, SLICE
+OUTPORT = data_buffer_1/n516, Q0
+OUTPORT = data_buffer_1/n518, Q1
+OUTPUT = data_buffer_1/SLICE_50, SLICE
+OUTPORT = data_buffer_1/n520, Q0
+OUTPORT = data_buffer_1/n522, Q1
+OUTPUT = data_buffer_1/SLICE_51, SLICE
+OUTPORT = data_buffer_1/n526, Q0
+OUTPORT = data_buffer_1/n528, Q1
+OUTPUT = data_buffer_1/SLICE_52, SLICE
+OUTPORT = data_buffer_1/n530, Q0
+OUTPORT = data_buffer_1/n532, Q1
+OUTPUT = data_buffer_1/SLICE_53, SLICE
+OUTPORT = data_buffer_1/n534, Q0
+OUTPORT = data_buffer_1/n536, Q1
+OUTPUT = data_buffer_1/SLICE_54, SLICE
+OUTPORT = n498, Q0
+OUTPORT = n524, Q1
+OUTPUT = write_controller_1/SLICE_67, SLICE
+OUTPORT = read_set_address_0, Q0
+OUTPUT = write_controller_1/SLICE_77, SLICE
+OUTPORT = write_controller_1/n1, F0
+OUTPORT = write_controller_1/r_controller_state_0, Q0
+OUTPUT = write_controller_1/SLICE_78, SLICE
+OUTPORT = write_controller_1/n836, F0
+OUTPORT = write_controller_1/r_controller_state_1, Q0
+OUTPUT = data_buffer_1/ram0, EBR
+OUTPORT = data_buffer_1/n637, DOA17
+OUTPORT = data_buffer_1/n636, DOA16
+OUTPORT = data_buffer_1/n635, DOA15
+OUTPORT = data_buffer_1/n634, DOA14
+OUTPORT = data_buffer_1/n633, DOA13
+OUTPORT = data_buffer_1/n632, DOA12
+OUTPORT = data_buffer_1/n631, DOA11
+OUTPORT = data_buffer_1/n630, DOA10
+OUTPORT = data_buffer_1/n629, DOA9
+OUTPORT = data_buffer_1/n628, DOA8
+OUTPORT = data_buffer_1/n627, DOA7
+OUTPORT = n626, DOA6
+OUTPORT = data_buffer_1/n625, DOA5
+OUTPORT = data_buffer_1/n624, DOA4
+OUTPORT = data_buffer_1/n623, DOA3
+OUTPORT = data_buffer_1/n622, DOA2
+OUTPORT = data_buffer_1/n621, DOA1
+OUTPORT = data_buffer_1/n620, DOA0
+OUTPORT = data_buffer_1/n638, DOB0
+OUTPORT = n639, DOB1
+OUTPORT = data_buffer_1/n640, DOB2
+OUTPORT = data_buffer_1/n641, DOB3
+OUTPORT = data_buffer_1/n642, DOB4
+OUTPORT = data_buffer_1/n643, DOB5
+OUTPORT = data_buffer_1/n644, DOB6
+OUTPORT = data_buffer_1/n645, DOB7
+OUTPUT = data_buffer_1/ram1, EBR
+OUTPORT = data_buffer_1/n703, DOA17
+OUTPORT = data_buffer_1/n702, DOA16
+OUTPORT = data_buffer_1/n701, DOA15
+OUTPORT = data_buffer_1/n700, DOA14
+OUTPORT = data_buffer_1/n699, DOA13
+OUTPORT = data_buffer_1/n698, DOA12
+OUTPORT = data_buffer_1/n697, DOA11
+OUTPORT = data_buffer_1/n696, DOA10
+OUTPORT = data_buffer_1/n695, DOA9
+OUTPORT = data_buffer_1/n694, DOA8
+OUTPORT = data_buffer_1/n693, DOA7
+OUTPORT = n692, DOA6
+OUTPORT = data_buffer_1/n691, DOA5
+OUTPORT = data_buffer_1/n690, DOA4
+OUTPORT = data_buffer_1/n689, DOA3
+OUTPORT = data_buffer_1/n688, DOA2
+OUTPORT = data_buffer_1/n687, DOA1
+OUTPORT = data_buffer_1/n686, DOA0
+OUTPORT = data_buffer_1/n704, DOB0
+OUTPORT = n705, DOB1
+OUTPORT = data_buffer_1/n706, DOB2
+OUTPORT = data_buffer_1/n707, DOB3
+OUTPORT = data_buffer_1/n708, DOB4
+OUTPORT = data_buffer_1/n709, DOB5
+OUTPORT = data_buffer_1/n710, DOB6
+OUTPORT = data_buffer_1/n711, DOB7
+OUTPUT = data_buffer_1/ram3, EBR
+OUTPORT = data_buffer_1/n729, DOA17
+OUTPORT = data_buffer_1/n728, DOA16
+OUTPORT = data_buffer_1/n727, DOA15
+OUTPORT = data_buffer_1/n726, DOA14
+OUTPORT = data_buffer_1/n725, DOA13
+OUTPORT = data_buffer_1/n724, DOA12
+OUTPORT = data_buffer_1/n723, DOA11
+OUTPORT = data_buffer_1/n722, DOA10
+OUTPORT = data_buffer_1/n721, DOA9
+OUTPORT = data_buffer_1/n720, DOA8
+OUTPORT = data_buffer_1/n719, DOA7
+OUTPORT = n718, DOA6
+OUTPORT = data_buffer_1/n717, DOA5
+OUTPORT = data_buffer_1/n716, DOA4
+OUTPORT = data_buffer_1/n715, DOA3
+OUTPORT = data_buffer_1/n714, DOA2
+OUTPORT = data_buffer_1/n713, DOA1
+OUTPORT = data_buffer_1/n712, DOA0
+OUTPORT = data_buffer_1/n730, DOB0
+OUTPORT = n731, DOB1
+OUTPORT = data_buffer_1/n732, DOB2
+OUTPORT = data_buffer_1/n733, DOB3
+OUTPORT = data_buffer_1/n734, DOB4
+OUTPORT = data_buffer_1/n735, DOB5
+OUTPORT = data_buffer_1/n736, DOB6
+OUTPORT = data_buffer_1/n737, DOB7
+OUTPUT = data_buffer_1/ram2, EBR
+OUTPORT = data_buffer_1/n663, DOA17
+OUTPORT = data_buffer_1/n662, DOA16
+OUTPORT = data_buffer_1/n661, DOA15
+OUTPORT = data_buffer_1/n660, DOA14
+OUTPORT = data_buffer_1/n659, DOA13
+OUTPORT = data_buffer_1/n658, DOA12
+OUTPORT = data_buffer_1/n657, DOA11
+OUTPORT = data_buffer_1/n656, DOA10
+OUTPORT = data_buffer_1/n655, DOA9
+OUTPORT = data_buffer_1/n654, DOA8
+OUTPORT = data_buffer_1/n653, DOA7
+OUTPORT = n652, DOA6
+OUTPORT = data_buffer_1/n651, DOA5
+OUTPORT = data_buffer_1/n650, DOA4
+OUTPORT = data_buffer_1/n649, DOA3
+OUTPORT = data_buffer_1/n648, DOA2
+OUTPORT = data_buffer_1/n647, DOA1
+OUTPORT = data_buffer_1/n646, DOA0
+OUTPORT = data_buffer_1/n664, DOB0
+OUTPORT = n665, DOB1
+OUTPORT = data_buffer_1/n666, DOB2
+OUTPORT = data_buffer_1/n667, DOB3
+OUTPORT = data_buffer_1/n668, DOB4
+OUTPORT = data_buffer_1/n669, DOB5
+OUTPORT = data_buffer_1/n670, DOB6
+OUTPORT = data_buffer_1/n671, DOB7
+SIGNAL = clk_uart_c, DUMMY
+INPUT = clk_uart, PIO
+OUTPUT = data_buffer_1/SLICE_23, SLICE
+OUTPORT = data_buffer_1/n461, Q0
+OUTPUT = data_buffer_1/SLICE_25, SLICE
+OUTPORT = data_buffer_1/n463, Q0
+OUTPUT = data_buffer_1/SLICE_27, SLICE
+OUTPORT = data_buffer_1/n465, Q0
+OUTPUT = data_buffer_1/SLICE_29, SLICE
+OUTPORT = data_buffer_1/n467, Q0
+OUTPUT = data_buffer_1/SLICE_31, SLICE
+OUTPORT = data_buffer_1/n469, Q0
+OUTPUT = data_buffer_1/SLICE_33, SLICE
+OUTPORT = data_buffer_1/n471, Q0
+OUTPUT = data_buffer_1/SLICE_35, SLICE
+OUTPORT = data_buffer_1/n473, Q0
+OUTPUT = data_buffer_1/SLICE_37, SLICE
+OUTPORT = data_buffer_1/n475, Q0
+OUTPUT = data_buffer_1/SLICE_39, SLICE
+OUTPORT = data_buffer_1/n477, Q0
+OUTPUT = SLICE_41, SLICE
+OUTPORT = n2143, F0
+OUTPORT = data_buffer_1/n483, Q0
+OUTPUT = uart_1/internal_uart/SLICE_55, SLICE
+OUTPORT = uart_1/internal_uart/o_data_N_74, F0
+OUTPORT = o_data_c, Q0
+OUTPUT = o_data, PIO
+OUTPUT = readout_controller_1/SLICE_57, SLICE
+OUTPORT = readout_controller_1/r_State_1_N_120_0, F0
+OUTPORT = r_State_0, Q0
+OUTPUT = SLICE_58, SLICE
+OUTPORT = n1945, F0
+OUTPORT = r_State_1, Q0
+OUTPORT = uart_1/n2147, F1
+OUTPUT = SLICE_59, SLICE
+OUTPORT = n2140, F0
+OUTPORT = r_controller_state_1_N_107_0, Q0
+OUTPUT = data_buffer_1/SLICE_60, SLICE
+OUTPORT = read_addr_9, Q0
+OUTPORT = read_addr_10, Q1
+OUTPUT = readout_controller_1/SLICE_61, SLICE
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_0, F0
+OUTPORT = read_address_0, Q0
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_1, F1
+OUTPORT = read_address_1, Q1
+OUTPUT = readout_controller_1/SLICE_62, SLICE
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_2, F0
+OUTPORT = read_address_2, Q0
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_3, F1
+OUTPORT = read_address_3, Q1
+OUTPUT = readout_controller_1/SLICE_63, SLICE
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_4, F0
+OUTPORT = read_address_4, Q0
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_5, F1
+OUTPORT = read_address_5, Q1
+OUTPUT = readout_controller_1/SLICE_64, SLICE
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_6, F0
+OUTPORT = read_address_6, Q0
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_7, F1
+OUTPORT = read_address_7, Q1
+OUTPUT = readout_controller_1/SLICE_65, SLICE
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_8, F0
+OUTPORT = read_address_8, Q0
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_9, F1
+OUTPORT = read_address_9, Q1
+OUTPUT = readout_controller_1/SLICE_66, SLICE
+OUTPORT = readout_controller_1/o_read_addr_10_N_109_10, F0
+OUTPORT = read_address_10, Q0
+OUTPUT = uart_1/internal_uart/SLICE_68, SLICE
+OUTPORT = uart_1/internal_uart/n20, F0
+OUTPORT = uart_1/internal_uart/r_Count_0, Q0
+OUTPORT = uart_1/internal_uart/n1868, F1
+OUTPORT = uart_1/internal_uart/r_Count_1, Q1
+OUTPUT = uart_1/internal_uart/SLICE_69, SLICE
+OUTPORT = uart_1/internal_uart/n2150, OFX0
+OUTPORT = uart_1/internal_uart/r_Count_2, Q0
+OUTPUT = uart_1/internal_uart/SLICE_70, SLICE
+OUTPORT = uart_1/internal_uart/r_Databuffer_6_N_47_0, F0
+OUTPORT = uart_1/internal_uart/r_Databuffer_0, Q0
+OUTPORT = uart_1/internal_uart/r_Databuffer_6_N_47_1, F1
+OUTPORT = uart_1/internal_uart/r_Databuffer_1, Q1
+OUTPUT = uart_1/internal_uart/SLICE_71, SLICE
+OUTPORT = uart_1/internal_uart/r_Databuffer_6_N_47_2, F0
+OUTPORT = uart_1/internal_uart/r_Databuffer_2, Q0
+OUTPORT = uart_1/internal_uart/r_Databuffer_6_N_47_3, F1
+OUTPORT = uart_1/internal_uart/r_Databuffer_3, Q1
+OUTPUT = uart_1/internal_uart/SLICE_72, SLICE
+OUTPORT = uart_1/internal_uart/r_Databuffer_6_N_47_4, F0
+OUTPORT = uart_1/internal_uart/r_Databuffer_4, Q0
+OUTPORT = uart_1/internal_uart/r_Databuffer_6_N_47_5, F1
+OUTPORT = uart_1/internal_uart/r_Databuffer_5, Q1
+OUTPUT = uart_1/internal_uart/SLICE_73, SLICE
+OUTPORT = uart_1/internal_uart/r_Databuffer_6_N_47_6, F0
+OUTPORT = uart_1/internal_uart/r_Databuffer_6, Q0
+OUTPORT = uart_1/internal_uart/n1796, F1
+OUTPUT = uart_1/internal_uart/SLICE_74, SLICE
+OUTPORT = uart_1/n2146, F0
+OUTPORT = uart_1/r_UART_State_0, Q0
+OUTPORT = uart_1/internal_uart/r_UART_State_1_N_45_1, F1
+OUTPORT = uart_1/r_UART_State_1, Q1
+OUTPUT = uart_1/internal_uart/SLICE_75, SLICE
+OUTPORT = uart_1/internal_uart/n2141, F0
+OUTPORT = uart_1/r_internal_outputready, Q0
+OUTPORT = uart_1/internal_uart/n2138, F1
+OUTPUT = readout_controller_1/SLICE_76, SLICE
+OUTPORT = readout_controller_1/o_tx_enable_N_142, F0
+OUTPORT = uart_dataready, Q0
+OUTPUT = data_buffer_1/ram0, EBR
+OUTPORT = data_buffer_1/n637, DOA17
+OUTPORT = data_buffer_1/n636, DOA16
+OUTPORT = data_buffer_1/n635, DOA15
+OUTPORT = data_buffer_1/n634, DOA14
+OUTPORT = data_buffer_1/n633, DOA13
+OUTPORT = data_buffer_1/n632, DOA12
+OUTPORT = data_buffer_1/n631, DOA11
+OUTPORT = data_buffer_1/n630, DOA10
+OUTPORT = data_buffer_1/n629, DOA9
+OUTPORT = data_buffer_1/n628, DOA8
+OUTPORT = data_buffer_1/n627, DOA7
+OUTPORT = n626, DOA6
+OUTPORT = data_buffer_1/n625, DOA5
+OUTPORT = data_buffer_1/n624, DOA4
+OUTPORT = data_buffer_1/n623, DOA3
+OUTPORT = data_buffer_1/n622, DOA2
+OUTPORT = data_buffer_1/n621, DOA1
+OUTPORT = data_buffer_1/n620, DOA0
+OUTPORT = data_buffer_1/n638, DOB0
+OUTPORT = n639, DOB1
+OUTPORT = data_buffer_1/n640, DOB2
+OUTPORT = data_buffer_1/n641, DOB3
+OUTPORT = data_buffer_1/n642, DOB4
+OUTPORT = data_buffer_1/n643, DOB5
+OUTPORT = data_buffer_1/n644, DOB6
+OUTPORT = data_buffer_1/n645, DOB7
+OUTPUT = data_buffer_1/ram1, EBR
+OUTPORT = data_buffer_1/n703, DOA17
+OUTPORT = data_buffer_1/n702, DOA16
+OUTPORT = data_buffer_1/n701, DOA15
+OUTPORT = data_buffer_1/n700, DOA14
+OUTPORT = data_buffer_1/n699, DOA13
+OUTPORT = data_buffer_1/n698, DOA12
+OUTPORT = data_buffer_1/n697, DOA11
+OUTPORT = data_buffer_1/n696, DOA10
+OUTPORT = data_buffer_1/n695, DOA9
+OUTPORT = data_buffer_1/n694, DOA8
+OUTPORT = data_buffer_1/n693, DOA7
+OUTPORT = n692, DOA6
+OUTPORT = data_buffer_1/n691, DOA5
+OUTPORT = data_buffer_1/n690, DOA4
+OUTPORT = data_buffer_1/n689, DOA3
+OUTPORT = data_buffer_1/n688, DOA2
+OUTPORT = data_buffer_1/n687, DOA1
+OUTPORT = data_buffer_1/n686, DOA0
+OUTPORT = data_buffer_1/n704, DOB0
+OUTPORT = n705, DOB1
+OUTPORT = data_buffer_1/n706, DOB2
+OUTPORT = data_buffer_1/n707, DOB3
+OUTPORT = data_buffer_1/n708, DOB4
+OUTPORT = data_buffer_1/n709, DOB5
+OUTPORT = data_buffer_1/n710, DOB6
+OUTPORT = data_buffer_1/n711, DOB7
+OUTPUT = data_buffer_1/ram3, EBR
+OUTPORT = data_buffer_1/n729, DOA17
+OUTPORT = data_buffer_1/n728, DOA16
+OUTPORT = data_buffer_1/n727, DOA15
+OUTPORT = data_buffer_1/n726, DOA14
+OUTPORT = data_buffer_1/n725, DOA13
+OUTPORT = data_buffer_1/n724, DOA12
+OUTPORT = data_buffer_1/n723, DOA11
+OUTPORT = data_buffer_1/n722, DOA10
+OUTPORT = data_buffer_1/n721, DOA9
+OUTPORT = data_buffer_1/n720, DOA8
+OUTPORT = data_buffer_1/n719, DOA7
+OUTPORT = n718, DOA6
+OUTPORT = data_buffer_1/n717, DOA5
+OUTPORT = data_buffer_1/n716, DOA4
+OUTPORT = data_buffer_1/n715, DOA3
+OUTPORT = data_buffer_1/n714, DOA2
+OUTPORT = data_buffer_1/n713, DOA1
+OUTPORT = data_buffer_1/n712, DOA0
+OUTPORT = data_buffer_1/n730, DOB0
+OUTPORT = n731, DOB1
+OUTPORT = data_buffer_1/n732, DOB2
+OUTPORT = data_buffer_1/n733, DOB3
+OUTPORT = data_buffer_1/n734, DOB4
+OUTPORT = data_buffer_1/n735, DOB5
+OUTPORT = data_buffer_1/n736, DOB6
+OUTPORT = data_buffer_1/n737, DOB7
+OUTPUT = data_buffer_1/ram2, EBR
+OUTPORT = data_buffer_1/n663, DOA17
+OUTPORT = data_buffer_1/n662, DOA16
+OUTPORT = data_buffer_1/n661, DOA15
+OUTPORT = data_buffer_1/n660, DOA14
+OUTPORT = data_buffer_1/n659, DOA13
+OUTPORT = data_buffer_1/n658, DOA12
+OUTPORT = data_buffer_1/n657, DOA11
+OUTPORT = data_buffer_1/n656, DOA10
+OUTPORT = data_buffer_1/n655, DOA9
+OUTPORT = data_buffer_1/n654, DOA8
+OUTPORT = data_buffer_1/n653, DOA7
+OUTPORT = n652, DOA6
+OUTPORT = data_buffer_1/n651, DOA5
+OUTPORT = data_buffer_1/n650, DOA4
+OUTPORT = data_buffer_1/n649, DOA3
+OUTPORT = data_buffer_1/n648, DOA2
+OUTPORT = data_buffer_1/n647, DOA1
+OUTPORT = data_buffer_1/n646, DOA0
+OUTPORT = data_buffer_1/n664, DOB0
+OUTPORT = n665, DOB1
+OUTPORT = data_buffer_1/n666, DOB2
+OUTPORT = data_buffer_1/n667, DOB3
+OUTPORT = data_buffer_1/n668, DOB4
+OUTPORT = data_buffer_1/n669, DOB5
+OUTPORT = data_buffer_1/n670, DOB6
+OUTPORT = data_buffer_1/n671, DOB7
+

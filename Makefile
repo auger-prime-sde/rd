@@ -1,18 +1,12 @@
-.PHONY: settable_counter_tb clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb
+.PHONY: clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb
 
-all: data_buffer_tb settable_counter_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb clock_divider_tb
+all: data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb
 
 clock_divider_tb: rtl/clock_divider.vhd test/clock_divider_tb.vhd
 	ghdl -a rtl/clock_divider.vhd
 	ghdl -a test/clock_divider_tb.vhd
 	ghdl -e clock_divider_tb
 	ghdl -r clock_divider_tb --assert-level=warning
-
-settable_counter_tb: rtl/settable_counter.vhd test/settable_counter_tb.vhd
-	ghdl -a rtl/settable_counter.vhd
-	ghdl -a test/settable_counter_tb.vhd
-	ghdl -e settable_counter_tb
-	ghdl -r settable_counter_tb --assert-level=warning
 
 simple_counter_tb: rtl/simple_counter.vhd test/simple_counter_tb.vhd
 	ghdl -a rtl/simple_counter.vhd
@@ -46,6 +40,13 @@ write_controller_tb: rtl/write_controller.vhd test/write_controller_tb.vhd
 	ghdl -e write_controller_tb
 	ghdl -r write_controller_tb --assert-level=warning
 
+readout_controller_tb: rtl/readout_controller.vhd test/readout_controller_tb.vhd
+	ghdl -a rtl/readout_controller.vhd
+	ghdl -a rtl/simple_counter.vhd
+	ghdl -a test/readout_controller_tb.vhd
+	ghdl -e readout_controller_tb
+	ghdl -r readout_controller_tb --assert-level=warning
+
 wave.vcd:
 	ghdl -r settable_counter_tb --vcd=wave.vcd
 
@@ -54,9 +55,8 @@ uart_expander.vcd: uart_expander_tb
 
 uart.vcd: uart_tb
 	ghdl -r uart_tb --vcd=uart.vcd
-
-clock_divider.vcd: clock_divider_tb
-	ghdl -r clock_divider_tb --vcd=clock_divider.vcd
+readout_controller.vcd: readout_controller_tb
+	ghdl -r readout_controller_tb --vcd=readout_controller.vcd
 
 clean:
-	rm -f work-obj93.cf uart.vcd
+	rm -f work-obj93.cf *.vcd

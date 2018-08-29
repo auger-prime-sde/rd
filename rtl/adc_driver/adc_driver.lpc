@@ -16,8 +16,8 @@ CoreRevision=6.0
 ModuleName=adc_driver
 SourceFormat=vhdl
 ParameterFileVersion=1.0
-Date=07/11/2018
-Time=14:37:28
+Date=08/14/2018
+Time=14:06:47
 
 [Parameters]
 Verilog=0
@@ -30,9 +30,9 @@ IO=0
 mode=Receive
 trioddr=0
 io_type=LVDS
-width=13
+width=15
 freq_in=200
-bandwidth=5200
+bandwidth=6000
 aligned=Centered
 pre-configuration=ENABLED
 mode2=Receive
@@ -41,7 +41,7 @@ io_type2=LVDS
 freq_in2=200
 gear=2:1
 aligned2=Centered
-width2=13
+width2=15
 DataLane=By Time
 EnECLK=0
 Interface=GDDRX1_RX.SCLK.Centered
@@ -63,4 +63,4 @@ enClkIBuf=0
 ClkIBuf=LVDS
 
 [Command]
-cmd_line= -w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 13 -freq_in 200 -gear 2 -del 128
+cmd_line= -w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 15 -freq_in 200 -gear 2 -del 128
