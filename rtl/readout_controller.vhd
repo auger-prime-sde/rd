@@ -11,7 +11,7 @@ entity readout_controller is
     -- interface to write controller:
     i_trigger_done : in std_logic;
     i_start_addr   : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-    o_arm          : out std_logic := '1';
+    o_arm          : out std_logic := '0';
     -- interface to data buffer:
     o_read_enable  : out std_logic := '1';
     o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
@@ -48,16 +48,15 @@ begin
       case r_State is
         when s_Idle =>
           o_tx_enable <= '0';
+          o_arm <= '0';
           r_read_addr <= i_start_addr;
           if i_trigger_done='1' and i_tx_start='1' then
-            o_arm <= '0';
-            -- o_tx_enable is only set after the next clock cycle
             r_State <= s_Loaded;
           else
-            o_arm <= '1';
             r_State <= s_Idle;
           end if;
         when s_Loaded =>
+          o_arm <= '0';
           o_tx_enable <= '1';
           if i_word_ready = '0' then
             r_State <= s_Busy;
@@ -68,8 +67,10 @@ begin
             r_read_addr <= std_logic_vector(unsigned(r_read_addr)+1);
             if std_logic_vector(unsigned(r_read_addr)+1) = i_start_addr then
               r_State <= s_Idle;
+              o_arm <= '1';
             else
-              r_State <= s_Loaded;              
+              r_State <= s_Loaded;
+              o_arm <= '0';
             end if;
           end if;
       end case;

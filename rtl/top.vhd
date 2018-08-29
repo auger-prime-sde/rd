@@ -111,7 +111,7 @@ architecture behaviour of top is
       i_clk          : in std_logic;
       i_trigger_done : in std_logic;
       i_start_addr   : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-      o_arm          : out std_logic := '1';
+      o_arm          : out std_logic := '0';
       o_read_enable  : out std_logic := '1';
       o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
       i_word_ready   : in std_logic;
