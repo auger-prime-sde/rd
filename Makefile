@@ -46,7 +46,11 @@ readout_controller_tb: rtl/readout_controller.vhd test/readout_controller_tb.vhd
 	ghdl -e readout_controller_tb
 	ghdl -r readout_controller_tb --assert-level=warning
 
+
+
 top_tb: rtl/top.vhd test/top_tb.vhd
+	ghdl -a rtl/adc_driver/adc_driver.vhd
+	ghdl -i --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/synthesis/vhdl/ecp5u.vhd
 	ghdl -a rtl/top.vhd
 	ghdl -a test/top_tb.vhd
 	ghdl -e top_tb
