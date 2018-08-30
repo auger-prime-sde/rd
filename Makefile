@@ -2,6 +2,7 @@
 
 all: data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb top_tb
 
+
 clock_divider_tb: rtl/clock_divider.vhd test/clock_divider_tb.vhd
 	ghdl -a rtl/clock_divider.vhd
 	ghdl -a test/clock_divider_tb.vhd
@@ -49,12 +50,14 @@ readout_controller_tb: rtl/readout_controller.vhd test/readout_controller_tb.vhd
 
 
 top_tb: rtl/top.vhd test/top_tb.vhd
-	ghdl -a rtl/adc_driver/adc_driver.vhd
-	ghdl -i --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/synthesis/vhdl/ecp5u.vhd
-	ghdl -a rtl/top.vhd
-	ghdl -a test/top_tb.vhd
-	ghdl -e top_tb
-	ghdl -r top_tb --assert-level=warning
+	ghdl -a --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/synthesis/vhdl/ecp5u.vhd
+	ghdl -a --ieee=synopsys -fexplicit --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/simulation/vhdl/lifmd/src/LIFMDCOMP.vhd
+	ghdl -a --ieee=synopsys -fexplicit --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/simulation/vhdl/ecp5u/src/ECP5UCOMP.vhd
+	ghdl -a --ieee=synopsys -fexplicit rtl/adc_driver/adc_driver.vhd
+	ghdl -a --ieee=synopsys -fexplicit rtl/top.vhd
+	ghdl -a --ieee=synopsys -fexplicit test/top_tb.vhd
+	ghdl -e --ieee=synopsys -fexplicit top_tb
+	ghdl -r --ieee=synopsys -fexplicit top_tb --assert-level=warning
 
 
 wave.vcd:
@@ -73,4 +76,4 @@ top.vcd: top_tb
 	ghdl -r top_tb --vcd=top.vcd
 
 clean:
-	rm -f work-obj93.cf *.vcd
+	rm -f *-obj93.cf *.vcd *.o
