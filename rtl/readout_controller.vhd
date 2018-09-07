@@ -11,7 +11,7 @@ entity readout_controller is
     -- interface to write controller:
     i_trigger_done : in std_logic;
     i_start_addr   : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-    o_arm          : out std_logic := '0';
+    o_arm          : out std_logic := '1';
     -- interface to data buffer:
     o_read_enable  : out std_logic := '1';
     o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
@@ -27,13 +27,15 @@ end readout_controller;
 
 architecture behave of readout_controller is
   -- state machine type:
-  type t_State is (s_Idle, s_Loaded, s_Busy);
-  -- loaded and busy are both states in which the machine is transmitting
+  type t_State is (s_Initial, s_Idle, s_Loaded, s_Busy);
+  -- initial is only for the first clockcycle to force an arm signal to the
+  -- write controller.
+  -- loaded and busy are both states in which the machine is transmitting.
   -- busy indicates that the previous word is in transmission.
   -- loaded means that the next word has already been loaded and we are waiting
   -- for the uart to start transmitting that word.
   -- variables:
-  signal r_State : t_State := s_Idle;
+  signal r_State : t_State := s_Initial;
   signal r_read_addr : std_logic_vector(g_ADDRESS_BITS-1 downto 0);
 
   signal is_idle : std_logic;
@@ -46,6 +48,9 @@ begin
   begin
     if rising_edge(i_clk) then
       case r_State is
+        when s_Initial =>
+          o_arm <= '1';
+          r_State <= s_Idle;
         when s_Idle =>
           o_tx_enable <= '0';
           o_arm <= '0';

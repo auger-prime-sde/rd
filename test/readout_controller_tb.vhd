@@ -80,36 +80,38 @@ begin
     i_start_addr <= std_logic_vector(to_unsigned(42, width));
     i_word_ready <= '1';
 
-    wait for 51 ns;
+    for rep in 1 to 3 loop
+      wait for 51 ns;
 
-    -- trigger a readout
-    i_tx_start <= '1';
-    -- wait until the unit starts transmitting
-    wait until o_tx_enable = '1';
-    assert o_read_addr = i_start_addr;
-    assert o_arm = '0';
-    assert o_tx_ready = '0';
-    -- prevent immediate retrigger
-    i_tx_start <= '0';
-
-    for i in 1 to 2048 loop
-      -- pretend to be transmitting data for a while
-      i_word_ready <= '0';
-      wait for 100 ns;
-      i_word_ready <= '1';
-      --assert o_read_addr = std_logic_vector(unsigned(i_start_addr)+i);
-      assert o_tx_enable = '1';
-      assert o_tx_ready = '0';
+      -- trigger a readout
+      i_tx_start <= '1';
+      -- wait until the unit starts transmitting
+      wait until o_tx_enable = '1';
+      assert o_read_addr = i_start_addr;
       assert o_arm = '0';
-      -- word ready means that the next word can be loaded but it actually
-      -- continues to be busy sending data for 2 additional clock cycles.
-      wait for 2*clk_period;
+      assert o_tx_ready = '0';
+      -- prevent immediate retrigger
+      i_tx_start <= '0';
       
-    end loop;
+      for i in 1 to 2048 loop
+        -- pretend to be transmitting data for a while
+        i_word_ready <= '0';
+        wait for 100 ns;
+        i_word_ready <= '1';
+        --assert o_read_addr = std_logic_vector(unsigned(i_start_addr)+i);
+        assert o_tx_enable = '1';
+        assert o_tx_ready = '0';
+        assert o_arm = '0';
+        -- word ready means that the next word can be loaded but it actually
+        -- continues to be busy sending data for 2 additional clock cycles.
+        wait for 2*clk_period;
+        
+      end loop;
 
-    --assert o_arm = '1';
-    assert o_tx_enable = '0';
-    assert o_tx_ready = '1';
+      --assert o_arm = '1';
+      assert o_tx_enable = '0';
+      assert o_tx_ready = '1';
+    end loop; 
 
         
       

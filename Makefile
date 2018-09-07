@@ -1,8 +1,8 @@
-.PHONY: clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb top_tb
+.PHONY: clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb software_integration_tb top_tb
 
-GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93 
+#GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93 
 
-all: data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb top_tb
+all: data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb software_integration_tb top_tb
 
 
 clock_divider_tb: rtl/clock_divider.vhd test/clock_divider_tb.vhd
@@ -67,6 +67,14 @@ top_tb: rtl/top.vhd test/top_tb.vhd
 	ghdl -r $(GHDL_OPTS) top_tb --assert-level=warning
 
 
+software_integration_tb: rtl/software_integration.vhd test/software_integration_tb.vhd
+	ghdl -a $(GHDL_OPTS) rtl/software_integration.vhd
+	ghdl -a $(GHDL_OPTS) test/software_integration_tb.vhd
+	ghdl -e $(GHDL_OPTS) software_integration_tb
+	ghdl -r $(GHDL_OPTS) software_integration_tb --assert-level=warning
+
+
+
 wave.vcd:
 	ghdl -r settable_counter_tb --vcd=wave.vcd
 
@@ -81,6 +89,9 @@ readout_controller.vcd: readout_controller_tb
 
 top.vcd: top_tb
 	ghdl -r top_tb --vcd=top.vcd
+
+software_integration.vcd: software_integration_tb
+	ghdl -r $(GHDL_OPTS) software_integration_tb --vcd=software_integration.vcd
 
 clean:
 	rm -f *-obj93.cf *.vcd *.o

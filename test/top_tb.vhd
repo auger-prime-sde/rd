@@ -91,7 +91,7 @@ begin
   begin
     wait for 52 ns;
     i_trigger <= '1';
-    wait for 1 us;
+    wait for 1 ms;
     stop <= '1';
     wait;
   end process;
