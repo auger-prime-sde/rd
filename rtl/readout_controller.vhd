@@ -67,16 +67,19 @@ begin
             r_State <= s_Busy;
           end if;
         when s_Busy =>
-          o_tx_enable <= '1';
+          --o_tx_enable <= '1';
           if i_word_ready = '1' then
-            r_read_addr <= std_logic_vector(unsigned(r_read_addr)+1);
-            if std_logic_vector(unsigned(r_read_addr)+1) = i_start_addr then
+            o_tx_enable <= '0';
+            r_read_addr <= std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS);
+            if std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS) = i_start_addr then
               r_State <= s_Idle;
               o_arm <= '1';
             else
               r_State <= s_Loaded;
               o_arm <= '0';
             end if;
+          else
+            o_tx_enable <= '1';
           end if;
       end case;
     end if;

@@ -97,7 +97,8 @@ begin
     i_trigger <= '1';
     wait for 42 ns;
     i_start_transfer <= '1';
-    wait for 1 ms;
+    i_trigger <= '0';
+    wait for 10 ms;
     stop <= '1';
     wait;
   end process;
