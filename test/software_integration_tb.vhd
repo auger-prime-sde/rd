@@ -27,8 +27,9 @@ architecture behavior of software_integration_tb is
 
   -- interface to ADC:
   signal i_data : std_logic_vector(25 downto 0) := (others=>'0');
-  signal left : natural range 0 to 4095 := 0;
-  signal right : natural range 0 to 4095 := 4095;
+  --signal left : natural range 0 to 4095 := 0;
+  --signal right : natural range 0 to 4095 := 4095;
+  signal counter : natural range 0 to 4096 := 0;
 
   component software_integration is
     generic (
@@ -66,8 +67,9 @@ begin
       o_data => o_data
     );
 
-  i_data(25 downto 13) <= std_logic_vector(to_unsigned(left,13));
-  i_data(12 downto 0) <= std_logic_vector(to_unsigned(right,13));
+  --i_data(25 downto 13) <= std_logic_vector(to_unsigned(left,13));
+  --i_data(12 downto 0) <= std_logic_vector(to_unsigned(right,13));
+  i_data(25 downto 0) <= std_logic_vector(to_unsigned(counter,26));
   p_data_clk : process is
   begin
     if stop = '1' then
@@ -75,11 +77,16 @@ begin
     end if;
     wait for data_clk_period / 2;
     --report "data clk";
-    if data_clk = '1' then
-      left <= (left+1) mod 4096;
-      right <= (right-1) mod 4096;
-    end if;
     data_clk <= not data_clk;
+    if data_clk = '0' then
+    --  left <= (left+1) mod 4096;
+    --  right <= (right-1) mod 4096;
+    
+      --i_data(25 downto 0) <= (others => '1');
+      --i_data(25 downto 0) <= (others => '0');
+      counter <= (counter + 1) mod 4096;
+    end if;
+
   end process;
   p_uart_clk : process is
   begin
@@ -98,7 +105,8 @@ begin
     wait for 42 ns;
     i_start_transfer <= '1';
     i_trigger <= '0';
-    wait for 10 ms;
+    
+    wait for 5 ms;
     stop <= '1';
     wait;
   end process;
