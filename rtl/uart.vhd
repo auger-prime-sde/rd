@@ -44,7 +44,7 @@ architecture behave of uart is
 					r_UART_State <= s_Data_Bits;
 				end if;
 			when s_Data_Bits =>
-				o_data <= r_Databuffer(r_Count);
+				o_data <= i_data(r_Count);
 				if r_Count = g_WORDSIZE-1 then
 					r_UART_State <= s_Stop_Bit;
 					o_ready <= '1'; -- because the last bit has just been sent,
