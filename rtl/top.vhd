@@ -18,11 +18,13 @@ entity top is
     dataIn : in std_logic_vector (g_ADC_DRIVER_BITS-1 downto 0);
     dataOvIn : in std_logic;
     clk : in std_logic;
-    clk_uart : std_logic;
+    slow_clk : std_logic;
     rst : in std_logic;
     trigger : in std_logic;
     i_start_transfer : in std_logic;
-    o_data : out std_logic);
+    o_data : out std_logic;
+    o_tx_ready : out std_logic;
+    o_uart_clk : out std_logic);
 end top;
 
 architecture behaviour of top is
@@ -41,6 +43,7 @@ architecture behaviour of top is
   signal buffer_write_en : std_logic;
   signal buffer_read_en : std_logic;
   signal clk_intern : std_logic;
+  signal clk_uart : std_logic;
   signal write_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
   signal read_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
   signal read_set_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
@@ -121,8 +124,22 @@ architecture behaviour of top is
     );
   end component;
 
+
+  component clock_divider
+    port (
+      i_clk: in std_logic;
+      o_q: out std_logic
+    );
+  end component;
+
 begin
   adc_input_bus <= dataOvIn & dataIn;
+  o_uart_clk <= clk_uart;
+
+clock_divider_uart : clock_divider
+  port map (
+    i_clk => slow_clk,
+    o_q => clk_uart);
 
 adc_driver_1 : adc_driver
   port map (
@@ -192,7 +209,7 @@ write_controller_1 : write_controller
       o_read_addr    => read_address,
       i_word_ready   => uart_ready,
       o_tx_enable    => uart_dataready,
-      o_tx_ready     => open,
+      o_tx_ready     => o_tx_ready,
       i_tx_start     => i_start_transfer
    );
 
