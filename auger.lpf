@@ -1,8 +1,9 @@
 BLOCK RESETPATHS ;
 BLOCK ASYNCPATHS ;
+BLOCK JTAGPATHS ;
 # Input clock
 FREQUENCY NET "clk_intern" 200.000000 MHz ;
-FREQUENCY NET "clk_uart_c" 40.000000 MHz ;## Automatically derived internal name for clk_uart
+FREQUENCY NET "slow_clk_c" 40.000000 MHz ; ## Automatically derived internal name for clk_uart
 # Bank voltages
 SYSCONFIG MASTER_SPI_PORT=ENABLE CONFIG_IOVOLTAGE=3.3 ;
 BANK 8 VCCIO 3.3 V;
@@ -48,9 +49,17 @@ IOBUF PORT "dataIn[12]" DIFFRESISTOR=100 IO_TYPE=LVDS ;
 IOBUF PORT "dataIn[13]" DIFFRESISTOR=100 IO_TYPE=LVDS ;
 IOBUF PORT "dataOvIn" DIFFRESISTOR=100 IO_TYPE=LVDS ;
 # Control interface
-LOCATE COMP "clk_uart" SITE "H4" ;
-IOBUF PORT "clk_uart" IO_TYPE=LVCMOS33 ;
+LOCATE COMP "slow_clk" SITE "H4" ;
+LOCATE COMP "rst" SITE "B2" ;
+LOCATE COMP "trigger" SITE "A2" ;
+LOCATE COMP "i_start_transfer" SITE "B1" ;
+LOCATE COMP "o_data" SITE "C2" ;
+LOCATE COMP "o_tx_ready" SITE "F4" ;
+LOCATE COMP "o_uart_clk" SITE "B3" ;
+IOBUF PORT "slow_clk" IO_TYPE=LVCMOS33 ;
 IOBUF PORT "trigger" IO_TYPE=LVCMOS33 ;
 IOBUF PORT "rst" IO_TYPE=LVCMOS33 ;
-IOBUF PORT "o_data" IO_TYPE=LVCMOS33 ;
 IOBUF PORT "i_start_transfer" IO_TYPE=LVCMOS33 ;
+IOBUF PORT "o_data" IO_TYPE=LVCMOS33 ;
+IOBUF PORT "o_tx_ready" IO_TYPE=LVCMOS33 ;
+IOBUF PORT "o_uart_clk" IO_TYPE=LVCMOS33 ;
