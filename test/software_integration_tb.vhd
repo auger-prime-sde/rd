@@ -29,7 +29,7 @@ architecture behavior of software_integration_tb is
   signal i_data : std_logic_vector(25 downto 0) := (others=>'0');
   --signal left : natural range 0 to 4095 := 0;
   --signal right : natural range 0 to 4095 := 4095;
-  signal counter : natural range 0 to 4096 := 0;
+  signal counter : natural range 0 to 2048 := 0;
 
   component software_integration is
     generic (
@@ -84,7 +84,7 @@ begin
     
       --i_data(25 downto 0) <= (others => '1');
       --i_data(25 downto 0) <= (others => '0');
-      counter <= (counter + 1) mod 4096;
+      counter <= (counter + 1) mod 2048;
     end if;
 
   end process;
@@ -100,11 +100,17 @@ begin
 
   p_test : process is
   begin
-    wait for 42 ns;
+    wait for 50 us; -- enough to fill the buffer at least once
     i_trigger <= '1';
     wait for 42 ns;
-    i_start_transfer <= '1';
     i_trigger <= '0';
+
+    -- wait for the recording to be finished
+    wait for 7 us;
+    i_start_transfer <= '1';
+    wait for 42 us;
+    i_start_transfer <= '0';
+
     
     wait for 5 ms;
     stop <= '1';
