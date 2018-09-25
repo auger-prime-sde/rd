@@ -24,11 +24,12 @@ architecture behavior of write_controller is
   -- Number of bytes to read, block size minus start offset
   constant c_DELAY_COUNT : natural := 2**g_ADDRESS_BITS - g_START_OFFSET;
   -- state machine type:
-  type t_controller_state is (s_Idle, s_Armed, s_Triggered);
+  type t_controller_state is (s_Idle, s_Armed, s_ArmReady, s_Triggered);
   -- variables
   signal r_controller_state : t_controller_state := s_Idle;
   signal r_start_addr : natural range 0 to 2**g_ADDRESS_BITS-1 := 0;
   signal r_count : natural range 0 to c_DELAY_COUNT := 0;
+  signal test_count : std_logic_vector(11 downto 0) := (others => '0');
 
 begin
   p_main : process (i_clk) is
@@ -45,8 +46,17 @@ begin
           else
             r_controller_state <= s_Idle;
           end if;
+		when s_Armed =>
+		  -- wait for at least half the buffer to be filled
+		  r_start_addr <= r_start_addr;
+          r_count <= r_count + 1;
 
-        when s_Armed =>
+          if r_count < c_DELAY_COUNT  then
+            r_controller_state <= s_Armed;
+          else
+            r_controller_state <= s_ArmReady;
+          end if;
+        when s_ArmReady =>
           -- Wait for TRIGGER event
           --  once trigger arrives calculate new start address for read controller
           --  and start counting remaining values read (in s_Triggered)
@@ -57,7 +67,7 @@ begin
             r_controller_state <= s_Triggered;
           else
             r_start_addr <= r_start_addr;
-            r_controller_state <= s_Armed;
+            r_controller_state <= s_ArmReady;
           end if;
 
         when s_Triggered =>
@@ -73,11 +83,17 @@ begin
             r_controller_state <= s_Idle;
           end if;
       end case;
+	  if r_controller_state = s_Idle then
+		o_trigger_done <= '1';
+		o_write_en <= '0';
+	  else
+		o_trigger_done <= '0';
+		o_write_en <= '1';
+	end if;  
     end if;  -- if rising_edge(i_clk)
   end process;
 
-  o_trigger_done <= '1' when r_controller_state = s_Idle else '0';
-  o_write_en <= '1' when r_controller_state /= s_Idle else '0';
 
+  test_count <= std_logic_vector(to_unsigned(r_Count,12));
   o_start_addr <= std_logic_vector(to_unsigned(r_start_addr, o_start_addr'length));
 end behavior;
