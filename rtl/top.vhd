@@ -13,7 +13,9 @@ entity top is
     -- Number of bits in index counters (11 gives 2048 samples stored)
     g_BUFFER_INDEXSIZE : natural := 11;
     -- Number of bits in serial words
-    g_UART_WORDSIZE : natural := 7  );
+    g_WORDSIZE : natural := 7;
+    -- Number of words per sample channels
+    g_WORDCOUNT: natural := 4);
   port (
     dataIn : in std_logic_vector (g_ADC_DRIVER_BITS-1 downto 0);
     dataOvIn : in std_logic;
@@ -173,7 +175,7 @@ data_buffer_1 : data_buffer
     o_rdata => data_output_bus);
 
 uart_1 : uart_expander
-  generic map (g_WORDSIZE => g_UART_WORDSIZE, g_WORDCOUNT => 4)
+  generic map (g_WORDSIZE => g_WORDSIZE, g_WORDCOUNT => g_WORDCOUNT)
   port map (
     -- TODO: do this more generic:
     i_data(12 downto 0)   => data_output_bus(12 downto 0),

@@ -12,20 +12,25 @@ end clock_divider;
 
 architecture behavior of clock_divider is
   -- 40MHz clock / 8 = 5MHz
-  constant MAX_COUNT : integer := 8;
+  constant MAX_COUNT : integer := 40;--347; -- 115200 baud
   signal r_count : natural range 0 to MAX_COUNT-1 := 0;
 
 begin
-  process(i_clk, r_count)
+  process(i_clk)
   begin
     if rising_edge(i_clk) then
-      if r_count > MAX_COUNT-1 then
+      if r_count = MAX_COUNT-1 then
         r_count <= 0;
       else
         r_count <= (r_count+1);
       end if;
+	  if r_count < MAX_COUNT/2 then
+		o_q <= '0';
+	  else
+		o_q <= '1';
+	  end if;
     end if;
   end process;
-
-  o_q <= '0' when r_count < MAX_COUNT/2 else '1';
+  
 end;
+

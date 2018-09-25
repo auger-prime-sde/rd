@@ -1,9 +1,11 @@
+rvl_alias "slow_clk" "slow_clk";
 BLOCK RESETPATHS ;
 BLOCK ASYNCPATHS ;
 BLOCK JTAGPATHS ;
 # Input clock
 FREQUENCY NET "clk_intern" 200.000000 MHz ;
 FREQUENCY NET "slow_clk_c" 40.000000 MHz ; ## Automatically derived internal name for clk_uart
+FREQUENCY NET "clk_uart" 115.200 KHz ;
 # Bank voltages
 SYSCONFIG MASTER_SPI_PORT=ENABLE CONFIG_IOVOLTAGE=3.3 ;
 BANK 8 VCCIO 3.3 V;

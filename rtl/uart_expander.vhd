@@ -5,8 +5,7 @@ use ieee.numeric_std.all;
 entity uart_expander is
 	generic (
 		g_WORDSIZE : natural := 7;
-		g_WORDCOUNT: natural := 4
-	);
+		g_WORDCOUNT: natural := 4);
 	port (
 		-- inputs
 		i_data      : in std_logic_vector(g_WORDCOUNT*g_WORDSIZE-1 downto 0);
@@ -21,9 +20,9 @@ end uart_expander;
 
 architecture behave of uart_expander is
 	-- Variables:
-	signal r_Index : natural range 0 to g_WORDCOUNT-1 := 0;
+	signal r_Index : natural range 0 to g_WORDCOUNT-1 := 0;--g_WORDCOUNT-1;
 	signal r_internal_dataready : std_logic := '0';
-	signal r_internal_outputready : std_logic;
+	signal r_internal_outputready : std_logic := '0';
 	signal r_internal_data : std_logic_vector(g_WORDSIZE-1 downto 0) := (others=> '0');
 
 	-- internal 7 bit uart
@@ -59,6 +58,7 @@ begin
 			r_Index <= (r_Index + 1) mod g_wordcount;
 		end if;
 	end process;
+	
 	
 
 	-- the following qualifies as a "hack". By setting dataready '1'
