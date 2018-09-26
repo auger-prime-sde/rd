@@ -1,8 +1,8 @@
-.PHONY: clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb software_integration_tb top_tb
+.PHONY: clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb
 
 #GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93 
 
-all: data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb software_integration_tb top_tb
+all: data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb top_tb
 
 
 clock_divider_tb: rtl/clock_divider.vhd test/clock_divider_tb.vhd
@@ -21,7 +21,7 @@ data_buffer_tb: rtl/data_buffer.vhd test/data_buffer_tb.vhd
 	ghdl -a $(GHDL_OPTS)  rtl/data_buffer.vhd
 	ghdl -a $(GHDL_OPTS)  test/data_buffer_tb.vhd
 	ghdl -e $(GHDL_OPTS)  data_buffer_tb
-	## Disable IEEE warnings as RAM lookup operation gives problems during initialization
+	# Disable IEEE warnings as RAM lookup operation gives problems during initialization
 	ghdl -r $(GHDL_OPTS) data_buffer_tb --assert-level=warning --ieee-asserts=disable
 
 uart_tb: rtl/uart.vhd test/uart_tb.vhd
@@ -51,47 +51,18 @@ readout_controller_tb: rtl/readout_controller.vhd test/readout_controller_tb.vhd
 
 
 
-top_tb: rtl/top.vhd test/top_tb.vhd
-	#ghdl -a $(GHDL_OPTS)  --work=ecp5u /usr/local/diamond/3.10_x64/synpbase/lib/lucent/ecp5u.vhd
-	#ghdl -a $(GHDL_OPTS)  --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/synthesis/vhdl/ecp5u.vhd
-	#ghdl -a $(GHDL_OPTS)  --ieee=synopsys -fexplicit /usr/local/diamond/3.10_x64/cae_library/simulation/vhdl/ecp5u/src/ECP5UCOMP.vhd
-	#ghdl -a $(GHDL_OPTS)  --ieee=synopsys -fexplicit /usr/local/diamond/3.10_x64/cae_library/simulation/vhdl/ecp5u/src/ECP5U_LUT.vhd
-	#ghdl -a $(GHDL_OPTS)  --ieee=synopsys -fexplicit --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/synthesis/vhdl/ecp5u.vhd
-	#ghdl -a $(GHDL_OPTS)  --ieee=synopsys -fexplicit --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/simulation/vhdl/ecp5u/src/.vhd
-	#ghdl -a $(GHDL_OPTS)  --ieee=synopsys -fexplicit --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/simulation/vhdl/ecp5u/src/.vhd
-	#ghdl -a $(GHDL_OPTS)  --ieee=synopsys -fexplicit --work=ecp5u /usr/local/diamond/3.10_x64/cae_library/simulation/vhdl/ecp5u/src/.vhd
-	ghdl -a $(GHDL_OPTS)  rtl/adc_driver/adc_driver.vhd
-	ghdl -a $(GHDL_OPTS)  rtl/top.vhd
-	ghdl -a $(GHDL_OPTS)  test/top_tb.vhd
-	ghdl -e $(GHDL_OPTS) top_tb
-	ghdl -r $(GHDL_OPTS) top_tb --assert-level=warning
-
-
-software_integration_tb: rtl/software_integration.vhd test/software_integration_tb.vhd
-	ghdl -a $(GHDL_OPTS) rtl/software_integration.vhd
-	ghdl -a $(GHDL_OPTS) test/software_integration_tb.vhd
-	ghdl -e $(GHDL_OPTS) software_integration_tb
-	ghdl -r $(GHDL_OPTS) software_integration_tb --assert-level=warning
-
-
 
 wave.vcd:
 	ghdl -r settable_counter_tb --vcd=wave.vcd
-
 uart_expander.vcd: uart_expander_tb
 	ghdl -r uart_expander_tb --vcd=uart_expander.vcd
-
 uart.vcd: uart_tb
 	ghdl -r uart_tb --vcd=uart.vcd
-
 readout_controller.vcd: readout_controller_tb
 	ghdl -r readout_controller_tb --vcd=readout_controller.vcd
 
-top.vcd: top_tb
-	ghdl -r top_tb --vcd=top.vcd
 
-software_integration.vcd: software_integration_tb
-	ghdl -r $(GHDL_OPTS) software_integration_tb --vcd=software_integration.vcd
+
 
 clean:
 	rm -f *-obj93.cf *.vcd *.o
