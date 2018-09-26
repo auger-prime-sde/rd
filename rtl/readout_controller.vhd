@@ -16,10 +16,10 @@ entity readout_controller is
     o_read_enable  : out std_logic := '1';
     o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
     -- interface to uart
-    i_word_ready   : in std_logic;
-    o_tx_enable    : out std_logic := '0';
+    i_uart_ready   : in std_logic;
+    o_data_next    : out std_logic := '0';
     -- interface to host
-    o_tx_ready     : out std_logic := '1';
+    o_data_ready   : out std_logic := '1';
     i_tx_start     : in std_logic
     );
 end readout_controller;
@@ -52,7 +52,7 @@ begin
           o_arm <= '1';
           r_State <= s_Idle;
         when s_Idle =>
-          o_tx_enable <= '0';
+          o_data_next <= '0';
           o_arm <= '0';
           r_read_addr <= i_start_addr;
           if i_trigger_done='1' and i_tx_start='1' then
@@ -62,18 +62,18 @@ begin
           end if;
         when s_Loaded =>
           o_arm <= '0';
-          o_tx_enable <= '1';
-          if i_word_ready = '0' then
+          o_data_next <= '1';
+          if i_uart_ready = '0' then
             r_State <= s_Busy;
           end if;
         when s_Busy =>
           if r_read_addr = std_logic_vector(unsigned(i_start_addr)-1) then
-            o_tx_enable <= '0';
+            o_data_next <= '0';
           --else
-          --  o_tx_enable <= '0';
+          --  o_data_next <= '0';
           end if;
-          if i_word_ready = '1' then
-            --o_tx_enable <= '0';
+          if i_uart_ready = '1' then
+            --o_data_next <= '0';
             r_read_addr <= std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS);
             if std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS) = i_start_addr then
               r_State <= s_Idle;
@@ -83,13 +83,13 @@ begin
               o_arm <= '0';
             end if;
           else
-            --o_tx_enable <= '1';
+            --o_data_next <= '1';
           end if;
       end case;
     end if;
   end process;
 
-  o_tx_ready <= '1' when r_State=s_Idle else '0';
+  o_data_ready <= '1' when r_State=s_Idle else '0';
   o_read_enable <= '1';
   o_read_addr <= r_read_addr;
 

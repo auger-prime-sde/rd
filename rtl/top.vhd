@@ -17,20 +17,20 @@ entity top is
     -- Number of words per sample channels
     g_WORDCOUNT: natural := 4);
   port (
-    dataIn : in std_logic_vector (g_ADC_DRIVER_BITS-1 downto 0);
-    dataOvIn : in std_logic;
-    clk : in std_logic;
-    slow_clk : std_logic;
-    rst : in std_logic;
-    trigger : in std_logic;
+    i_data_in        : in std_logic_vector (g_ADC_DRIVER_BITS-1 downto 0);
+    i_data_overflow  : in std_logic;
+    i_adc_clk        : in std_logic;
+    i_slow_clk       : in std_logic;
+    i_rst            : in std_logic;
+    i_trigger        : in std_logic;
     i_start_transfer : in std_logic;
-    o_data : out std_logic;
-    o_tx_ready : out std_logic;
-    o_uart_clk : out std_logic);
+    o_tx_data        : out std_logic;
+    o_data_ready     : out std_logic;
+    o_uart_clk       : out std_logic);
 end top;
 
 architecture behaviour of top is
-  constant c_SAMPLE_WIDTH : natural := g_ADC_BITS+1;
+  constant c_SAMPLE_WIDTH  : natural := g_ADC_BITS+1;
   constant c_STORAGE_WIDTH : natural := 2*c_SAMPLE_WIDTH;
   constant c_CLOCK_DIVIDER : natural := 1736;
   constant c_CLOCK_SIZE    : natural := 11;
@@ -38,43 +38,43 @@ architecture behaviour of top is
   constant c_ADC_DRIVER_OUTPUT_WIDTH : natural := 2*c_ADC_DRIVER_WIDTH;
 
   signal adc_input_bus : std_logic_vector(c_ADC_DRIVER_WIDTH-1 downto 0);
-  signal adc_data : std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0);
+  signal data : std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0);
   signal adc_data_selected : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
   signal data_output_bus : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
 
   signal buffer_write_en : std_logic;
   signal buffer_read_en : std_logic;
-  signal clk_intern : std_logic;
-  signal clk_uart : std_logic;
+  signal internal_clk : std_logic;
+  signal uart_clk : std_logic;
   signal write_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
   signal read_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
-  signal read_set_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
+  signal start_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
 
-  signal write_trigger_done : std_logic;
-  signal write_arm : std_logic;
+  signal trigger_done : std_logic;
+  signal arm : std_logic;
 
   signal uart_ready : std_logic;
   signal uart_dataready : std_logic;
 
   component adc_driver
     port (
-      clkin: in  std_logic; reset: in  std_logic; sclk: out  std_logic;
-      datain: in  std_logic_vector(c_ADC_DRIVER_WIDTH-1 downto 0);
-      q: out  std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0)
+      clkin  : in  std_logic; reset: in  std_logic; sclk: out  std_logic;
+      datain : in  std_logic_vector(c_ADC_DRIVER_WIDTH-1 downto 0);
+      q      : out std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0)
     );
   end component;
 
   component data_buffer
     generic (g_DATA_WIDTH, g_ADDRESS_WIDTH : natural);
     port (
-      i_wclk : in std_logic;
-      i_we : in std_logic;
-      i_waddr : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
-      i_wdata : in std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
-      i_rclk : in std_logic;
-      i_re: in std_logic;
-      i_raddr : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
-      o_rdata : out std_logic_vector(c_STORAGE_WIDTH-1 downto 0)
+      i_write_clk   : in  std_logic;
+      i_write_enable: in  std_logic;
+      i_write_addr  : in  std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
+      i_write_data  : in  std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
+      i_read_clk    : in  std_logic;
+      i_read_enable : in  std_logic;
+      i_read_addr   : in  std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
+      o_read_data   : out std_logic_vector(c_STORAGE_WIDTH-1 downto 0)
     );
   end component;
 
@@ -82,7 +82,7 @@ architecture behaviour of top is
     generic ( g_SIZE : natural );
     port (
       i_clk: in std_logic;
-      o_q: out std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0)
+      o_count: out std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0)
     );
   end component;
 
@@ -119,9 +119,9 @@ architecture behaviour of top is
       o_arm          : out std_logic := '0';
       o_read_enable  : out std_logic := '1';
       o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-      i_word_ready   : in std_logic;
-      o_tx_enable    : out std_logic := '0';
-      o_tx_ready     : out std_logic := '1';
+      i_uart_ready   : in std_logic;
+      o_data_next    : out std_logic := '0';
+      o_data_ready   : out std_logic := '1';
       i_tx_start     : in std_logic
     );
   end component;
@@ -130,49 +130,49 @@ architecture behaviour of top is
   component clock_divider
     port (
       i_clk: in std_logic;
-      o_q: out std_logic
+      o_clk: out std_logic
     );
   end component;
 
 begin
-  adc_input_bus <= dataOvIn & dataIn;
-  o_uart_clk <= clk_uart;
+  adc_input_bus <= i_data_overflow & i_data_in;
+  o_uart_clk <= uart_clk;
 
 clock_divider_uart : clock_divider
   port map (
-    i_clk => slow_clk,
-    o_q => clk_uart);
+    i_clk => i_slow_clk,
+    o_clk => uart_clk);
 
 adc_driver_1 : adc_driver
   port map (
-    clkin => clk,
-    reset => rst,
-    sclk => clk_intern,
+    clkin  => i_adc_clk,
+    reset  => i_rst,
+    sclk   => internal_clk,
     datain =>  adc_input_bus,
-    q => adc_data);
+    q      => data);
 
   adc_data_selected <=
-    adc_data(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto c_ADC_DRIVER_OUTPUT_WIDTH-g_ADC_BITS-1) &
-    adc_data(c_ADC_DRIVER_OUTPUT_WIDTH/2-1 downto g_ADC_DRIVER_BITS - g_ADC_BITS);
+    data(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto c_ADC_DRIVER_OUTPUT_WIDTH-g_ADC_BITS-1) &
+    data(c_ADC_DRIVER_OUTPUT_WIDTH/2-1 downto g_ADC_DRIVER_BITS - g_ADC_BITS);
 
 
 write_index_counter : simple_counter
   generic map (g_SIZE => g_BUFFER_INDEXSIZE)
   port map (
-    i_clk => clk_intern,
-    o_q => write_address);
+    i_clk   => internal_clk,
+    o_count => write_address);
 
 data_buffer_1 : data_buffer
   generic map (g_ADDRESS_WIDTH => g_BUFFER_INDEXSIZE, g_DATA_WIDTH => c_STORAGE_WIDTH)
   port map (
-    i_wclk => clk_intern,
-    i_we => buffer_write_en,
-    i_waddr => write_address,
-    i_rclk => clk_uart,
-    i_re => buffer_read_en,
-    i_raddr => read_address,
-    i_wdata => adc_data_selected,
-    o_rdata => data_output_bus);
+    i_write_clk    => internal_clk,
+    i_write_enable => buffer_write_en,
+    i_write_addr   => write_address,
+    i_read_clk     => uart_clk,
+    i_read_enable  => buffer_read_en,
+    i_read_addr    => read_address,
+    i_write_data   => adc_data_selected,
+    o_read_data    => data_output_bus);
 
 uart_1 : uart_expander
   generic map (g_WORDSIZE => g_WORDSIZE, g_WORDCOUNT => g_WORDCOUNT)
@@ -182,37 +182,34 @@ uart_1 : uart_expander
     i_data(26 downto 14)  => data_output_bus(25 downto 13),
     i_data(13)            => '0',
     i_data(27)            => '0',
-    i_dataready => uart_dataready,
-    i_clk       => clk_uart,
-    o_data      => o_data,
-    o_ready     => uart_ready
-    );
+    i_dataready           => uart_dataready,
+    i_clk                 => uart_clk,
+    o_data                => o_tx_data,
+    o_ready               => uart_ready);
 
 write_controller_1 : write_controller
   generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 1023)
   port map (
-    i_clk => clk_intern,
-    i_trigger => trigger,
-    i_curr_addr => write_address,
-    i_arm => write_arm,
-    o_write_en => buffer_write_en,
-    o_start_addr => read_set_address,
-    o_trigger_done => write_trigger_done
-    );
+    i_clk          => internal_clk,
+    i_trigger      => i_trigger,
+    i_curr_addr    => write_address,
+    i_arm          => arm,
+    o_write_en     => buffer_write_en,
+    o_start_addr   => start_address,
+    o_trigger_done => trigger_done);
 
-  readout_controller_1 : readout_controller
-    generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE)
-    port map (
-      i_clk => clk_uart,
-      i_trigger_done => write_trigger_done,
-      i_start_addr   => read_set_address,
-      o_arm          => write_arm,
-      o_read_enable  => buffer_read_en,
-      o_read_addr    => read_address,
-      i_word_ready   => uart_ready,
-      o_tx_enable    => uart_dataready,
-      o_tx_ready     => o_tx_ready,
-      i_tx_start     => i_start_transfer
-   );
+readout_controller_1 : readout_controller
+  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE)
+  port map (
+    i_clk          => uart_clk,
+    i_trigger_done => trigger_done,
+    i_start_addr   => start_address,
+    o_arm          => arm,
+    o_read_enable  => buffer_read_en,
+    o_read_addr    => read_address,
+    i_uart_ready   => uart_ready,
+      o_data_next  => uart_dataready,
+    o_data_ready   => o_data_ready,
+    i_tx_start     => i_start_transfer);
 
 end;

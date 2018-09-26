@@ -10,15 +10,15 @@ entity data_buffer is
     g_ADDRESS_WIDTH : natural := 11);
 	port (
     -- Write port
-		i_wclk : in std_logic;
-		i_we : in std_logic;
-		i_waddr : in std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
-		i_wdata : in std_logic_vector(g_DATA_WIDTH-1 downto 0);
+		i_write_clk : in std_logic;
+		i_write_enable : in std_logic;
+		i_write_addr : in std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
+		i_write_data : in std_logic_vector(g_DATA_WIDTH-1 downto 0);
     -- Read port
-		i_rclk : in std_logic;
-		i_re: in std_logic;
-		i_raddr : in std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
-		o_rdata : out std_logic_vector(g_DATA_WIDTH-1 downto 0)
+		i_read_clk : in std_logic;
+		i_read_enable: in std_logic;
+		i_read_addr : in std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
+		o_read_data : out std_logic_vector(g_DATA_WIDTH-1 downto 0)
 	);
 end data_buffer;
 
@@ -31,23 +31,23 @@ architecture behavioral of data_buffer is
 	attribute syn_ramstyle of ram : signal is "block_ram";
 
 begin
-	process (i_wclk)
+	process (i_write_clk)
 	begin
-		if rising_edge(i_wclk) then
-			if i_we='1' then
-				ram(to_integer(unsigned(i_waddr)))<=i_wdata;
+		if rising_edge(i_write_clk) then
+			if i_write_enable='1' then
+				ram(to_integer(unsigned(i_write_addr)))<=i_write_data;
 			end if;
 		end if;
 	end process;
 
-	process (i_rclk)
+	process (i_read_clk)
 	begin
-		if rising_edge(i_rclk) then
-			if i_re='1' then
-				read_addr<=i_raddr;
+		if rising_edge(i_read_clk) then
+			if i_read_enable='1' then
+				read_addr<=i_read_addr;
 			end if;
 		end if;
 	end process;
 
-	o_rdata <=ram(to_integer(unsigned(read_addr)));
+	o_read_data <=ram(to_integer(unsigned(read_addr)));
 end behavioral;

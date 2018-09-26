@@ -8,7 +8,7 @@ entity simple_counter is
     generic (g_SIZE : natural := 11);
     port (
         i_clk: in  std_logic;
-        o_q: out  std_logic_vector(g_SIZE-1 downto 0));
+        o_count: out  std_logic_vector(g_SIZE-1 downto 0));
 end simple_counter;
 
 architecture behavior of simple_counter is
@@ -24,5 +24,5 @@ begin
 		end if;
 	end process;
 
-	o_q <= std_logic_vector(to_unsigned(r_count, o_q'length));
+	o_count <= std_logic_vector(to_unsigned(r_count, o_count'length));
 end;
