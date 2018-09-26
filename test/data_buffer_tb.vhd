@@ -5,44 +5,44 @@ entity data_buffer_tb is
 end data_buffer_tb;
 
 architecture behavior of data_buffer_tb is
-	constant address_width : natural := 12;
-	constant data_width : natural := 32;
-	constant clk_period : time := 10 ns;
+  constant address_width : natural := 12;
+  constant data_width : natural := 32;
+  constant clk_period : time := 10 ns;
 
   signal i_wclk, i_we, i_rclk, i_re : std_logic := '0';
   signal i_wdata, o_rdata : std_logic_vector(data_width-1 downto 0) := (others => '0');
   signal i_waddr, i_raddr : std_logic_vector(address_width-1 downto 0) := (others => '0');
   signal stop : std_logic := '0';
 
-	component data_buffer is
-		generic (g_DATA_WIDTH, g_ADDRESS_WIDTH : natural);
-		port (
+  component data_buffer is
+    generic (g_DATA_WIDTH, g_ADDRESS_WIDTH : natural);
+    port (
       -- Write port
-      i_wclk : in std_logic;
-      i_we : in std_logic;
-      i_waddr : in std_logic_vector(address_width-1 downto 0);
-      i_wdata : in std_logic_vector(data_width-1 downto 0);
+      i_write_clk   : in std_logic;
+      i_write_enable : in std_logic;
+      i_write_addr   : in std_logic_vector(address_width-1 downto 0);
+      i_write_data   : in std_logic_vector(data_width-1 downto 0);
       -- Read port
-      i_rclk : in std_logic;
-      i_re: in std_logic;
-	    i_raddr : in std_logic_vector(address_width-1 downto 0);
-		  o_rdata : out std_logic_vector(data_width-1 downto 0)
+      i_read_clk     : in std_logic;
+      i_read_enable  : in std_logic;
+      i_read_addr    : in std_logic_vector(address_width-1 downto 0);
+      o_read_data    : out std_logic_vector(data_width-1 downto 0)
     );
-	end component;
+  end component;
 
 begin
   -- DUT instantiation
   dut : data_buffer
     generic map (g_DATA_WIDTH => data_width, g_ADDRESS_WIDTH => address_width)
     port map (
-      i_wclk => i_wclk,
-      i_we => i_we,
-      i_waddr => i_waddr,
-      i_wdata => i_wdata,
-      i_rclk => i_rclk,
-      i_re => i_re,
-      i_raddr => i_raddr,
-      o_rdata => o_rdata);
+      i_write_clk    => i_wclk,
+      i_write_enable => i_we,
+      i_write_addr   => i_waddr,
+      i_write_data   => i_wdata,
+      i_read_clk     => i_rclk,
+      i_read_enable  => i_re,
+      i_read_addr    => i_raddr,
+      o_read_data    => o_rdata);
 
   p_wclk : process is
   begin

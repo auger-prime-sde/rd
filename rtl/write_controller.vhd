@@ -46,10 +46,10 @@ begin
           else
             r_controller_state <= s_Idle;
           end if;
-		when s_Armed =>
-		  -- wait for at least half the buffer to be filled
-		  r_start_addr <= r_start_addr;
-          r_count <= r_count + 1;
+        when s_Armed =>
+          -- wait for at least half the buffer to be filled
+          r_start_addr <= r_start_addr;
+          r_count <= (r_count + 1) mod (c_DELAY_COUNT+1);
 
           if r_count < c_DELAY_COUNT  then
             r_controller_state <= s_Armed;
@@ -83,13 +83,13 @@ begin
             r_controller_state <= s_Idle;
           end if;
       end case;
-	  if r_controller_state = s_Idle then
-		o_trigger_done <= '1';
-		o_write_en <= '0';
-	  else
-		o_trigger_done <= '0';
-		o_write_en <= '1';
-	end if;  
+      if r_controller_state = s_Idle then
+        o_trigger_done <= '1';
+        o_write_en <= '0';
+      else
+        o_trigger_done <= '0';
+        o_write_en <= '1';
+      end if;  
     end if;  -- if rising_edge(i_clk)
   end process;
 

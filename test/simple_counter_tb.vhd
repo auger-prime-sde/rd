@@ -14,7 +14,7 @@ architecture behavior of simple_counter_tb is
 
   component simple_counter is
     generic (g_SIZE : natural);
-    port (i_clk : in std_logic; o_q : out std_logic_vector(g_SIZE-1 downto 0));
+    port (i_clk : in std_logic; o_count : out std_logic_vector(g_SIZE-1 downto 0));
   end component;
 
 begin
@@ -23,7 +23,7 @@ begin
     generic map (g_SIZE => width)
     port map (
       i_clk => clk,
-      o_q => q);
+      o_count => q);
 
   p_clk : process is
   begin

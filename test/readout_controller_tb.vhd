@@ -31,9 +31,9 @@ architecture behavior of readout_controller_tb is
       o_arm          : out std_logic := '0';
       o_read_enable  : out std_logic := '1';
       o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-      i_word_ready   : in std_logic;
-      o_tx_enable    : out std_logic := '0';
-      o_tx_ready     : out std_logic := '1';
+      i_uart_ready   : in std_logic;
+      o_data_next    : out std_logic := '0';
+      o_data_ready   : out std_logic := '1';
       i_tx_start     : in std_logic
     );
   end component;
@@ -49,9 +49,9 @@ begin
       o_arm => o_arm,
       o_read_enable => o_read_enable,
       o_read_addr => o_read_addr,
-      i_word_ready => i_word_ready,
-      o_tx_enable => o_tx_enable,
-      o_tx_ready => o_tx_ready,
+      i_uart_ready => i_word_ready,
+      o_data_next => o_tx_enable,
+      o_data_ready => o_tx_ready,
       i_tx_start => i_tx_start
     );
 
@@ -99,7 +99,9 @@ begin
         wait for 100 ns;
         i_word_ready <= '1';
         --assert o_read_addr = std_logic_vector(unsigned(i_start_addr)+i);
-        assert o_tx_enable = '1';
+        if i < 2048 then
+          assert o_tx_enable = '1';
+        end if;
         assert o_tx_ready = '0';
         assert o_arm = '0';
         -- word ready means that the next word can be loaded but it actually

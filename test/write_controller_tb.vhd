@@ -37,8 +37,8 @@ architecture behavior of write_controller_tb is
   component simple_counter is
     generic (g_SIZE : natural);
     port (
-      i_clk : in std_logic;
-      o_q   : out std_logic_vector(g_SIZE-1 downto 0)
+      i_clk   : in std_logic;
+      o_count : out std_logic_vector(g_SIZE-1 downto 0)
     );
   end component;
 
@@ -57,7 +57,7 @@ begin
 
   write_counter : simple_counter
     generic map (g_SIZE => address_width)
-    port map ( i_clk => clk, o_q => curr_addr );
+    port map ( i_clk => clk, o_count => curr_addr );
 
   p_clk : process is
   begin
@@ -88,13 +88,15 @@ begin
     arm <= '0';
     wait for 90 ns;
     assert write_en = '1' report "Buffer not writing when armed" severity error;
-
+    -- wait for enough data to accumulate
+    wait for clk_period * 100;
+    
     -- Generates start address when triggered
     trigger <= '1';
     wait for 15 ns;
     trigger <= '0';
     -- Currently starting the 18th clock cycle, check if offset was calculated correctly
-    assert unsigned(start_addr) = 18-start_offset report "Wrong start address generated" severity error;
+    assert unsigned(start_addr) = 22-start_offset report "Wrong start address generated" severity error;
 
     -- Check trigger finish
     wait for 340 ns;
@@ -114,7 +116,7 @@ begin
     trigger <= '0';
     wait for 300 ns;
     -- Finish
-    assert unsigned(start_addr) = 33-start_offset report "Wrong start address generated (wraparound)" severity error;
+    assert unsigned(start_addr) = 22-start_offset report "Wrong start address generated (wraparound)" severity error;
 
     wait for 10 ns;
     stop <= '1';

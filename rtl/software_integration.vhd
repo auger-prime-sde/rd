@@ -49,14 +49,14 @@ architecture behaviour of software_integration is
   component data_buffer
     generic (g_DATA_WIDTH, g_ADDRESS_WIDTH : natural);
     port (
-      i_wclk : in std_logic;
-      i_we : in std_logic;
-      i_waddr : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
-      i_wdata : in std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
-      i_rclk : in std_logic;
-      i_re: in std_logic;
-      i_raddr : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
-      o_rdata : out std_logic_vector(c_STORAGE_WIDTH-1 downto 0)
+      i_write_clk : in std_logic;
+      i_write_enable : in std_logic;
+      i_write_addr : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
+      i_write_data : in std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
+      i_read_clk : in std_logic;
+      i_read_enable: in std_logic;
+      i_read_addr : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
+      o_read_data : out std_logic_vector(c_STORAGE_WIDTH-1 downto 0)
     );
   end component;
 
@@ -64,7 +64,7 @@ architecture behaviour of software_integration is
     generic ( g_SIZE : natural );
     port (
       i_clk: in std_logic;
-      o_q: out std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0)
+      o_count: out std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0)
     );
   end component;
 
@@ -101,9 +101,9 @@ architecture behaviour of software_integration is
       o_arm          : out std_logic := '1';
       o_read_enable  : out std_logic := '1';
       o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-      i_word_ready   : in std_logic;
-      o_tx_enable    : out std_logic := '0';
-      o_tx_ready     : out std_logic := '1';
+      i_uart_ready   : in std_logic;
+      o_data_next    : out std_logic := '0';
+      o_data_ready   : out std_logic := '1';
       i_tx_start     : in std_logic
     );
   end component;
@@ -116,20 +116,20 @@ begin
 write_index_counter : simple_counter
   generic map (g_SIZE => g_BUFFER_INDEXSIZE)
   port map (
-    i_clk => clk_intern,
-    o_q => write_address);
+    i_clk   => clk_intern,
+    o_count => write_address);
 
 data_buffer_1 : data_buffer
   generic map (g_ADDRESS_WIDTH => g_BUFFER_INDEXSIZE, g_DATA_WIDTH => c_STORAGE_WIDTH)
   port map (
-    i_wclk => clk_intern,
-    i_we => buffer_write_en,
-    i_waddr => write_address,
-    i_rclk => clk_uart,
-    i_re => buffer_read_en,
-    i_raddr => read_address,
-    i_wdata => i_data,
-    o_rdata => data_output_bus);
+    i_write_clk => clk_intern,
+    i_write_enable => buffer_write_en,
+    i_write_addr => write_address,
+    i_read_clk => clk_uart,
+    i_read_enable => buffer_read_en,
+    i_read_addr => read_address,
+    i_write_data => i_data,
+    o_read_data => data_output_bus);
 
 uart_1 : uart_expander
   generic map (g_WORDSIZE => g_UART_WORDSIZE, g_WORDCOUNT => 4)
@@ -166,9 +166,9 @@ write_controller_1 : write_controller
       o_arm          => write_arm,
       o_read_enable  => buffer_read_en,
       o_read_addr    => read_address,
-      i_word_ready   => uart_ready,
-      o_tx_enable    => uart_dataready,
-      o_tx_ready     => o_transfer_done,
+      i_uart_ready   => uart_ready,
+      o_data_next    => uart_dataready,
+      o_data_ready   => o_transfer_done,
       i_tx_start     => i_start_transfer
    );
 
