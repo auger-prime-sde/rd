@@ -4,7 +4,7 @@
         <Option name="HDL type" value="VHDL"/>
     </Options>
     <Implementation title="impl1" dir="impl1" description="impl1" synthesis="lse" default_strategy="Strategy1">
-        <Options top="top"/>
+        <Options def_top="top" top="top"/>
         <Source name="rtl/data_buffer.vhd" type="VHDL" type_short="VHDL">
             <Options/>
         </Source>
@@ -13,9 +13,6 @@
         </Source>
         <Source name="rtl/top.vhd" type="VHDL" type_short="VHDL">
             <Options top_module="top"/>
-        </Source>
-        <Source name="rtl/software_integration.vhd" type="VHDL" type_short="VHDL">
-            <Options/>
         </Source>
         <Source name="rtl/adc_driver/adc_driver.sbx" type="sbx" type_short="SBX">
             <Options/>
