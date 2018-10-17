@@ -1,8 +1,8 @@
 .PHONY: clean wave.vcd all data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb
 
-#GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93 
+#GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93
 
-all: data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb top_tb
+all: data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb
 
 
 clock_divider_tb: rtl/clock_divider.vhd test/clock_divider_tb.vhd
