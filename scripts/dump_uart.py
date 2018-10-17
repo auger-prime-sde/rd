@@ -8,7 +8,7 @@ import scipy.signal as sig
 
 dev          = serial.Serial()
 dev.port     = '/dev/ttyUSB0'
-dev.baudrate = 1000000
+dev.baudrate = 500000
 dev.timeout  = 1
 dev.bytesize = 7
 dev.dtr      = 1

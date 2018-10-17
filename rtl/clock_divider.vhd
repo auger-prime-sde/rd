@@ -12,7 +12,7 @@ end clock_divider;
 
 architecture behavior of clock_divider is
   --constant MAX_COUNT : integer := 8; -- 40MHz clock / 8 = 5MHz
-  constant MAX_COUNT : integer := 40; -- 40MHz clock / 40 = 1MHz
+  constant MAX_COUNT : integer := 80; -- 40MHz clock / 40 = 1MHz
   --constant MAX_COUNT : integer := 347; -- 40MHz clock / 347 ~= 115200 baud
 
   signal r_count : natural range 0 to MAX_COUNT-1 := 0;
