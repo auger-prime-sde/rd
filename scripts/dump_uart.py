@@ -6,6 +6,10 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal as sig
 
+## Number of FFTs to average
+averages = 4
+
+## Port setup
 dev          = serial.Serial()
 dev.port     = '/dev/ttyUSB0'
 dev.baudrate = 500000
@@ -83,10 +87,10 @@ def fft_from_samples(data):
     x = np.linspace(0.0, N*T, N)
     xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
 
-    fig, ax = plt.subplots()
-    ax.plot(x, y)
-    ax.set_xlabel("time (us)")
-    ax.set_ylabel("input level (V)")
+#    fig, ax = plt.subplots()
+#    ax.plot(x, y)
+#    ax.set_xlabel("time (us)")
+#    ax.set_ylabel("input level (V)")
 
     # Apply windowing function (7-term Blackman-Harris)
     # Compute FFT, default size = data size
@@ -112,48 +116,31 @@ def fft_from_samples(data):
     ypowl = 2*1000*np.abs(yf[:N//2])**2/50
     ypow = 10*np.log10(ypowl)
 
+    return (xf, ypow+CPGdB)
+
+def print_fft(xf, ypow):
     # Start plotting things
     fig, ax = plt.subplots()
-    ax.plot(xf, ypow+CPGdB)
+    ax.plot(xf, ypow)
     ax.set_ylabel("power (dBm)")
     ax.set_xlabel("frequency (MHz)")
 
     # Locate peak value
     peak = np.argmax(ypow)
-    ax.plot(xf[peak], ypow[peak]+CPGdB, "ro")
-
-    # Plot label with statistics for peak
-    # Compute equivalent noise bandwidth for our window and determine SINAD to add to labels
-    ENBW = N * np.sum(w**2)/np.sum(w)**2
-    ENBWdB = 10*np.log10(ENBW)
-
-    # Processing gain
-    PGdB = 10*np.log10(2.0/N)
-
-    # TODO fix the computations here...
-    #print("GPG={3:.2f}dB, ENBW={0:.2f}dB, PG={1:.2f}dB, N={2}".format(ENBWdB, PGdB, N, CPGdB))
-    #peak_width=20
-
-    #NF = 10*np.log10(np.sum(ypowl[:peak-peak_width])+np.sum(ypowl[peak+peak_width:]))
-    #NFtrue = NF + CPGdB + PGdB - ENBWdB
-    #SINAD = ypow[peak]-NFtrue
-
-    # Place labels
-    #plt.annotate(
-    #  "{0:.2f}dBm @ {1:.2f}MHz (bin {5})\nNF={3:.2f}dBm, SINAD={2:.2f}dB\nENOB={4:.2f}bit".format(ypow[peak]+CPGdB, xf[peak], SINAD, NFtrue, (SINAD-1.76)/6.02, peak),
-    #  xy=(xf[peak],ypow[peak]+CPGdB),
-    #  xytext=(220,-20),
-    #  textcoords='offset points',
-    #  ha='right', va='bottom',
-    #  bbox=dict(boxstyle='round,pad=0.5', fc='yellow', alpha=0.5),
-    #  arrowprops=dict(arrowstyle = '->', connectionstyle='arc3,rad=0'))
-
+    ax.plot(xf[peak], ypow[peak], "ro")
 
 ##
 # Example run code
 ##
-(ch1, ch2) = read_samples()
-fft_from_samples(ch1)
+ypow = np.zeros(1024, dtype='float')
+for i in range(1, averages):
+    (ch1, ch2) = read_samples()
+    (xf, ypow_new) = fft_from_samples(ch2)
+    ypow += ypow_new
+
+ypow = ypow / averages
+
+print_fft(xf, ypow)
 
 ##
 # Fix plotting in interactive mode...
