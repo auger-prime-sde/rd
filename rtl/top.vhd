@@ -188,7 +188,7 @@ uart_1 : uart_expander
     o_ready               => uart_ready);
 
 write_controller_1 : write_controller
-  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 1023)
+  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 1024)
   port map (
     i_clk          => internal_clk,
     i_trigger      => i_trigger,

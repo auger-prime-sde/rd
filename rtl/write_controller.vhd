@@ -49,9 +49,9 @@ begin
         when s_Armed =>
           -- wait for at least half the buffer to be filled
           r_start_addr <= r_start_addr;
-          r_count <= (r_count + 1) mod (c_DELAY_COUNT+1);
+          r_count <= r_count + 1;
 
-          if r_count < c_DELAY_COUNT  then
+          if r_count < c_DELAY_COUNT - 1 then
             r_controller_state <= s_Armed;
           else
             r_controller_state <= s_ArmReady;
