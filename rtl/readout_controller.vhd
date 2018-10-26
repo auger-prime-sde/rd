@@ -4,7 +4,8 @@ use ieee.numeric_std.all;
 
 entity readout_controller is
   generic (
-    g_ADDRESS_BITS : natural := 11
+    g_ADDRESS_BITS : natural := 11;
+    g_WORDSIZE : natural := 13
     );
   port (
     i_clk       : in std_logic;
@@ -16,10 +17,8 @@ entity readout_controller is
     o_read_enable  : out std_logic := '1';
     o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
     -- interface to uart
-    i_uart_ready   : in std_logic;
-    o_data_next    : out std_logic := '0';
+    o_tx_enable    : out std_logic := '0';
     -- interface to host
-    o_data_ready   : out std_logic := '1';
     i_tx_start     : in std_logic
     );
 end readout_controller;
@@ -27,20 +26,12 @@ end readout_controller;
 
 architecture behave of readout_controller is
   -- state machine type:
-  type t_State is (s_Initial, s_Idle, s_Loaded, s_Busy);
-  -- initial is only for the first clockcycle to force an arm signal to the
-  -- write controller.
-  -- loaded and busy are both states in which the machine is transmitting.
-  -- busy indicates that the previous word is in transmission.
-  -- loaded means that the next word has already been loaded and we are waiting
-  -- for the uart to start transmitting that word.
+  type t_State is (s_Initial, s_Idle, s_Busy, s_Arm);
   -- variables:
   signal r_State : t_State := s_Initial;
   signal r_read_addr : std_logic_vector(g_ADDRESS_BITS-1 downto 0);
+  signal r_Count : natural  range 0 to g_WORDSIZE-1 := 0;
 
-  signal is_idle : std_logic;
-  signal is_loaded : std_logic;
-  signal is_busy : std_logic;
   
 begin
 --  main program
@@ -52,49 +43,37 @@ begin
           o_arm <= '1';
           r_State <= s_Idle;
         when s_Idle =>
-          o_data_next <= '0';
+          o_tx_enable <= '0';
           o_arm <= '0';
           r_read_addr <= i_start_addr;
           if i_trigger_done='1' and i_tx_start='1' then
-            r_State <= s_Loaded;
-          else
-            r_State <= s_Idle;
-          end if;
-        when s_Loaded =>
-          o_arm <= '0';
-          o_data_next <= '1';
-          if i_uart_ready = '0' then
             r_State <= s_Busy;
+            r_Count <= 0;
+            o_tx_enable <= '1';
           end if;
         when s_Busy =>
-          if r_read_addr = std_logic_vector(unsigned(i_start_addr)-1) then
-            o_data_next <= '0';
-          --else
-          --  o_data_next <= '0';
-          end if;
-          if i_uart_ready = '1' then
-            --o_data_next <= '0';
+          r_Count <= (r_Count + 1) mod g_WORDSIZE;
+          if r_Count = g_WORDSIZE-1 then
             r_read_addr <= std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS);
-            if std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS) = i_start_addr then
-              r_State <= s_Idle;
+            if r_read_addr = std_logic_vector(unsigned(i_start_addr)-1) then
+              o_tx_enable <= '0';
               o_arm <= '1';
+              r_State <= s_Arm;
             else
-              r_State <= s_Loaded;
-              o_arm <= '0';
+              o_tx_enable <= '1';
             end if;
-          else
-            --o_data_next <= '1';
+          end if;
+        when s_Arm =>
+          if i_trigger_done = '0' then
+            r_State <= s_Idle;
           end if;
       end case;
     end if;
   end process;
 
-  o_data_ready <= '1' when r_State=s_Idle else '0';
   o_read_enable <= '1';
   o_read_addr <= r_read_addr;
 
-  is_busy <= '1' when r_State = s_Busy else '0';
-  is_loaded <= '1' when r_State = s_Loaded else '0';
-  is_idle <= '1' when r_State = s_Idle else '0';
+
 end behave;
 

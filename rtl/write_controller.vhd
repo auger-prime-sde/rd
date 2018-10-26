@@ -29,7 +29,7 @@ architecture behavior of write_controller is
   signal r_controller_state : t_controller_state := s_Idle;
   signal r_start_addr : natural range 0 to 2**g_ADDRESS_BITS-1 := 0;
   signal r_count : natural range 0 to c_DELAY_COUNT := 0;
-  signal test_count : std_logic_vector(11 downto 0) := (others => '0');
+  --signal test_count : std_logic_vector(11 downto 0) := (others => '0');
 
 begin
   p_main : process (i_clk) is
@@ -75,7 +75,7 @@ begin
           --    send signal to the read controller,
           --    and go to idle
           r_start_addr <= r_start_addr;
-          r_count <= r_count + 1;
+          r_count <= (r_count + 1) ;
 
           if r_count < c_DELAY_COUNT - 1 then
             r_controller_state <= s_Triggered;
@@ -94,6 +94,6 @@ begin
   end process;
 
 
-  test_count <= std_logic_vector(to_unsigned(r_Count,12));
+  --test_count <= std_logic_vector(to_unsigned(r_Count,12));
   o_start_addr <= std_logic_vector(to_unsigned(r_start_addr, o_start_addr'length));
 end behavior;

@@ -14,13 +14,11 @@ architecture behavior of readout_controller_tb is
   signal i_start_addr : std_logic_vector(width-1 downto 0);
   signal i_trigger_done : std_logic;
   signal i_tx_start : std_logic;
-  signal i_word_ready : std_logic;
-
+  
   signal o_arm : std_logic := '0';
   signal o_read_addr : std_logic_vector(width-1 downto 0);
   signal o_read_enable : std_logic;
   signal o_tx_enable : std_logic;
-  signal o_tx_ready : std_logic;
 
   component readout_controller is
     generic (g_ADDRESS_BITS : natural);
@@ -31,9 +29,7 @@ architecture behavior of readout_controller_tb is
       o_arm          : out std_logic := '0';
       o_read_enable  : out std_logic := '1';
       o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-      i_uart_ready   : in std_logic;
-      o_data_next    : out std_logic := '0';
-      o_data_ready   : out std_logic := '1';
+      o_tx_enable    : out std_logic := '0';
       i_tx_start     : in std_logic
     );
   end component;
@@ -49,9 +45,7 @@ begin
       o_arm => o_arm,
       o_read_enable => o_read_enable,
       o_read_addr => o_read_addr,
-      i_uart_ready => i_word_ready,
-      o_data_next => o_tx_enable,
-      o_data_ready => o_tx_ready,
+      o_tx_enable => o_tx_enable,
       i_tx_start => i_tx_start
     );
 
@@ -78,47 +72,22 @@ begin
     i_tx_start <= '0'; 
     i_trigger_done <= '1';
     i_start_addr <= std_logic_vector(to_unsigned(42, width));
-    i_word_ready <= '1';
+    
+    
+    wait for 1051 ns;
 
-    for rep in 1 to 3 loop
-      wait for 51 ns;
+    i_tx_start <= '1';
+    wait for 100*clk_period;
+    i_tx_start <= '0';
+            
 
-      -- trigger a readout
-      i_tx_start <= '1';
-      -- wait until the unit starts transmitting
-      wait until o_tx_enable = '1';
-      assert o_read_addr = i_start_addr;
-      assert o_arm = '0';
-      assert o_tx_ready = '0';
-      -- prevent immediate retrigger
-      i_tx_start <= '0';
-      
-      for i in 1 to 2048 loop
-        -- pretend to be transmitting data for a while
-        i_word_ready <= '0';
-        wait for 100 ns;
-        i_word_ready <= '1';
-        --assert o_read_addr = std_logic_vector(unsigned(i_start_addr)+i);
-        if i < 2048 then
-          assert o_tx_enable = '1';
-        end if;
-        assert o_tx_ready = '0';
-        assert o_arm = '0';
-        -- word ready means that the next word can be loaded but it actually
-        -- continues to be busy sending data for 2 additional clock cycles.
-        wait for 2*clk_period;
+    wait for 13*2048*clk_period - 100 * clk_period;
         
-      end loop;
+    --wait for 3 * clk_period;
+    i_trigger_done <= '0';
+    
 
-      --assert o_arm = '1';
-      assert o_tx_enable = '0';
-      assert o_tx_ready = '1';
-    end loop; 
-
-        
-      
-
-    wait for 1000 ns;
+    wait for 100 us;
     
     stop <= '1';
     wait;

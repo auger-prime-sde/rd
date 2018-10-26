@@ -13,9 +13,8 @@ entity top is
     -- Number of bits in index counters (11 gives 2048 samples stored)
     g_BUFFER_INDEXSIZE : natural := 11;
     -- Number of bits in serial words
-    g_WORDSIZE : natural := 7;
-    -- Number of words per sample channels
-    g_WORDCOUNT: natural := 4);
+    g_WORDSIZE : natural := 13 );
+
   port (
     i_data_in        : in std_logic_vector (g_ADC_DRIVER_BITS-1 downto 0);
     i_data_overflow  : in std_logic;
@@ -24,8 +23,9 @@ entity top is
     i_rst            : in std_logic;
     i_trigger        : in std_logic;
     i_start_transfer : in std_logic;
-    o_tx_data        : out std_logic;
-    o_data_ready     : out std_logic;
+    o_tx_data        : out std_logic_vector(1 downto 0);
+    o_tx_clk         : out std_logic;
+    o_tx_datavalid   : out std_logic;
     o_uart_clk       : out std_logic);
 end top;
 
@@ -53,9 +53,8 @@ architecture behaviour of top is
   signal trigger_done : std_logic;
   signal arm : std_logic;
 
-  signal uart_ready : std_logic;
-  signal uart_dataready : std_logic;
-
+  signal tx_enable : std_logic;
+  
   component adc_driver
     port (
       clkin  : in  std_logic; reset: in  std_logic; sclk: out  std_logic;
@@ -86,14 +85,16 @@ architecture behaviour of top is
     );
   end component;
 
-  component uart_expander
-    generic (g_WORDSIZE: natural; g_WORDCOUNT : natural);
+  component data_writer
+    generic (g_WORDSIZE: natural);
     port (
-      i_data      : in std_logic_vector(g_WORDCOUNT*g_WORDSIZE-1 downto 0);
+      i_data      : in std_logic_vector(2*g_WORDSIZE-1 downto 0);
       i_dataready : in std_logic;
       i_clk       : in std_logic;
-      o_data      : out std_logic;
-      o_ready     : out std_logic
+      o_data_1    : out std_logic;
+      o_data_2    : out std_logic;
+      o_valid     : out std_logic;
+      o_clk       : out std_logic
     );
   end component;
 
@@ -111,7 +112,7 @@ architecture behaviour of top is
   end component;
 
   component readout_controller
-    generic (g_ADDRESS_BITS : natural);
+    generic (g_ADDRESS_BITS : natural; g_WORDSIZE : natural);
     port (
       i_clk          : in std_logic;
       i_trigger_done : in std_logic;
@@ -119,9 +120,7 @@ architecture behaviour of top is
       o_arm          : out std_logic := '0';
       o_read_enable  : out std_logic := '1';
       o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-      i_uart_ready   : in std_logic;
-      o_data_next    : out std_logic := '0';
-      o_data_ready   : out std_logic := '1';
+      o_tx_enable    : out std_logic := '0';
       i_tx_start     : in std_logic
     );
   end component;
@@ -174,18 +173,18 @@ data_buffer_1 : data_buffer
     i_write_data   => adc_data_selected,
     o_read_data    => data_output_bus);
 
-uart_1 : uart_expander
-  generic map (g_WORDSIZE => g_WORDSIZE, g_WORDCOUNT => g_WORDCOUNT)
+data_writer_1 : data_writer
+  generic map (g_WORDSIZE => g_WORDSIZE)
   port map (
     -- TODO: do this more generic:
     i_data(12 downto 0)   => data_output_bus(12 downto 0),
-    i_data(26 downto 14)  => data_output_bus(25 downto 13),
-    i_data(13)            => '0',
-    i_data(27)            => '0',
-    i_dataready           => uart_dataready,
+    i_data(25 downto 13)  => data_output_bus(25 downto 13),
+    i_dataready           => tx_enable,
     i_clk                 => uart_clk,
-    o_data                => o_tx_data,
-    o_ready               => uart_ready);
+    o_data_1              => o_tx_data(0),
+    o_data_2              => o_tx_data(1),
+    o_valid               => o_tx_datavalid,
+    o_clk                 => o_tx_clk);
 
 write_controller_1 : write_controller
   generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 1024)
@@ -199,7 +198,7 @@ write_controller_1 : write_controller
     o_trigger_done => trigger_done);
 
 readout_controller_1 : readout_controller
-  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE)
+  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_WORDSIZE => g_WORDSIZE)
   port map (
     i_clk          => uart_clk,
     i_trigger_done => trigger_done,
@@ -207,9 +206,7 @@ readout_controller_1 : readout_controller
     o_arm          => arm,
     o_read_enable  => buffer_read_en,
     o_read_addr    => read_address,
-    i_uart_ready   => uart_ready,
-      o_data_next  => uart_dataready,
-    o_data_ready   => o_data_ready,
+    o_tx_enable    => tx_enable,
     i_tx_start     => i_start_transfer);
 
 end;

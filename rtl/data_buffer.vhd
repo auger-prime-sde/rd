@@ -27,8 +27,8 @@ architecture behavioral of data_buffer is
 	signal ram : ram_type;
 	signal read_addr : std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
 
-	attribute syn_ramstyle : string;
-	attribute syn_ramstyle of ram : signal is "block_ram";
+	--attribute syn_ramstyle : string;
+	--attribute syn_ramstyle of ram : signal is "block_ram";
 
 begin
 	process (i_write_clk)
