@@ -8,16 +8,11 @@ entity top is
   generic (
     -- Number of data bits from the ADC channels
     g_ADC_BITS : natural := 12;
-    -- ADC interface width
-    g_ADC_DRIVER_BITS : natural := 14;
     -- Number of bits in index counters (11 gives 2048 samples stored)
-    g_BUFFER_INDEXSIZE : natural := 11;
-    -- Number of bits in serial words
-    g_WORDSIZE : natural := 13 );
+    g_BUFFER_INDEXSIZE : natural := 11 );
 
   port (
-    i_data_in        : in std_logic_vector (g_ADC_DRIVER_BITS-1 downto 0);
-    i_data_overflow  : in std_logic;
+    i_data_in        : in std_logic_vector (g_ADC_BITS-1 downto 0);
     i_adc_clk        : in std_logic;
     i_slow_clk       : in std_logic;
     i_rst            : in std_logic;
@@ -25,20 +20,17 @@ entity top is
     i_start_transfer : in std_logic;
     o_tx_data        : out std_logic_vector(1 downto 0);
     o_tx_clk         : out std_logic;
-    o_tx_datavalid   : out std_logic;
-    o_uart_clk       : out std_logic);
-end top;
+    o_tx_datavalid   : out std_logic);
+  end top;
 
 architecture behaviour of top is
-  constant c_SAMPLE_WIDTH  : natural := g_ADC_BITS+1;
-  constant c_STORAGE_WIDTH : natural := 2*c_SAMPLE_WIDTH;
+  constant c_STORAGE_WIDTH : natural := 2*g_ADC_BITS;
   constant c_CLOCK_DIVIDER : natural := 1736;
   constant c_CLOCK_SIZE    : natural := 11;
-  constant c_ADC_DRIVER_WIDTH : natural := g_ADC_DRIVER_BITS+1;
-  constant c_ADC_DRIVER_OUTPUT_WIDTH : natural := 2*c_ADC_DRIVER_WIDTH;
+  constant c_ADC_DRIVER_OUTPUT_WIDTH : natural := 2*g_ADC_BITS;
 
-  signal adc_input_bus : std_logic_vector(c_ADC_DRIVER_WIDTH-1 downto 0);
-  signal data : std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0);
+  signal adc_input_bus : std_logic_vector(g_ADC_BITS-1 downto 0);
+  signal adc_data : std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0);
   signal adc_data_selected : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
   signal data_output_bus : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
 
@@ -54,11 +46,11 @@ architecture behaviour of top is
   signal arm : std_logic;
 
   signal tx_enable : std_logic;
-  
+
   component adc_driver
     port (
       clkin  : in  std_logic; reset: in  std_logic; sclk: out  std_logic;
-      datain : in  std_logic_vector(c_ADC_DRIVER_WIDTH-1 downto 0);
+      datain : in  std_logic_vector(g_ADC_BITS-1 downto 0);
       q      : out std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0)
     );
   end component;
@@ -134,8 +126,6 @@ architecture behaviour of top is
   end component;
 
 begin
-  adc_input_bus <= i_data_overflow & i_data_in;
-  o_uart_clk <= uart_clk;
 
 clock_divider_uart : clock_divider
   port map (
@@ -147,13 +137,8 @@ adc_driver_1 : adc_driver
     clkin  => i_adc_clk,
     reset  => i_rst,
     sclk   => internal_clk,
-    datain =>  adc_input_bus,
-    q      => data);
-
-  adc_data_selected <=
-    data(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto c_ADC_DRIVER_OUTPUT_WIDTH-g_ADC_BITS-1) &
-    data(c_ADC_DRIVER_OUTPUT_WIDTH/2-1 downto g_ADC_DRIVER_BITS - g_ADC_BITS);
-
+    datain =>  i_data_in,
+    q      => adc_data);
 
 write_index_counter : simple_counter
   generic map (g_SIZE => g_BUFFER_INDEXSIZE)
@@ -170,15 +155,14 @@ data_buffer_1 : data_buffer
     i_read_clk     => uart_clk,
     i_read_enable  => buffer_read_en,
     i_read_addr    => read_address,
-    i_write_data   => adc_data_selected,
+    i_write_data   => adc_data,
     o_read_data    => data_output_bus);
 
 data_writer_1 : data_writer
-  generic map (g_WORDSIZE => g_WORDSIZE)
+  generic map (g_WORDSIZE => g_ADC_BITS)
   port map (
     -- TODO: do this more generic:
-    i_data(12 downto 0)   => data_output_bus(12 downto 0),
-    i_data(25 downto 13)  => data_output_bus(25 downto 13),
+    i_data                => data_output_bus,
     i_dataready           => tx_enable,
     i_clk                 => uart_clk,
     o_data_1              => o_tx_data(0),
@@ -198,7 +182,7 @@ write_controller_1 : write_controller
     o_trigger_done => trigger_done);
 
 readout_controller_1 : readout_controller
-  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_WORDSIZE => g_WORDSIZE)
+  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_WORDSIZE => g_ADC_BITS)
   port map (
     i_clk          => uart_clk,
     i_trigger_done => trigger_done,
