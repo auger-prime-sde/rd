@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity readout_controller is
   generic (
     g_ADDRESS_BITS : natural := 11;
-    g_WORDSIZE : natural := 13
+    g_WORDSIZE : natural := 12
     );
   port (
     i_clk       : in std_logic;
@@ -25,13 +25,15 @@ end readout_controller;
 
 
 architecture behave of readout_controller is
+  constant c_TRANSMIT_BITS :natural := g_WORDSIZE + 1; -- one parity bit
   -- state machine type:
   type t_State is (s_Initial, s_Idle, s_Busy, s_Arm);
   -- variables:
   signal r_State : t_State := s_Initial;
   signal r_read_addr : std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-  signal r_Count : natural  range 0 to g_WORDSIZE-1 := 0;
-
+  signal r_Count : natural  range 0 to c_TRANSMIT_BITS-1 := 0;
+  
+  
   
 begin
 --  main program
@@ -52,11 +54,11 @@ begin
             o_tx_enable <= '1';
           end if;
         when s_Busy =>
-          r_Count <= (r_Count + 1) mod g_WORDSIZE;
-          if r_Count = g_WORDSIZE-2 then
+          r_Count <= (r_Count + 1) mod c_TRANSMIT_BITS;
+          if r_Count = c_TRANSMIT_BITS-2 then
             r_read_addr <= std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS);
 		  end if;
-		  if r_Count = g_WORDSIZE-1 then
+		  if r_Count = c_TRANSMIT_BITS-1 then
             if r_read_addr = std_logic_vector(unsigned(i_start_addr)) then
               o_tx_enable <= '0';
               o_arm <= '1';

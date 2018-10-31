@@ -6,7 +6,7 @@ entity data_writer_tb is
 end data_writer_tb;
 
 architecture behavior of data_writer_tb is
-  constant c_DATASIZE : natural := 26;
+  constant c_DATASIZE : natural := 24;
   constant clk_period : time := 20 ns;
   
   signal clk, tx_clk, stop : std_logic := '0';
@@ -18,7 +18,7 @@ architecture behavior of data_writer_tb is
   
   component data_writer is
     generic (
-      g_WORDSIZE : natural := 13 );
+      g_WORDSIZE : natural := 12 );
     port (
       -- inputs
       i_data      : in std_logic_vector(2*g_WORDSIZE-1 downto 0);
@@ -60,24 +60,24 @@ begin
 
   p_test : process is
   begin
-    data(12 downto 0) <= std_logic_vector(to_unsigned(42, 13));
-    data(25 downto 13) <= "1111001111110";
+    data(11 downto 0) <= std_logic_vector(to_unsigned(42, 12));
+    data(23 downto 12) <= "111100111110";
     wait for 70 ns; -- arbitrary rising edge
     assert out_1 = '1' and out_2 = '1' report "data lines not high when not in use";
     assert datavalid = '0' report "valid data reported when no data was actually transmitted";
 
     tx_enable <= '1';
     wait for clk_period /2;
-    for i in 0 to 12 loop
+    for i in 0 to 11 loop
       assert datavalid = '1' report "valid pin not high";
-      assert out_1 = data(12-i) report "data mismatch";
-      assert out_2 = data(25-i) report "data mismatch";
-      if i < 12 then
-        wait for clk_period;
-      else
-        wait for clk_period/2;
-      end if;
+      assert out_1 = data(11-i) report "data mismatch";
+      assert out_2 = data(23-i) report "data mismatch";
+      wait for clk_period;
     end loop;
+    assert datavalid = '1' report "no parity bit received";
+    assert out_1 = '0' report "wrong parity bit for channel 1";
+    assert out_2 = '0' report "wrong parity bit for channel 2";
+    wait for clk_period/2;
     tx_enable <= '0';
 
     wait for clk_period/2; -- to get the new values
