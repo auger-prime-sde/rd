@@ -33,12 +33,12 @@ def in_ipython():
 ##
 def trigger():
     dev.write("t".encode('utf-8'))
-    time.sleep(0.1)
+    time.sleep(0.01)
     dev.write("t".encode('utf-8'))
 
 def start_transfer():
     dev.write("x".encode('utf-8'))
-    time.sleep(0.1)
+    time.sleep(0.01)
     dev.write("x".encode('utf-8'))
 
 def dump_to_uart():
@@ -48,7 +48,7 @@ def dump_to_uart():
 # Convert a single sample value (as 2 byte pair) into a signed integer representation
 ##
 def val_from_raw(raw1, raw0):
-  val_unsigned = (raw1 << 7) + raw0
+  val_unsigned = (raw0 << 7) + raw1
   if val_unsigned > 2047:
     return val_unsigned - 4096
   else:
@@ -67,6 +67,7 @@ def read_samples():
      
     for b in range(2048):
         raw = dev.read(2)
+        #pprint(raw)
         ch1 = val_from_raw(raw[1], raw[0])
         ch1_data.append(ch1)
 
@@ -76,8 +77,8 @@ def read_samples():
         ch2_data.append(ch2)
 
     pprint("raw data:")
-    pprint(ch1_data[0:9])
-    pprint(ch2_data[0:9])
+    pprint(ch1_data[0:99])
+    pprint(ch2_data[0:99])
     
     print("done")
     #dev.timeout = 1
@@ -99,6 +100,10 @@ def fft_from_samples(data):
     x = np.linspace(0.0, N*T, N)
     xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
 
+    fix,ax = plt.subplots()
+    ax.plot(x,y)
+    ax.set_xlabel("time (us)")
+    ax.set_ylabel("V")
   
     # Apply windowing function (7-term Blackman-Harris)
     # Compute FFT, default size = data size
@@ -158,14 +163,15 @@ for i in range(0, averages):
 
 ypow = ypow / averages
 
-#print_fft(xf, ypow)
+print_fft(xf, ypow)
+#print_fft(xf, xt)
 
 ##
 # Fix plotting in interactive mode...
-#if in_ipython():
-#    plt.ion()
+if in_ipython():
+    plt.ion()
 
 ##
 # Show results
-#plt.show()
+plt.show()
 

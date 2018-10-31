@@ -53,9 +53,11 @@ begin
           end if;
         when s_Busy =>
           r_Count <= (r_Count + 1) mod g_WORDSIZE;
-          if r_Count = g_WORDSIZE-1 then
+          if r_Count = g_WORDSIZE-2 then
             r_read_addr <= std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS);
-            if r_read_addr = std_logic_vector(unsigned(i_start_addr)-1) then
+		  end if;
+		  if r_Count = g_WORDSIZE-1 then
+            if r_read_addr = std_logic_vector(unsigned(i_start_addr)) then
               o_tx_enable <= '0';
               o_arm <= '1';
               r_State <= s_Arm;
