@@ -41,7 +41,7 @@ begin
     if rising_edge(i_clk) then
 	  case r_State is
       when s_Idle =>
-	      if i_dataready = '1' then
+	    if i_dataready = '1' then
           r_State <= s_Busy;
           r_Count <= 0;
           r_Buffer <= i_data;
@@ -51,8 +51,8 @@ begin
 		  r_Parity_1 <= not i_data(g_WORDSIZE-1);
 		  r_Parity_2 <= not i_data(2*g_WORDSIZE-1);
         else
-            o_data_1 <= '1';
-            o_data_2 <= '1';
+          o_data_1 <= '1';
+          o_data_2 <= '1';
         end if;
       when s_Busy =>
         if r_Count = g_WORDSIZE-2 then

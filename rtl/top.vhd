@@ -27,11 +27,9 @@ architecture behaviour of top is
   constant c_STORAGE_WIDTH : natural := 2*g_ADC_BITS;
   constant c_CLOCK_DIVIDER : natural := 1736;
   constant c_CLOCK_SIZE    : natural := 11;
-  constant c_ADC_DRIVER_OUTPUT_WIDTH : natural := 2*g_ADC_BITS;
 
   signal adc_input_bus : std_logic_vector(g_ADC_BITS-1 downto 0);
-  signal adc_data : std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0);
-  signal adc_data_selected : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
+  signal adc_data : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
   signal data_output_bus : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
 
   signal buffer_write_en : std_logic;
@@ -51,7 +49,7 @@ architecture behaviour of top is
     port (
       clkin  : in  std_logic; reset: in  std_logic; sclk: out  std_logic;
       datain : in  std_logic_vector(g_ADC_BITS-1 downto 0);
-      q      : out std_logic_vector(c_ADC_DRIVER_OUTPUT_WIDTH-1 downto 0)
+      q      : out std_logic_vector(c_STORAGE_WIDTH-1 downto 0)
     );
   end component;
 
@@ -137,7 +135,7 @@ adc_driver_1 : adc_driver
     clkin  => i_adc_clk,
     reset  => i_rst,
     sclk   => internal_clk,
-    datain =>  i_data_in,
+    datain => i_data_in,
     q      => adc_data);
 
 write_index_counter : simple_counter

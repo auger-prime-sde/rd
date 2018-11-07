@@ -18,19 +18,19 @@ BANK 0 VCCIO 1.8 V;
 ## Data clock
 LOCATE COMP "i_adc_clk" SITE "J20" ;
 IOBUF PORT "i_adc_clk" DIFFRESISTOR=100 IO_TYPE=LVDS ;
-## ADC data (reserve extra bits for 14bit ADC option)
-LOCATE COMP "i_data_in[0]" SITE "E18" ;
-LOCATE COMP "i_data_in[1]" SITE "C20" ;
-LOCATE COMP "i_data_in[2]" SITE "D20" ;
-LOCATE COMP "i_data_in[3]" SITE "E20" ;
-LOCATE COMP "i_data_in[4]" SITE "H18" ;
-LOCATE COMP "i_data_in[5]" SITE "J17" ;
-LOCATE COMP "i_data_in[6]" SITE "J18" ;
-LOCATE COMP "i_data_in[7]" SITE "L20" ;
-LOCATE COMP "i_data_in[8]" SITE "N16" ;
-LOCATE COMP "i_data_in[9]" SITE "N19" ;
-LOCATE COMP "i_data_in[10]" SITE "P19" ;
-LOCATE COMP "i_data_in[11]" SITE "T19" ;
+## ADC data
+LOCATE COMP "i_data_in[0]" SITE "D20" ;
+LOCATE COMP "i_data_in[1]" SITE "E20" ;
+LOCATE COMP "i_data_in[2]" SITE "H18" ;
+LOCATE COMP "i_data_in[3]" SITE "J17" ;
+LOCATE COMP "i_data_in[4]" SITE "J18" ;
+LOCATE COMP "i_data_in[5]" SITE "L20" ;
+LOCATE COMP "i_data_in[6]" SITE "N16" ;
+LOCATE COMP "i_data_in[7]" SITE "N19" ;
+LOCATE COMP "i_data_in[8]" SITE "P19" ;
+LOCATE COMP "i_data_in[9]" SITE "T19" ;
+LOCATE COMP "i_data_in[10]" SITE "U19" ;
+LOCATE COMP "i_data_in[11]" SITE "R16" ;
 IOBUF PORT "i_data_in[0]" DIFFRESISTOR=100 IO_TYPE=LVDS ;
 IOBUF PORT "i_data_in[1]" DIFFRESISTOR=100 IO_TYPE=LVDS ;
 IOBUF PORT "i_data_in[2]" DIFFRESISTOR=100 IO_TYPE=LVDS ;
