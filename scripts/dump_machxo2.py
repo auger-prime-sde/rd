@@ -48,7 +48,7 @@ def dump_to_uart():
 # Convert a single sample value (as 2 byte pair) into a signed integer representation
 ##
 def val_from_raw(raw1, raw0):
-  val_unsigned = (raw0 << 7) + raw1
+  val_unsigned = ((raw0 & 0x3F) << 6) + (raw1 & 0x3F)
   if val_unsigned > 2047:
     return val_unsigned - 4096
   else:
@@ -158,7 +158,7 @@ for i in range(0, averages):
    
     
     (ch1, ch2) = read_samples()
-    (xf, ypow_new) = fft_from_samples(ch2)
+    (xf, ypow_new) = fft_from_samples(ch1)
     ypow += ypow_new
 
 ypow = ypow / averages
