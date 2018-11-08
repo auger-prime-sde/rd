@@ -6,7 +6,7 @@ use ieee.numeric_std.all;
 
 entity clock_divider is
   generic (
-    g_MAX_COUNT : natural := 80);
+    g_MAX_COUNT : natural := 16);
   port (
     i_clk: in std_logic;
     o_clk: out std_logic);

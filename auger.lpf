@@ -1,3 +1,4 @@
+rvl_alias "i_slow_clk" "i_slow_clk";
 RVL_ALIAS "slow_clk" "slow_clk"; 
 BLOCK RESETPATHS ;
 BLOCK ASYNCPATHS ;

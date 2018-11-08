@@ -9,7 +9,7 @@ from pprint import pprint
 
 
 ## Number of FFTs to average
-averages = 1
+averages = 10
 
 
 dev          = serial.Serial()
@@ -33,12 +33,12 @@ def in_ipython():
 ##
 def trigger():
     dev.write("t".encode('utf-8'))
-    time.sleep(0.01)
+    time.sleep(0.1)
     dev.write("t".encode('utf-8'))
 
 def start_transfer():
     dev.write("x".encode('utf-8'))
-    time.sleep(0.01)
+    time.sleep(0.1)
     dev.write("x".encode('utf-8'))
 
 def dump_to_uart():
@@ -149,12 +149,12 @@ def print_fft(xf, ypow):
 ##
 ypow = np.zeros(1024, dtype='float')
 for i in range(0, averages):
-    time.sleep(0.5)
+    time.sleep(0.1)
     dev.reset_input_buffer()
     trigger()
-    time.sleep(0.5)
+    time.sleep(0.1)
     start_transfer()
-    time.sleep(0.5)
+    time.sleep(0.1)
    
     
     (ch1, ch2) = read_samples()
