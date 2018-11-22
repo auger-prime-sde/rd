@@ -116,19 +116,19 @@ architecture behaviour of top is
   end component;
 
 
-  component clock_divider
+  component tx_clock_pll
     port (
-      i_clk: in std_logic;
-      o_clk: out std_logic
+      CLKI: in std_logic;
+      CLKOP: out std_logic
     );
   end component;
 
 begin
 
-clock_divider_uart : clock_divider
+clock_divider_uart : tx_clock_pll
   port map (
-    i_clk => i_slow_clk,
-    o_clk => uart_clk);
+    CLKI => i_slow_clk,
+    CLKOP => uart_clk);
 
 adc_driver_1 : adc_driver
   port map (
