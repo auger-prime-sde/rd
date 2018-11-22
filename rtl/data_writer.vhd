@@ -32,6 +32,8 @@ architecture behave of data_writer is
   signal r_Buffer : std_logic_vector(2*g_WORDSIZE-1 downto 0) := (others => '0');
   signal r_Parity_1 : std_logic := '0';
   signal r_Parity_2 : std_logic := '0';
+
+  signal r_dataready : std_logic;
 begin
 
   o_clk <= not i_clk;
@@ -39,9 +41,10 @@ begin
   p_transmit : process (i_clk) is
   begin
     if rising_edge(i_clk) then
+      r_dataready <= i_dataready;
 	  case r_State is
       when s_Idle =>
-	    if i_dataready = '1' then
+	    if r_dataready = '1' then
           r_State <= s_Busy;
           r_Count <= 0;
           r_Buffer <= i_data;
@@ -69,7 +72,7 @@ begin
 		o_data_1 <= r_Parity_1;
 		o_data_2 <= r_Parity_2;
       end case;
-      o_valid <= i_dataready;
+      o_valid <= r_dataready;
     end if; -- if rising_edge(i_clk)
   end process;
   
