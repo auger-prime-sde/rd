@@ -25,7 +25,8 @@ end data_buffer;
 architecture behavioral of data_buffer is
 	type ram_type is array (2**g_ADDRESS_WIDTH-1 downto 0) of std_logic_vector (g_DATA_WIDTH-1 downto 0);
 	signal ram : ram_type;
-	signal read_addr : std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
+	signal data_out_reg : std_logic_vector(g_DATA_WIDTH-1 downto 0) := (others => '0');
+
 
 	--attribute syn_ramstyle : string;
 	--attribute syn_ramstyle of ram : signal is "block_ram";
@@ -44,10 +45,10 @@ begin
 	begin
 		if rising_edge(i_read_clk) then
 			if i_read_enable='1' then
-				read_addr<=i_read_addr;
+				data_out_reg <= ram(to_integer(unsigned(i_read_addr)));
 			end if;
 		end if;
 	end process;
 
-	o_read_data <=ram(to_integer(unsigned(read_addr)));
+	o_read_data <= data_out_reg;
 end behavioral;
