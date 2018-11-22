@@ -63,7 +63,7 @@ begin
           r_count <= 0;
 
           if i_trigger = '1' then
-            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET + 1) mod 2**o_start_addr'length;
+            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET +2) mod 2**o_start_addr'length;
             r_controller_state <= s_Triggered;
           else
             r_start_addr <= r_start_addr;

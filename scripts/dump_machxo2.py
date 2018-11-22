@@ -14,7 +14,7 @@ averages = 10
 
 dev          = serial.Serial()
 dev.port     = '/dev/ttyUSB1'
-dev.baudrate = 1e6 #115200
+dev.baudrate = 115200
 dev.timeout  = 1
 dev.open()
 
@@ -68,17 +68,22 @@ def read_samples():
     for b in range(2048):
         raw = dev.read(2)
         #pprint(raw)
+        
         ch1 = val_from_raw(raw[1], raw[0])
         ch1_data.append(ch1)
 
     for b in range(2048):
         raw = dev.read(2)
+
         ch2 = val_from_raw(raw[1], raw[0])
         ch2_data.append(ch2)
+        print("{0:b} {1:b} = {2}".format(raw[0], raw[1], ch2))
 
-    pprint("raw data:")
-    pprint(ch1_data[0:99])
-    pprint(ch2_data[0:99])
+    #pprint("raw data:")
+    #for i in range(100):
+    #    print("{0:b}".format(ch2_data[i]))
+    #pprint(ch1_data[0:99])
+    #pprint(ch2_data[0:99])
     
     print("done")
     #dev.timeout = 1
@@ -158,7 +163,7 @@ for i in range(0, averages):
    
     
     (ch1, ch2) = read_samples()
-    (xf, ypow_new) = fft_from_samples(ch1)
+    (xf, ypow_new) = fft_from_samples(ch2)
     ypow += ypow_new
 
 ypow = ypow / averages
