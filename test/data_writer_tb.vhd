@@ -67,21 +67,29 @@ begin
     assert datavalid = '0' report "valid data reported when no data was actually transmitted";
 
     tx_enable <= '1';
+    wait for clk_period;
     wait for clk_period /2;
     for i in 0 to 11 loop
       assert datavalid = '1' report "valid pin not high";
       assert out_1 = data(11-i) report "data mismatch";
       assert out_2 = data(23-i) report "data mismatch";
-      wait for clk_period;
+      wait for clk_period/2;
+      if i=11 then
+        tx_enable <= '0';
+      end if;
+       
+      wait for clk_period/2;
+      
     end loop;
     assert datavalid = '1' report "no parity bit received";
     assert out_1 = '0' report "wrong parity bit for channel 1";
     assert out_2 = '0' report "wrong parity bit for channel 2";
+
     wait for clk_period/2;
-    tx_enable <= '0';
+    
 
     wait for clk_period/2; -- to get the new values
-    assert datavalid = '0' report "incorrect valid data reported";
+    assert datavalid = '0' report "incorrect datavalid reported";
     assert out_1 = '1' report "data not high outside transmission";
     assert out_2 = '1' report "data not high outside transmission";
         

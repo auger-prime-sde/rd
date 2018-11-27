@@ -96,7 +96,7 @@ begin
     wait for 15 ns;
     trigger <= '0';
     -- Currently starting the 18th clock cycle, check if offset was calculated correctly
-    assert unsigned(start_addr) = 22-start_offset report "Wrong start address generated" severity error;
+    assert unsigned(start_addr) = 23-start_offset report "Wrong start address generated" severity error;
 
     -- Check trigger finish
     wait for 340 ns;
@@ -116,7 +116,7 @@ begin
     trigger <= '0';
     wait for 300 ns;
     -- Finish
-    assert unsigned(start_addr) = 22-start_offset report "Wrong start address generated (wraparound)" severity error;
+    assert unsigned(start_addr) = 23-start_offset report "Wrong start address generated (wraparound)" severity error;
 
     wait for 10 ns;
     stop <= '1';
