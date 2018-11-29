@@ -16,8 +16,8 @@ CoreRevision=5.8
 ModuleName=tx_clock_pll
 SourceFormat=vhdl
 ParameterFileVersion=1.0
-Date=11/22/2018
-Time=13:06:46
+Date=11/27/2018
+Time=17:20:41
 
 [Parameters]
 Verilog=0
@@ -32,8 +32,8 @@ CLKI_DIV=2
 ENABLE_HBW=DISABLED
 REFERENCE=0
 IOBUF=LVDS
-CLKOP_FREQ=60.00
-CLKOP_TOL=0.0
+CLKOP_FREQ=60
+CLKOP_TOL=5.0
 CLKOP_DIV=10
 CLKOP_ACTUAL_FREQ=60.000000
 CLKOP_MUXA=DISABLED
@@ -90,4 +90,4 @@ PLL_LOCK_STK=DISABLED
 PLL_USE_SMI=DISABLED
 
 [Command]
-cmd_line= -w -n tx_clock_pll -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type pll -fin 40.00 -fclkop 60.00 -fclkop_tol 0.0 -phase_cntl STATIC -fb_mode 1
+cmd_line= -w -n tx_clock_pll -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type pll -fin 40.00 -fclkop 60 -fclkop_tol 5.0 -phase_cntl STATIC -fb_mode 1

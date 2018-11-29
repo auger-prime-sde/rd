@@ -45,6 +45,9 @@ architecture behaviour of top is
 
   signal tx_enable : std_logic;
 
+  signal reset_discontinuity_tester : std_logic;
+  signal discontinuity_trigger : std_logic;
+
   component adc_driver
     port (
       clkin  : in  std_logic; reset: in  std_logic; sclk: out  std_logic;
@@ -87,6 +90,17 @@ architecture behaviour of top is
       o_clk       : out std_logic
     );
   end component;
+
+  component discontinuity_detector
+    generic ( g_SIZE : natural := 12 );
+    port (
+      i_data: in std_logic_vector(g_SIZE-1 downto 0);
+      i_clk: in std_logic;
+      i_rst: in std_logic;
+      o_fault : out std_logic
+      );
+  end component;
+
 
   component write_controller
     generic (g_ADDRESS_BITS : natural; g_START_OFFSET : natural);
@@ -167,6 +181,15 @@ data_writer_1 : data_writer
     o_data_2              => o_tx_data(1),
     o_valid               => o_tx_datavalid,
     o_clk                 => o_tx_clk);
+
+reset_discontinuity_tester <= '1' when read_address = start_address else '0';
+discontinuity_detector_1 : discontinuity_detector
+  port map (
+    i_data   => data_output_bus(23 downto 12),
+    i_clk    => uart_clk,
+    i_rst    => reset_discontinuity_tester,
+    o_fault  => discontinuity_trigger
+    );
 
 write_controller_1 : write_controller
   generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 1024)

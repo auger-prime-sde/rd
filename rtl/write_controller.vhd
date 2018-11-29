@@ -30,18 +30,22 @@ architecture behavior of write_controller is
   signal r_start_addr : natural range 0 to 2**g_ADDRESS_BITS-1 := 0;
   signal r_count : natural range 0 to c_DELAY_COUNT := 0;
   --signal test_count : std_logic_vector(11 downto 0) := (others => '0');
-
+  signal r_arm : std_logic := '0';
+  signal r_trigger : std_logic := '0';
+  
 begin
   p_main : process (i_clk) is
   begin
     if rising_edge(i_clk) then
+      r_trigger <= i_trigger;
+      r_arm <= i_arm;
       case r_controller_state is
         when s_Idle =>
           -- Wait for ARM event, signal done to read controller and keep write enable low until armed
           r_start_addr <= r_start_addr;
           r_count <= 0;
 
-          if i_arm = '1' then
+          if r_arm = '1' then
             r_Controller_State <= s_Armed;
           else
             r_controller_state <= s_Idle;
@@ -62,8 +66,12 @@ begin
           --  and start counting remaining values read (in s_Triggered)
           r_count <= 0;
 
-          if i_trigger = '1' then
-            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET +2) mod 2**o_start_addr'length;
+          if r_trigger = '1' then
+            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET -1) mod 2**o_start_addr'length;
+            -- 1 clock cycles delay is added by the input latch on the trigger
+            -- 1 clock cycle is subtracted again because the cur_addr is also latched.
+            -- 1 further cycle is subtracted because the actual trigger occured
+            -- somewhere in the last clock cycle.
             r_controller_state <= s_Triggered;
           else
             r_start_addr <= r_start_addr;
@@ -77,7 +85,15 @@ begin
           r_start_addr <= r_start_addr;
           r_count <= (r_count + 1) ;
 
-          if r_count < c_DELAY_COUNT - 1 then
+          if r_count < c_DELAY_COUNT - 5 then
+            -- -1 because c_DELAY_COUNT is the last address that we don't want
+            -- (i.e. we must stop at 2047 not 2048)
+            -- -2 because the counter actually starts counting 2 cycles after
+            -- the trigger.
+            -- -1 because the write_enable must go low on the clock tick before
+            -- the last write.
+            -- -1 because on this clock we change state and only on the next
+            -- clock will the write enable be changed.
             r_controller_state <= s_Triggered;
           else
             r_controller_state <= s_Idle;

@@ -81,7 +81,7 @@ begin
 
     -- Check if arming works
     arm <= '1';
-    wait for 20 ns;
+    wait for 30 ns;
     assert write_en = '1' report "Buffer not writing when armed" severity error;
 
     -- Stays armed when signal is removed?
@@ -93,13 +93,13 @@ begin
     
     -- Generates start address when triggered
     trigger <= '1';
-    wait for 15 ns;
+    wait for 30 ns;
     trigger <= '0';
     -- Currently starting the 18th clock cycle, check if offset was calculated correctly
-    assert unsigned(start_addr) = 23-start_offset report "Wrong start address generated" severity error;
+    assert unsigned(start_addr) = 22-start_offset report "Wrong start address generated" severity error;
 
     -- Check trigger finish
-    wait for 340 ns;
+    wait for 325 ns;
     assert write_en = '0' report "Buffer still writing when done" severity error;
     assert trigger_done = '1' report "Trigger done signal not asserted when finished" severity error;
 
@@ -116,7 +116,7 @@ begin
     trigger <= '0';
     wait for 300 ns;
     -- Finish
-    assert unsigned(start_addr) = 23-start_offset report "Wrong start address generated (wraparound)" severity error;
+    assert unsigned(start_addr) = 22-start_offset report "Wrong start address generated (wraparound)" severity error;
 
     wait for 10 ns;
     stop <= '1';

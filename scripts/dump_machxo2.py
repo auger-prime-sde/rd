@@ -17,7 +17,7 @@ dev.port     = '/dev/ttyUSB1'
 dev.baudrate = 115200
 dev.timeout  = 1
 dev.open()
-
+dev.write("r".encode('utf-8'))
 ##
 # Detect if we're running in interactive mode to avoid problems with matplotlib
 ##
