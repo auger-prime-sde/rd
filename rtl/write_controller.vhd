@@ -67,11 +67,8 @@ begin
           r_count <= 0;
 
           if r_trigger = '1' then
-            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET -1) mod 2**o_start_addr'length;
-            -- 1 clock cycles delay is added by the input latch on the trigger
-            -- 1 clock cycle is subtracted again because the cur_addr is also latched.
-            -- 1 further cycle is subtracted because the actual trigger occured
-            -- somewhere in the last clock cycle.
+            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET -2) mod 2**o_start_addr'length;
+            -- still don't fully understand the -2 here. 
             r_controller_state <= s_Triggered;
           else
             r_start_addr <= r_start_addr;
