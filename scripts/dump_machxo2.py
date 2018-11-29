@@ -106,7 +106,9 @@ def fft_from_samples(data):
     xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
 
     fix,ax = plt.subplots()
-    ax.plot(x,y)
+    line = (ax.plot(x,y))[0]
+    line.set_marker("o")
+    line.set_markersize(3)
     ax.set_xlabel("time (us)")
     ax.set_ylabel("V")
   
