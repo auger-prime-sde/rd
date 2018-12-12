@@ -33,14 +33,16 @@ architecture behave of readout_controller is
   signal r_read_addr : std_logic_vector(g_ADDRESS_BITS-1 downto 0);
   signal r_Count : natural  range 0 to c_TRANSMIT_BITS-1 := 0;
   signal r_trigger_done : std_logic := '0';
+  signal r_tx_start : std_logic := '0';
   
   
 begin
 --  main program
   p_transmit : process (i_clk) is
   begin
-    r_trigger_done <= i_trigger_done;
     if rising_edge(i_clk) then
+      r_trigger_done <= i_trigger_done;
+      r_tx_start <= i_tx_start;
       case r_State is
         when s_Initial =>
           o_arm <= '1';
@@ -49,7 +51,7 @@ begin
           o_tx_enable <= '0';
           o_arm <= '0';
           r_read_addr <= i_start_addr;
-          if r_trigger_done='1' and i_tx_start='1' then
+          if r_trigger_done='1' and r_tx_start='1' then
             r_State <= s_Busy;
             r_Count <= 0;
             o_tx_enable <= '1';
