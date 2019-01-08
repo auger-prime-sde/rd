@@ -16,7 +16,7 @@ entity readout_controller is
     -- interface to data buffer:
     o_read_enable  : out std_logic := '1';
     o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
-    -- interface to uart
+    -- interface to transmit
     o_tx_enable    : out std_logic := '0';
     -- interface to host
     i_tx_start     : in std_logic

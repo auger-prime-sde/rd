@@ -18,7 +18,7 @@ entity data_streamer is
   port (
     i_adc_data       : in std_logic_vector(2*g_ADC_BITS-1 downto 0);
     i_clk            : in std_logic;
-    i_uart_clk       : in std_logic;
+    i_tx_clk         : in std_logic;
     i_rst            : in std_logic;
     i_trigger        : in std_logic;
     i_start_transfer : in std_logic;
@@ -119,7 +119,7 @@ data_buffer_1 : data_buffer
     i_write_clk    => i_clk,
     i_write_enable => buffer_write_en,
     i_write_addr   => write_address,
-    i_read_clk     => i_uart_clk,
+    i_read_clk     => i_tx_clk,
     i_read_enable  => buffer_read_en,
     i_read_addr    => read_address,
     i_write_data   => i_adc_data,
@@ -130,7 +130,7 @@ data_writer_1 : data_writer
   port map (
     i_data         => data_output_bus,
     i_dataready    => tx_enable,
-    i_clk          => i_uart_clk,
+    i_clk          => i_tx_clk,
     o_data_1       => o_tx_data(0),
     o_data_2       => o_tx_data(1),
     o_valid        => o_tx_datavalid,
@@ -150,7 +150,7 @@ write_controller_1 : write_controller
 readout_controller_1 : readout_controller
   generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_WORDSIZE => g_ADC_BITS)
   port map (
-    i_clk          => i_uart_clk,
+    i_clk          => i_tx_clk,
     i_trigger_done => trigger_done,
     i_start_addr   => start_address,
     o_arm          => arm,

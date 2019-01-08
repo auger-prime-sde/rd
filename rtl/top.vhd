@@ -29,7 +29,7 @@ architecture behaviour of top is
   signal adc_data : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
 
   signal internal_clk : std_logic;
-  signal uart_clk : std_logic;
+  signal tx_clk : std_logic;
 
   component adc_driver
     port (
@@ -49,7 +49,7 @@ architecture behaviour of top is
     port (
       i_adc_data       : in std_logic_vector(2*g_ADC_BITS-1 downto 0);
       i_clk            : in std_logic;
-      i_uart_clk       : in std_logic;
+      i_tx_clk       : in std_logic;
       i_rst            : in std_logic;
       i_trigger        : in std_logic;
       i_start_transfer : in std_logic;
@@ -68,10 +68,10 @@ architecture behaviour of top is
 
 begin
 
-clock_divider_uart : tx_clock_pll
+tx_clock_synthesizer : tx_clock_pll
   port map (
     CLKI => i_slow_clk,
-    CLKOP => uart_clk);
+    CLKOP => tx_clk);
 
 adc_driver_1 : adc_driver
   port map (
@@ -86,7 +86,7 @@ data_streamer_1 : data_streamer
   port map (
     i_adc_data     => adc_data,
     i_clk          => internal_clk,
-    i_uart_clk     => uart_clk,
+    i_tx_clk     => tx_clk,
     i_rst          => i_rst,
     i_trigger      => i_trigger,
     i_start_transfer => i_start_transfer,
