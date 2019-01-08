@@ -3,7 +3,7 @@
 #GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93
 GHDL_RUN_OPTS = --assert-level=warning --ieee-asserts=disable
 
-all: data_buffer_tb simple_counter_tb uart_tb uart_expander_tb write_controller_tb readout_controller_tb data_writer_tb
+all: data_buffer_tb simple_counter_tb write_controller_tb readout_controller_tb data_writer_tb
 
 
 
