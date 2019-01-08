@@ -7,7 +7,7 @@ all: data_buffer_tb simple_counter_tb write_controller_tb readout_controller_tb 
 
 
 
-%_tb: rtl/%.vhd test/%_tb.vhd
+%_tb: rtl/data_streamer/%.vhd test/%_tb.vhd
 	ghdl -a $(GHDL_OPTS)  $^
 	ghdl -e $(GHDL_OPTS)  $@
 	ghdl -r $(GHDL_OPTS)  $@ $(GHDL_RUN_OPTS) 
