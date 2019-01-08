@@ -12,5 +12,6 @@ pipelines:
           - apt-get install make
           - make simple_counter_tb
           - make data_buffer_tb
-          - make uart_tb
-          - make uart_expander_tb
+          - make write_controller_tb
+          - make readout_controller_tb
+          - make data_writer_tb
