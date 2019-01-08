@@ -27,7 +27,6 @@ architecture behaviour of top is
   constant c_STORAGE_WIDTH : natural := 2*g_ADC_BITS;
 
   signal adc_data : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
-  signal data_output_bus : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
 
   signal internal_clk : std_logic;
   signal uart_clk : std_logic;
