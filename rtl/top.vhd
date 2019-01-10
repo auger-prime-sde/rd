@@ -12,6 +12,7 @@ entity top is
     g_BUFFER_INDEXSIZE : natural := 11 );
 
   port (
+    -- signals for data streamer
     i_data_in        : in std_logic_vector (g_ADC_BITS-1 downto 0);
     i_adc_clk        : in std_logic;
     i_slow_clk       : in std_logic;
@@ -20,7 +21,13 @@ entity top is
     i_start_transfer : in std_logic;
     o_tx_data        : out std_logic_vector(1 downto 0);
     o_tx_clk         : out std_logic;
-    o_tx_datavalid   : out std_logic);
+    o_tx_datavalid   : out std_logic;
+    -- signals for eeprom
+    i_eeprom_miso    : in std_logic;
+    o_eeprom_mosi    : out std_logic;
+    o_eeprom_ce      : out std_logic;
+    i_uart_data      : in std_logic;
+    o_uart_data      : out std_logic);
   end top;
 
 architecture behaviour of top is
@@ -49,7 +56,7 @@ architecture behaviour of top is
     port (
       i_adc_data       : in std_logic_vector(2*g_ADC_BITS-1 downto 0);
       i_clk            : in std_logic;
-      i_tx_clk       : in std_logic;
+      i_tx_clk         : in std_logic;
       i_rst            : in std_logic;
       i_trigger        : in std_logic;
       i_start_transfer : in std_logic;
@@ -65,6 +72,19 @@ architecture behaviour of top is
       CLKOP: out std_logic
     );
   end component;
+
+  component eeprom_test
+    port (
+      i_clk           : in std_logic;
+      i_eeprom_miso   : in std_logic;
+      o_eeprom_ce     : out std_logic;
+      o_eeprom_mosi   : out std_logic;
+      i_uart_data     : in std_logic;
+      o_uart_data     : out std_logic
+      );
+  end component;
+  
+      
 
 begin
 
@@ -84,15 +104,24 @@ adc_driver_1 : adc_driver
 data_streamer_1 : data_streamer
   generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
   port map (
-    i_adc_data     => adc_data,
-    i_clk          => internal_clk,
-    i_tx_clk     => tx_clk,
-    i_rst          => i_rst,
-    i_trigger      => i_trigger,
+    i_adc_data       => adc_data,
+    i_clk            => internal_clk,
+    i_tx_clk         => tx_clk,
+    i_rst            => i_rst,
+    i_trigger        => i_trigger,
     i_start_transfer => i_start_transfer,
-    o_tx_data      => o_tx_data,
-    o_tx_clk       => o_tx_clk,
-    o_tx_datavalid => o_tx_datavalid);
+    o_tx_data        => o_tx_data,
+    o_tx_clk         => o_tx_clk,
+    o_tx_datavalid   => o_tx_datavalid);
 
+eeprom_test_1 : eeprom_test
+  port map (
+    i_clk         => i_slow_clk,
+    i_eeprom_miso => i_eeprom_miso,
+    o_eeprom_ce   => o_eeprom_ce,
+    o_eeprom_mosi => o_eeprom_mosi,
+    i_uart_data   => i_uart_data,
+    o_uart_data   => o_uart_data
+    );
 
 end;
