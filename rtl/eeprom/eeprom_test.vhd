@@ -8,6 +8,7 @@ entity eeprom_test is
     i_eeprom_miso   : in std_logic;
     o_eeprom_ce     : out std_logic;
     o_eeprom_mosi   : out std_logic;
+    o_eeprom_clk    : out std_logic;
     i_uart_data     : in std_logic;
     o_uart_data     : out std_logic
     );
@@ -32,7 +33,8 @@ architecture behave of eeprom_test is
       o_spi_mosi      : out std_logic;
       o_spi_ce        : out std_logic;
       -- control interface:
-      i_read_deviceid : in std_logic;
+      i_command       : in t_command;
+      i_command_ready : in std_logic;
       o_done          : out std_logic := '0';
       o_deviceid      : out std_logic_vector(7 downto 0);
       o_vendorid      : out std_logic_vector(7 downto 0);
@@ -71,6 +73,7 @@ architecture behave of eeprom_test is
 
 
 begin
+  o_eeprom_clk <= internal_clk;
 
   clock_divider_1 : clock_divider
     generic map (g_MAX_COUNT => 40)

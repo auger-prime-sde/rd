@@ -26,7 +26,7 @@ entity top is
     -- signals for eeprom
     i_eeprom_miso    : in std_logic;
     o_eeprom_mosi    : out std_logic;
-    o_eeprom_ce      : out std_logic;
+    o_eeprom_ce      : inout std_logic;
     i_uart_data      : in std_logic;
     o_uart_data      : out std_logic);
   end top;
@@ -39,6 +39,15 @@ architecture behaviour of top is
   signal internal_clk : std_logic;
   signal tx_clk : std_logic;
 
+  signal eeprom_clk : std_logic;
+  --signal mclk_init : std_logic := '0';
+  --signal mclk_tristate : std_logic := '0';
+  --attribute syn_keep: boolean;
+  --attribute syn_keep of mclk_tristate : signal is true;
+  --attribute syn_keep of mclk_init : signal is true;
+
+  
+
   component adc_driver
     port (
       clkin  : in  std_logic; reset: in  std_logic; sclk: out  std_logic;
@@ -47,6 +56,19 @@ architecture behaviour of top is
     );
   end component;
 
+  -- start of magic MCLK block
+  -- (see ECP5 sysCONFIG manual section 6.1.2)
+  component USRMCLK
+    port(
+      USRMCLKI : in std_ulogic;
+      USRMCLKTS : in std_ulogic
+      );
+  end component;
+  attribute syn_noprune: boolean ;
+  attribute syn_noprune of USRMCLK: component is true;
+  -- end of magic block
+
+  
   component data_streamer
     generic (
     -- Number of data bits from the ADC channels
@@ -80,6 +102,7 @@ architecture behaviour of top is
       i_eeprom_miso   : in std_logic;
       o_eeprom_ce     : out std_logic;
       o_eeprom_mosi   : out std_logic;
+      o_eeprom_clk    : out std_logic;
       i_uart_data     : in std_logic;
       o_uart_data     : out std_logic
       );
@@ -89,40 +112,57 @@ architecture behaviour of top is
 
 begin
 
-tx_clock_synthesizer : tx_clock_pll
-  port map (
-    CLKI => i_slow_clk,
-    CLKOP => tx_clk);
+  --p_mclk : process(i_slow_clk) is
+  --begin
+    --if rising_edge(i_slow_clk) then
+      --if mclk_init = '0' then
+        --mclk_tristate <= '0';
+        --mclk_init <= '1';
+      --end if;
+    --end if;
+  --end process;
+  
 
-adc_driver_1 : adc_driver
-  port map (
-    clkin  => i_adc_clk,
-    reset  => i_rst,
-    sclk   => internal_clk,
-    datain => i_data_in,
-    q      => adc_data);
+  tx_clock_synthesizer : tx_clock_pll
+    port map (
+      CLKI => i_slow_clk,
+      CLKOP => tx_clk);
 
-data_streamer_1 : data_streamer
-  generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
-  port map (
-    i_adc_data       => adc_data,
-    i_clk            => internal_clk,
-    i_tx_clk         => tx_clk,
-    i_rst            => i_rst,
-    i_trigger        => i_trigger,
-    i_start_transfer => i_start_transfer,
-    o_tx_data        => o_tx_data,
-    o_tx_clk         => o_tx_clk,
-    o_tx_datavalid   => o_tx_datavalid);
+  adc_driver_1 : adc_driver
+    port map (
+      clkin  => i_adc_clk,
+      reset  => i_rst,
+      sclk   => internal_clk,
+      datain => i_data_in,
+      q      => adc_data);
+  
+  u1: USRMCLK port map (
+    USRMCLKI => eeprom_clk,
+    USRMCLKTS => o_eeprom_ce);
 
-eeprom_test_1 : eeprom_test
-  port map (
-    i_clk         => i_slow_clk,
-    i_eeprom_miso => i_eeprom_miso,
-    o_eeprom_ce   => o_eeprom_ce,
-    o_eeprom_mosi => o_eeprom_mosi,
-    i_uart_data   => i_uart_data,
-    o_uart_data   => o_uart_data
-    );
+
+  data_streamer_1 : data_streamer
+    generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
+    port map (
+      i_adc_data       => adc_data,
+      i_clk            => internal_clk,
+      i_tx_clk         => tx_clk,
+      i_rst            => i_rst,
+      i_trigger        => i_trigger,
+      i_start_transfer => i_start_transfer,
+      o_tx_data        => o_tx_data,
+      o_tx_clk         => o_tx_clk,
+      o_tx_datavalid   => o_tx_datavalid);
+
+  eeprom_test_1 : eeprom_test
+    port map (
+      i_clk         => i_slow_clk,
+      i_eeprom_miso => i_eeprom_miso,
+      o_eeprom_ce   => o_eeprom_ce,
+      o_eeprom_mosi => o_eeprom_mosi,
+      o_eeprom_clk  => eeprom_clk,
+      i_uart_data   => i_uart_data,
+      o_uart_data   => o_uart_data
+      );
 
 end;
