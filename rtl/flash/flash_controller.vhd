@@ -26,7 +26,7 @@ use ieee.numeric_std.all;
 -- 
 
 
-entity eeprom_controller is
+entity flash_controller is
   port (
     -- clock:
     i_clk           : in std_logic;
@@ -34,21 +34,21 @@ entity eeprom_controller is
     i_spi_miso      : in std_logic;
     o_spi_mosi      : out std_logic := '0';
     o_spi_ce        : out std_logic := '1';
-    -- control interface:
-    i_command_ready : in std_logic;
-    
-    o_done          : out std_logic := '0';
-    o_deviceid      : out std_logic_vector(7 downto 0);
-    o_vendorid      : out std_logic_vector(7 downto 0);
-    o_devicetype    : out std_logic_vector(7 downto 0)   
+    -- housekeeping interface:
+    i_enable        : in std_logic;
+    i_command       : in std_logic_vector(3 downto 0);
+    i_address       : in std_logic_vector(23 downto 0);
+    i_data          : in std_logic_vector(9 downto 0);
+    o_busy          : out std_logic := '1';
+    o_data          : out std_logic_vector(7 downto 0) := (others=>'z');
     );
-end eeprom_controller;
+end flash_controller;
 
 
 
 
 
-architecture behave of eeprom_controller is
+architecture behave of flash_controller is
   -- constant:
   constant CMD_JEDEC_ID : std_logic_vector(7 downto 0) := std_logic_vector(to_unsigned(16#9F#,8));
   -- state machine type:
