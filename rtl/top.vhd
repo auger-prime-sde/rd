@@ -96,19 +96,7 @@ architecture behaviour of top is
     );
   end component;
 
-  component eeprom_test
-    port (
-      i_clk           : in std_logic;
-      i_eeprom_miso   : in std_logic;
-      o_eeprom_ce     : out std_logic;
-      o_eeprom_mosi   : out std_logic;
-      o_eeprom_clk    : out std_logic;
-      i_uart_data     : in std_logic;
-      o_uart_data     : out std_logic
-      );
-  end component;
-  
-      
+
 
 begin
 
@@ -153,16 +141,5 @@ begin
       o_tx_data        => o_tx_data,
       o_tx_clk         => o_tx_clk,
       o_tx_datavalid   => o_tx_datavalid);
-
-  eeprom_test_1 : eeprom_test
-    port map (
-      i_clk         => i_slow_clk,
-      i_eeprom_miso => i_eeprom_miso,
-      o_eeprom_ce   => o_eeprom_ce,
-      o_eeprom_mosi => o_eeprom_mosi,
-      o_eeprom_clk  => eeprom_clk,
-      i_uart_data   => i_uart_data,
-      o_uart_data   => o_uart_data
-      );
 
 end;
