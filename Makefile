@@ -15,12 +15,12 @@ flash_controller_tb: rtl/flash/flash_controller.vhd test/flash_controller_tb.vhd
 	ghdl -e $(GHDL_OPTS)  $@
 	ghdl -r $(GHDL_OPTS)  $@ $(GHDL_RUN_OPTS) 
 
-
 wave.vcd:
 	ghdl -r settable_counter_tb --vcd=wave.vcd
 %.vcd: %_tb
 	ghdl -r $(GHDL_OPTS) $^ --vcd=$@
-
+%.ghw: %_tb
+	ghdl -r $(GHDL_OPTS) $^ --wave=$@
 
 
 clean:

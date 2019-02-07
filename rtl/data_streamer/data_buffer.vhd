@@ -18,7 +18,7 @@ entity data_buffer is
 		i_read_clk : in std_logic;
 		i_read_enable: in std_logic;
 		i_read_addr : in std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
-		o_read_data : out std_logic_vector(g_DATA_WIDTH-1 downto 0)
+		o_read_data : out std_logic_vector(g_DATA_WIDTH-1 downto 0) := (others => '0')
 	);
 end data_buffer;
 

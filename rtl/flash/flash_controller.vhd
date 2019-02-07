@@ -48,8 +48,8 @@ entity flash_controller is
     i_command       : in std_logic_vector(3 downto 0);
     i_address       : in std_logic_vector(11 downto 0);
     i_data          : in std_logic_vector(9 downto 0);
-    o_busy          : out std_logic := '1';
-    o_data          : out std_logic_vector(23 downto 0) := (others=>'Z')
+    o_busy          : out std_logic := '0';
+    o_data          : out std_logic_vector(23 downto 0)
     );
 end flash_controller;
 
@@ -77,17 +77,17 @@ architecture behave of flash_controller is
   -- constant CMD_GET_STATUS    : std_logic_vector(CMD_WIDTH-1 downto 0) := std_logic_vector(to_unsigned(16#9#,CMD_WIDTH));
   -- constant CMD_GET_CONFIG    : std_logic_vector(CMD_WIDTH-1 downto 0) := std_logic_vector(to_unsigned(16#a#,CMD_WIDTH));
 
-  constant CMD_IDLE          : unsigned(3 downto 0) := X"0";
-  constant CMD_GET_CHIP_INFO : unsigned(3 downto 0) := X"1";
-  constant CMD_GET_UNIQ_ID   : unsigned(3 downto 0) := X"2";
-  constant CMD_SET_UNIQ_ID   : unsigned(3 downto 0) := X"3";
-  constant CMD_LOAD_PAGE     : unsigned(3 downto 0) := X"4";
-  constant CMD_FLUSH_PAGE    : unsigned(3 downto 0) := X"5";
-  constant CMD_WRITE_BUFFER  : unsigned(3 downto 0) := X"6";
-  constant CMD_READ_BUFFER   : unsigned(3 downto 0) := X"7";
-  constant CMD_RESET         : unsigned(3 downto 0) := X"8";
-  constant CMD_GET_STATUS    : unsigned(3 downto 0) := X"9";
-  constant CMD_GET_CONFIG    : unsigned(3 downto 0) := X"A";
+  constant CMD_IDLE          : natural := 0;
+  constant CMD_GET_CHIP_INFO : natural := 1;
+  constant CMD_GET_UNIQ_ID   : natural := 2;
+  constant CMD_SET_UNIQ_ID   : natural := 3;
+  constant CMD_LOAD_PAGE     : natural := 4;
+  constant CMD_FLUSH_PAGE    : natural := 5;
+  constant CMD_WRITE_BUFFER  : natural := 6;
+  constant CMD_READ_BUFFER   : natural := 7;
+  constant CMD_RESET         : natural := 8;
+  constant CMD_GET_STATUS    : natural := 9;
+  constant CMD_GET_CONFIG    : natural := 10;
   
   -- constant for sending to the SPI flash:
   constant SPI_WRITE_PAGE   : std_logic_vector(7 downto 0) := std_logic_vector(to_unsigned(16#02#,8));
@@ -108,7 +108,7 @@ architecture behave of flash_controller is
   type t_Chip_Info_State    is (s_CI_Idle, s_CI_Cmd, s_CI_PhaseShift, s_CI_Data);
   type t_Get_Uniq_Id_State  is (s_GI_None);
   type t_Set_Uniq_Id_State  is (s_SI_None);
-  type t_Load_Page_State    is (s_LP_Idle, s_LP_Cmd, s_LP_Addr, s_LP_PhaseShift, s_LP_Data);
+  type t_Load_Page_State    is (s_LP_Idle, s_LP_Cmd, s_LP_Addr, s_LP_PhaseShift, s_LP_Data, s_LP_Wait);
   type t_Flush_Page_State   is (s_FP_Idle, s_FP_EnableWrite, s_FP_ClearPage, s_FP_WaitClear, s_FP_WriteCmd, s_FP_WriteData, s_FP_s_FP_WaitWrite);
   type t_Write_Buffer_State is (s_WB_Idle, s_WB_Busy);
   type t_Read_Buffer_State  is (s_RB_Idle, s_RB_Busy);
@@ -135,7 +135,7 @@ architecture behave of flash_controller is
   
 
    -- variable that tells which state machine is active:
-  signal r_command : unsigned(3 downto 0) := CMD_IDLE;
+  signal r_command : natural range 0 to NUM_COMMANDS := CMD_IDLE;
  
   
   -- signals for the write part:
@@ -144,33 +144,31 @@ architecture behave of flash_controller is
   signal r_Set_Uniq_Id_State : t_Set_Uniq_Id_State  := s_SI_None;
   signal r_Load_Page_State   : t_Load_Page_State    := s_LP_Idle;
   signal r_Flush_Page_State  : t_Flush_Page_State   := s_FP_Idle;
-  signal r_Write_Buffer_Stat : t_Write_Buffer_State := s_WB_Busy;
-  signal r_Read_Buffer_State : t_Read_Buffer_State  := s_RB_Busy;
+  signal r_Write_Buffer_Stat : t_Write_Buffer_State := s_WB_Idle;
+  signal r_Read_Buffer_State : t_Read_Buffer_State  := s_RB_Idle;
   signal r_Reset_State       : t_Reset_State        := s_RS_Idle;
   signal r_Get_Status_State  : t_Get_Status_State   := s_GS_Idle;
   signal r_Get_Config_State  : t_Get_Config_State   := s_GC_Idle;
 
 
   -- counters are re-used in different states
-  signal r_Count : natural range 0 to 10 := 0;
-  signal r_WordCount : natural range 0 to 256 := 0;
-  signal r_BitCount : natural range 0 to 7 := 0;
+  signal r_Count : natural range 0 to 23 := 0;
+  signal r_WordCount : natural range 0 to 4096 := 0;
+  signal r_BitCount : natural range 0 to 23 := 0;
 
 
   -- signals to/from buffers
   signal r_read_buffer_read_enable : std_logic := '0';
   signal r_read_buffer_write_enable : std_logic := '0';
-  signal r_read_buffer_data : std_logic_vector(INPUT_BITS-1 downto 0) := (others => 'Z');
+  signal r_read_buffer_data : std_logic_vector(7 downto 0) := (others => 'Z');
   signal r_read_buffer_addr : std_logic_vector(ADDR_BITS-1 downto 0) := (others => 'Z');
   
   -- two signals used to communicate between read and write process
   --signal r_write_done : std_logic := '0';
   signal r_read_done : std_logic := '0';
 
-  -- debug signals:
-  --signal r_countdebug : std_logic_vector(7 downto 0) := (others=>'0');
-  --signal state_is_idle, state_is_addr, state_is_data : std_logic;
-  
+  signal buffer_o_data : std_logic_vector(7 downto 0);
+  signal flash_o_data  : std_logic_vector(23 downto 0) := (others => 'Z');
   
 begin
 
@@ -191,22 +189,23 @@ begin
     generic map (g_ADDRESS_WIDTH => 12, g_DATA_WIDTH => 8)
     port map (
       i_write_clk    => i_clk,
-      i_write_enable => '0',
-      i_write_addr   => (others => '0'),
+      i_write_enable => r_read_buffer_write_enable,
+      i_write_addr   => r_read_buffer_addr,
       i_read_clk     => i_clk,
-      i_read_enable  => '1',
+      i_read_enable  => r_read_buffer_read_enable,
       i_read_addr    => i_address,
-      i_write_data   => (others => '0'),
-      o_read_data    => o_data(7 downto 0)
+      i_write_data   => r_read_buffer_data,
+      o_read_data    => buffer_o_data
       );
 
 
   
-  --r_countdebug <= std_logic_vector(to_unsigned(r_count, 8));
-  --state_is_idle <= '1' when r_State = s_Idle else '0';
-  --state_is_addr <= '1' when r_State = s_Addr else '0';
-  --state_is_data <= '1' when r_State = s_Data else '0';
-  
+  with r_read_buffer_read_enable select
+    o_data(7 downto 0) <= buffer_o_data when '1',
+                          flash_o_data(7 downto 0) when others;
+                          
+  o_data(23 downto 8) <= flash_o_data(23 downto 8);
+    
   
   -- main read process
   p_read : process (i_clk) is
@@ -217,7 +216,7 @@ begin
         when CMD_IDLE =>
           -- only accept commands when idle
           if i_enable = '1' then
-            r_Command <= unsigned(i_command);
+            r_Command <= to_integer(unsigned(i_command));
           end if;
         --------------------------------------------------------
         when CMD_GET_CHIP_INFO =>
@@ -226,14 +225,18 @@ begin
               r_WordCount <= 0;
               r_BitCount <= 0;
               r_read_done <= '0';
+              r_command <= CMD_IDLE;
             when s_CI_Cmd  =>
             when s_CI_PhaseShift =>
             when s_CI_Data =>
               -- read a bit
-              o_data(23 - r_BitCount) <= i_flash_miso;
-              r_BitCount <= r_BitCount + 1;
+              --report "reading bit " & integer'image(r_BitCount);
+              --report "value: " & std_logic'image(i_flash_miso);
+              flash_o_data(23 - r_BitCount) <= i_flash_miso;
               if r_BitCount = 23 then
                 r_read_done <= '1';
+              else
+                r_BitCount <= r_BitCount + 1;
               end if;
           end case;
         --------------------------------------------------------  
@@ -249,11 +252,33 @@ begin
               r_BitCount <= 0;
               r_WordCount <= 0;
               r_read_done <= '0';
+              r_Command <= CMD_IDLE;
+              r_read_buffer_write_enable <= '0';
             when s_LP_Cmd =>
             when s_LP_Addr =>
             when s_LP_PhaseShift =>
+              r_read_buffer_addr <= (others => '0');
+              r_WordCount <= 0;
+              r_BitCount <= 0;
             when s_LP_Data =>
+              r_BitCount <= (r_BitCount + 1) mod 8;
+              if r_BitCount = 7 then
+                r_read_buffer_write_enable <= '1';
+                if r_WordCount = 4095 then
+                  r_read_done <= '1';
+                  --r_read_buffer_read_enable <= '1';
+                else
+                  r_WordCount <= r_WordCount + 1;
+                end if;
+              else
+                r_read_buffer_write_enable <= '0';
+              end if;
               
+              r_read_buffer_addr <= std_logic_vector(to_unsigned(r_WordCount, ADDR_BITS));
+              r_read_buffer_data(7-r_BitCount) <= i_flash_miso;
+              -- read 4096 bytes from miso into the ram block
+            when s_LP_Wait =>
+              r_read_buffer_write_enable <= '0';
           end case;
         --------------------------------------------------------
         when CMD_FLUSH_PAGE =>
@@ -263,7 +288,12 @@ begin
 
         --------------------------------------------------------
         when CMD_READ_BUFFER =>
+          case r_Read_Buffer_State is
+            when s_RB_Idle =>
+              r_Command <= CMD_IDLE;
+            when s_RB_Busy =>
 
+          end case;
         --------------------------------------------------------
         when CMD_RESET =>
 
@@ -289,7 +319,7 @@ begin
       case r_Command is
         ---------------------------------------------------------
         when CMD_IDLE =>
-        -- nothing to do, trigger is received by rising edge process
+          o_busy <= '0';
         ---------------------------------------------------------
         when CMD_GET_CHIP_INFO =>
           case r_Chip_Info_State is
@@ -298,6 +328,7 @@ begin
               o_busy <= '1';
               r_Chip_Info_State <= s_CI_Cmd;
               r_Count <= 0;
+              o_flash_ce <= '1';
             when s_CI_Cmd =>
               o_flash_ce <= '0';
               o_flash_mosi <= SPI_JEDEC_ID(7-r_Count);
@@ -312,10 +343,10 @@ begin
             when s_CI_Data =>
               if r_read_done = '1' then
                 r_Chip_Info_State <= s_CI_Idle;
+                r_read_buffer_read_enable <= '0'; -- select flash data as ouput
+                                                  -- rather than buffer
                 o_busy <= '0';
                 o_flash_ce <= '1';
-                -- r_Command <= CMD_IDLE; TODO: figure out how to get r_command
-                -- back to idle
               end if;
           end case;
         --#######################################################--
@@ -329,7 +360,7 @@ begin
           case r_Load_Page_State is
             when s_LP_Idle =>
               o_busy <= '1';
-              r_Load_Page_State <= s_LP_Addr;
+              r_Load_Page_State <= s_LP_Cmd;
               r_Count <= 0;
             when s_LP_Cmd =>
               o_flash_ce <= '0';
@@ -358,10 +389,14 @@ begin
               r_Load_Page_State <= s_LP_Data;
             when s_LP_Data =>
               if r_read_done = '1' then
-                r_Load_Page_State <= s_LP_Idle;
-                o_busy <= '0';
+                r_Load_Page_State <= s_LP_Wait;
                 o_flash_ce <= '1';
               end if;
+            -- wait one more cycle for write to take effect
+            when s_LP_Wait =>
+              --o_busy <= '0'; -- cannot do this here because r_command is
+              --still at old value. 
+              r_Load_Page_State <= s_LP_Idle;
           end case;
           
         --######################################################--
@@ -372,7 +407,20 @@ begin
 
         ---------------------------------------------------------
         when CMD_READ_BUFFER =>
-
+          -- this state machine is a bit bogus because you can just read from
+          -- the buffer like any other buffer but I wanted it to generate a
+          -- pulse on the o_busy line for connsistency and I made that pulse
+          -- last until after the state has returned to idle so that it is
+          -- ready for the next command whenever o_busy is low.
+          case r_Read_Buffer_State is
+            when s_RB_Idle =>
+              r_Read_Buffer_State <= s_RB_Busy;
+              o_busy <= '1';
+              -- select the buffer as the output source
+              r_read_buffer_read_enable <= '1';
+            when s_RB_Busy =>
+              r_Read_Buffer_State <= s_RB_Idle;
+          end case;
         ---------------------------------------------------------
         when CMD_RESET =>
 
@@ -384,7 +432,8 @@ begin
 
         ---------------------------------------------------------
         when others =>
-          r_Command <= CMD_IDLE;
+          -- TODO: go to IDLE!
+          --r_Command <= CMD_IDLE;
         --#####################################################--
       end case;
     end if;
