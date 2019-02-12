@@ -25,4 +25,5 @@ wave.vcd:
 
 clean:
 	ghdl $(GHDL_OPTS) --clean
-	rm -f *-obj93.cf *.vcd *.o
+	rm -f *-obj93.cf *.vcd *.o *.ghw
+
