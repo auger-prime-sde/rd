@@ -4,11 +4,11 @@ use ieee.numeric_std.all;
 
 entity housekeeping is
   generic (
-    g_DEV_SELECT_BITS : natural := 3;
-    g_CMD_BITS : natural := 3;
-    g_ADDR_BITS : natural := 24;
-    g_DATA_IN_BITS : natural := 8;
-    g_DATA_OUT_BITS : natural := 16
+    g_DEV_SELECT_BITS : natural :=  3;
+    g_CMD_BITS        : natural :=  4;
+    g_ADDR_BITS       : natural := 12;
+    g_DATA_IN_BITS    : natural :=  8;
+    g_DATA_OUT_BITS   : natural := 16
     );
   port (
     i_clk            : in std_logic;
@@ -19,9 +19,10 @@ entity housekeeping is
        --signals to housekeeping sub-modules
     o_device_select  : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0);
     o_cmd            : out std_logic_vector(g_CMD_BITS-1 downto 0);
-    o_data           : out std_logic_vector(g_DATA_OUT_BITS-1 downto 0);
-    i_data           : in std_logic_vector(g_DATA_IN_BITS-1 downto 0);
-    i_busy           : in std_logic;
+    o_addr           : out std_logic_vector(g_ADDR_BITS-1 downto 0);
+    o_datain         : out std_logic_vector(g_DATA_IN_BITS-1 downto 0);
+    i_dataout        : in std_logic_vector(g_DATA_OUT_BITS-1 downto 0);
+    i_busy           : in std_logic
     );
 
 end housekeeping;
@@ -61,39 +62,35 @@ begin
   p_buffer_in : process (i_spi_clk) is
   begin
     if rising_edge(i_spi_clk) then
-      if i_spi_ce = '0' then
-        case r_read_state is
-          when s_Idle =>
-            r_count <= 0;
-            r_read_state <= s_Req;
-            -- already store the first bit
-            r_spi_data_buffer(0) <= i_spi_mosi;
-
-          when s_Req =>
-            -- store bits 1 and further
-            r_spi_data_buffer(r_count + 1) <= i_spi_mosi;
-            r_count <= r_count + 1;
-            if (r_count = c_buf_size-2) and (r_spi_data_buffer(g_DEV_SELECT_BITS downto 0) = DEV_FLASH) or
-              (r_count = g_DEV_SELECT_BITS+g_CMD_BITS+ 8 +g_DATA_IN_BITS-2) and     (r_spi_data_buffer(g_DEV_SELECT_BITS-1 downto 0) /= DEV_FLASH)  then
-              -- -1 extra because we already stored bit 0 when r_count was not yet running
-              r_read_state <= s_repl;
-              r_input_ready <= '1';
-            end if;
-          when s_Repl =>
-            if r_input_latched = '1' then
-              r_read_state <= s_Idle;
-              r_input_ready <= '0';
-            end if;
-          when s_Done =>
-            -- state unused for the moment
+      case r_read_state is
+        when s_Idle =>
+          r_count <= 0;
+          r_read_state <= s_Req;
+          -- already store the first bit
+          r_spi_data_buffer(c_buf_size-1) <= i_spi_mosi;
           
-        end case;
-      else
-        -- immediate reset
-        r_read_state <= s_idle;
-        r_count <= 0;
-        r_input_ready <= '0';
-      end if;--  i_spi_ce = '0'
+        when s_Req =>
+          -- store bits 1 and further
+          r_spi_data_buffer(c_buf_size - r_count -2) <= i_spi_mosi;
+          r_count <= r_count + 1;
+          if r_count = c_buf_size-2 then
+            -- -1 extra because we already stored bit 0 when r_count was not yet running
+            r_read_state <= s_repl;
+            r_input_ready <= '1';
+          end if;
+        when s_Repl =>
+          if r_input_latched = '1' then
+            r_read_state <= s_Idle;
+            r_input_ready <= '0';
+          end if;
+        when s_Done =>
+          -- state unused for the moment
+          
+      end case;
+      -- TODO: add watchdog:
+      --r_read_state <= s_idle;
+      --r_count <= 0;
+      --r_input_ready <= '0';
     end if; -- rising edge
   end process;
   
@@ -107,17 +104,17 @@ begin
             r_write_count <= 0;
             -- send bit 0
             if r_trigger_busy_out = '1' then
-              o_spi_miso <= o_busy;
+              o_spi_miso <= i_busy;
             else
-              o_spi_miso <= o_data(0);
+              o_spi_miso <= i_dataout(0);
             end if;
           end if;
         when s_Busy =>
           r_write_count <= r_write_count + 1;
           if r_trigger_busy_out = '1' then
-            o_spi_miso <= o_busy;
+            o_spi_miso <= i_busy;
           else
-            o_spi_miso <= o_data(r_write_count+1);
+            o_spi_miso <= i_dataout(r_write_count+1);
           end if;
           if r_write_count = g_DATA_OUT_BITS-2 then
             r_write_state <= s_Idle;
@@ -143,18 +140,19 @@ begin
       if r_input_latched = '0' then
         if r_input_ready = '1' then
           -- latch
-          if r_spi_data_buffer(g_DEV_SELECT_BITS-1 downto 0) /= (others => '0') then
-            o_device_select <= r_spi_data_buffer(g_DEV_SELECT_BITS-1 down to 0);
-            o_cmd           <= r_spi_data_buffer(g_DEV_SELECT_BITS+g_CMD_BITS-1 downto g_DEV_SELECT_BITS);
-            o_addr          <= r_spi_data_buffer(g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS-1 downto    g_DEV_SELECT_BITS+g_CMD_BITS);
-            o_data          <= r_spi_data_buffer(g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1  downto g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS);
+          if r_spi_data_buffer(g_DEV_SELECT_BITS-1 downto 0) /= std_logic_vector(to_unsigned(0, g_DEV_SELECT_BITS)) then
+            -- latch the command
+            o_device_select   <= r_spi_data_buffer( g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS );
+            o_cmd             <= r_spi_data_buffer(                   g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto            g_ADDR_BITS+g_DATA_IN_BITS );
+            o_addr            <= r_spi_data_buffer(                              g_ADDR_BITS+g_DATA_IN_BITS-1 downto                        g_DATA_IN_BITS );
+            o_datain          <= r_spi_data_buffer(                                          g_DATA_IN_BITS-1 downto                                     0 ); 
+
             -- remember that the current value was already latched
             r_input_latched <= '1';
           else
-            -- TODO: trigger a reply
-            if r_spi_data_buffer(g_DEV_SELECT_BITS+g_CMD_BITS-1 downto g_DEV_SELECT_BITS) = "001" then
+            if r_spi_data_buffer(g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS ) = "001" then
               r_trigger_busy_out <= '1';
-            elsif r_spi_data_buffer(g_DEV_SELECT_BITS+g_CMD_BITS-1 downto g_DEV_SELECT_BITS) = "010" then
+            elsif r_spi_data_buffer(g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS ) = "010" then
               r_trigger_data_out <= '1';
             end if;
           end if;
