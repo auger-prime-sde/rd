@@ -35,3 +35,5 @@ rtl/adc_driver/*
 **/*.o
 *_tb
 
+auger1.sty
+*.ghw
