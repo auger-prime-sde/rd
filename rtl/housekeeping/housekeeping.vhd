@@ -77,12 +77,21 @@ begin
             -- -1 extra because we already stored bit 0 when r_count was not yet running
             r_read_state <= s_repl;
             r_input_ready <= '1';
+            r_count <= 0;
           end if;
         when s_Repl =>
-          if r_input_latched = '1' then
+          -- old implemenation: wait for signal that input is acknowledge
+          --if r_input_latched = '1' then
+          --  r_read_state <= s_Idle;
+          --  r_input_ready <= '0';
+          --end if;
+          -- new implementation: wait exactly 16 clock cycles
+          r_count <= r_Count + 1;
+          if r_count = g_data_out_bits-1 then
             r_read_state <= s_Idle;
             r_input_ready <= '0';
           end if;
+          
         when s_Done =>
           -- state unused for the moment
           
@@ -99,6 +108,7 @@ begin
     if falling_edge(i_spi_clk) then
       case r_write_state is
         when s_idle =>
+          o_spi_miso <= 'U';
           if r_trigger_busy_out = '1' or r_trigger_data_out = '1' then
             r_write_state <= s_busy;
             r_write_count <= 0;
@@ -132,7 +142,7 @@ begin
   begin
     if rising_edge(i_clk) then
       -- reset triggers
-      if r_output_ready <= '1' then
+      if r_output_ready = '1' then
         r_trigger_data_out <= '0';
         r_trigger_busy_out <= '0';
       end if;
@@ -140,6 +150,7 @@ begin
       if r_input_latched = '0' then
         if r_input_ready = '1' then
           -- latch
+          r_input_latched <= '1';
           if r_spi_data_buffer(g_DEV_SELECT_BITS-1 downto 0) /= std_logic_vector(to_unsigned(0, g_DEV_SELECT_BITS)) then
             -- latch the command
             o_device_select   <= r_spi_data_buffer( g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS );
@@ -148,7 +159,7 @@ begin
             o_datain          <= r_spi_data_buffer(                                          g_DATA_IN_BITS-1 downto                                     0 ); 
 
             -- remember that the current value was already latched
-            r_input_latched <= '1';
+            --r_input_latched <= '1';
           else
             if r_spi_data_buffer(g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto g_ADDR_BITS+g_DATA_IN_BITS ) = "0001" then
               r_trigger_busy_out <= '1';
