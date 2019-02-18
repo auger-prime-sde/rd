@@ -150,9 +150,9 @@ begin
             -- remember that the current value was already latched
             r_input_latched <= '1';
           else
-            if r_spi_data_buffer(g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS ) = "001" then
+            if r_spi_data_buffer(g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto g_ADDR_BITS+g_DATA_IN_BITS ) = "0001" then
               r_trigger_busy_out <= '1';
-            elsif r_spi_data_buffer(g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS ) = "010" then
+            elsif r_spi_data_buffer(g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS-1 downto g_ADDR_BITS+g_DATA_IN_BITS ) = "0010" then
               r_trigger_data_out <= '1';
             end if;
           end if;
