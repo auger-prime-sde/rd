@@ -16,10 +16,12 @@ architecture behavior of housekeeping_tb is
   constant  g_DATA_IN_BITS    : natural :=  8;
   constant  g_DATA_OUT_BITS   : natural := 16;
   constant  g_MOSI_DATA_BITS   : natural := 27;
-  
+  constant  g_MISO_DATA_BITS   : natural := 16;
+   
+   
   signal clk, stop : std_logic := '0';
   signal spi_clk : std_logic := '1';
-  signal stop_spi_clk : std_logic := '0';
+  signal stop_spi_clk : std_logic := '1';
   signal spi_mosi : std_logic := '0';
   signal spi_miso : std_logic := '0';
   signal device_select : std_logic_vector(g_DEV_SELECT_BITS-1 downto 0);
@@ -29,6 +31,7 @@ architecture behavior of housekeeping_tb is
   signal dataout : std_logic_vector( g_DATA_OUT_BITS-1 downto 0);
   signal busy : std_logic := '0';
   signal mosi_data : bit_vector( g_MOSI_DATA_BITS-1 downto 0);
+  signal miso_data :std_logic_vector( g_MISO_DATA_BITS-1 downto 0);
   component housekeeping is
   generic (
     g_DEV_SELECT_BITS : natural :=  3;
@@ -76,12 +79,12 @@ begin
   begin
     -- Finish simulation when stop is asserted
     if stop = '1' then
-	report "stop=1";
+	--report "stop=1";
       wait;
     end if;
 
     clk <= '0';
-	report "clk";
+	--report "clk";
     wait for clk_period / 2;
     clk <= '1';
     wait for clk_period / 2;
@@ -90,14 +93,14 @@ begin
 p_spi_clk : process is
   begin
      if stop = '1' then
-	  report "stop_spi";
+	--  report "stop_spi";
       wait;
     end if;
     -- spi_clk can start anytime
-		report "clk_spi";
+	--	report "clk_spi";
 	if stop_spi_clk  = '0' then
 		spi_clk <= '0';
-		report "clk_spi_run";
+	--	report "clk_spi_run";
 		wait for spi_clk_period / 2;
 		spi_clk <= '1';
 		wait for spi_clk_period / 2;
@@ -108,25 +111,58 @@ p_spi_clk : process is
   
   p_test : process is
   begin
-	report "p_test start";
+  
+		wait for 100 ns;
+		report "get busy state";
     mosi_data <= B"000_0001_000000000000_00000000"; --get busy state
 	busy <= '1';			
 	stop_spi_clk <= '0';
   
- -- if falling_edge(spi_clk) then
-	 for i in 0 to (g_MOSI_DATA_BITS*2)-1 loop
-		report "forloop";
+		report "get busy state first attempt";
+ 	 for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
 		if i <= g_MOSI_DATA_BITS-1 then --write part of spi
-		spi_mosi <= to_stdulogic (mosi_data(26-i));
+			spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
+			elsif i = (g_MOSI_DATA_BITS+1) then
+--		assert spi_miso ='1' report "spi_miso not high after request bussy while bussy" severity warning;
 		end if;	
 		wait for spi_clk_period;
 	 end loop;
-  --end if;
-	report "stop_spi";
-	 stop_spi_clk <= '1';
-    wait for 100 ns;
+		
+		--stop_spi_clk <= '1';
+		--wait for 100 ns;
+	--	assert spi_miso ='0' report "spi_miso not low after request bussy while bussy done" severity warning; --controleer default
+		busy <= '0';
+		stop_spi_clk <= '0';
+	report "get busy state second attempt";
+	 for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
+		if i <= g_MOSI_DATA_BITS-1 then --write part of spi
+			spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
+		elsif i = (g_MOSI_DATA_BITS+1) then 		
+--	assert spi_miso ='0' report "spi_miso not low after request bussy while not bussy" severity warning;
+		end if;	
+		wait for spi_clk_period;
+	 end loop;
+	 
+	 busy <= '1';
+		stop_spi_clk <= '0';
+	report "get busy state second attempt";
+	 for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
+		if i <= g_MOSI_DATA_BITS-1 then --write part of spi
+			spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
+		elsif i = (g_MOSI_DATA_BITS+1) then 		
+--	assert spi_miso ='0' report "spi_miso not low after request bussy while not bussy" severity warning;
+		end if;	
+		wait for spi_clk_period;
+	 end loop;
+	 
+	stop_spi_clk <= '1'; 
+	wait for 100 ns;
+	--assert spi_miso ='0' report "spi_miso not low after request bussy done" severity warning; --controleer default 
     
-    stop <= '1';
+		
+		report "stop_spi";
+    
+	stop <= '1';
     wait;
 
   end process;
