@@ -117,16 +117,17 @@ p_spi_clk : process is
 	mosi_data <= B"011_0010_101010101010_11001100"; --send command to device 0010
 	busy <= '0';			
 	
-	report "send command to device 0010";
+	report "send command  0010 to device 011";
 	 for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
 		if i <= g_MOSI_DATA_BITS-1 then --write part of spi
 			spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
 		elsif i = (g_MOSI_DATA_BITS) then 	
-			busy <= '1';
-			assert device_select = "011" report "Device select failt " severity warning;
-			assert cmd = "0010" report "CMD out failt " severity warning;
-			assert addr = "101010101010" report "addres out failt " severity warning;
-			assert datain = "11001100" report "datain out failt " severity warning;
+          busy <= '1';
+          report "checking output at time " & time'image(now);
+          assert device_select = "011" report "Device select failt " severity warning;
+          assert cmd = "0010" report "CMD out failt " severity warning;
+          assert addr = "101010101010" report "addres out failt " severity warning;
+          assert datain = "11001100" report "datain out failt " severity warning;
 		end if;	
 		
 		wait for spi_clk_period;
