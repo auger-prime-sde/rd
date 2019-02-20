@@ -15,8 +15,8 @@ architecture behavior of housekeeping_tb is
   constant  g_ADDR_BITS       : natural := 12;
   constant  g_DATA_IN_BITS    : natural :=  8;
   constant  g_DATA_OUT_BITS   : natural := 16;
-  constant  g_MOSI_DATA_BITS   : natural := 27;
-  constant  g_MISO_DATA_BITS   : natural := 16;
+  constant  g_MOSI_DATA_BITS   : natural := g_DEV_SELECT_BITS+g_CMD_BITS+g_ADDR_BITS+g_DATA_IN_BITS;
+  constant  g_MISO_DATA_BITS   : natural := g_DATA_OUT_BITS;
    
    
   signal clk, stop : std_logic := '0';
@@ -113,50 +113,89 @@ p_spi_clk : process is
   begin
   
     wait for 100 ns;
-    report "get busy state";
     mosi_data <= B"000_0001_000000000000_00000000"; --get busy state
 	busy <= '1';			
 	stop_spi_clk <= '0';
-  
+
+
+
+    
     report "get busy state first attempt";
- 	 for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
-       if i <= g_MOSI_DATA_BITS-1 then --write part of spi
-         spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
-       elsif i = (g_MOSI_DATA_BITS+1) then
-       --	assert spi_miso ='1' report "spi_miso not high after request bussy while bussy" severity warning;
-       end if;	
-       wait for spi_clk_period;
-	 end loop;
-		
+    -- write part of spi
+    for i in 0 to g_MOSI_DATA_BITS-1 loop
+      -- write data when clock goes low
+      wait until spi_clk = '0';
+      spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
+    end loop;
+    -- we are left at the start of the last bit so we wait one clock period for
+    -- that bit to finish.
+    wait for spi_clk_period;
+    spi_mosi <= 'U'; -- last bit finished, should no longer care
+
+    -- read part of spi
+    for i in 0 to g_MISO_DATA_BITS-1 loop
+      -- read data when clock goes high
+      wait until spi_clk = '1';
+      assert spi_miso = busy report "spi_miso not high after request busy while busy" severity warning;
+    end loop;
+
+    
+
+    
     --stop_spi_clk <= '1';
     --wait for 100 ns;
 	--	assert spi_miso ='0' report "spi_miso not low after request bussy while bussy done" severity warning; --controleer default
     busy <= '0';
     stop_spi_clk <= '0';
 	report "get busy state second attempt";
-    for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
-      if i <= g_MOSI_DATA_BITS-1 then --write part of spi
-        spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
-      elsif i = (g_MOSI_DATA_BITS+1) then 		
-      -- assert spi_miso ='0' report "spi_miso not low after request bussy while not bussy" severity warning;
-      end if;	
-      wait for spi_clk_period;
+    -- write part of spi
+    for i in 0 to g_MOSI_DATA_BITS-1 loop
+      -- write data when clock goes low
+      wait until spi_clk = '0';
+      spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
     end loop;
-	 
+    -- we are left at the start of the last bit so we wait one clock period for
+    -- that bit to finish.
+    wait for spi_clk_period;
+    spi_mosi <= 'U'; -- last bit finished, should no longer care
+    -- read part of spi
+    for i in 0 to g_MISO_DATA_BITS-1 loop
+      -- read data when clock goes high
+      wait until spi_clk = '1';
+      assert spi_miso = busy report "spi_miso not high after request busy while busy" severity warning;
+    end loop;
+    stop_spi_clk <= '1';
+
+
+    
+    wait for 10 * spi_clk_period;
+
+
+    
+    report "get busy state third attempt";
     busy <= '1';
     stop_spi_clk <= '0';
-	report "get busy state second attempt";
-    for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
-      if i <= g_MOSI_DATA_BITS-1 then --write part of spi
-        spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
-      elsif i = (g_MOSI_DATA_BITS+1) then 		
-      --	assert spi_miso ='0' report "spi_miso not low after request bussy while not bussy" severity warning;
-      end if;	
-      wait for spi_clk_period;
+    -- write part of spi
+    for i in 0 to g_MOSI_DATA_BITS-1 loop
+      -- write data when clock goes low
+      wait until spi_clk = '0';
+      spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
     end loop;
-	 
-	stop_spi_clk <= '1'; 
-	wait for 100 ns;
+    -- we are left at the start of the last bit so we wait one clock period for
+    -- that bit to finish.
+    wait for spi_clk_period;
+    spi_mosi <= 'U'; -- last bit finished, should no longer care
+    -- read part of spi
+    for i in 0 to g_MISO_DATA_BITS-1 loop
+      -- read data when clock goes high
+      wait until spi_clk = '1';
+      assert spi_miso = busy report "spi_miso not high after request busy while busy" severity warning;
+    end loop;
+    stop_spi_clk <= '1';
+    
+    
+   
+	wait for 10 * spi_clk_period;
 	--assert spi_miso ='0' report "spi_miso not low after request bussy done" severity warning; --controleer default 
     
 		
