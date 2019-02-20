@@ -112,55 +112,55 @@ p_spi_clk : process is
   p_test : process is
   begin
   
-		wait for 100 ns;
-		report "get busy state";
+    wait for 100 ns;
+    report "get busy state";
     mosi_data <= B"000_0001_000000000000_00000000"; --get busy state
 	busy <= '1';			
 	stop_spi_clk <= '0';
   
-		report "get busy state first attempt";
+    report "get busy state first attempt";
  	 for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
-		if i <= g_MOSI_DATA_BITS-1 then --write part of spi
-			spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
-			elsif i = (g_MOSI_DATA_BITS+1) then
---		assert spi_miso ='1' report "spi_miso not high after request bussy while bussy" severity warning;
-		end if;	
-		wait for spi_clk_period;
+       if i <= g_MOSI_DATA_BITS-1 then --write part of spi
+         spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
+       elsif i = (g_MOSI_DATA_BITS+1) then
+       --	assert spi_miso ='1' report "spi_miso not high after request bussy while bussy" severity warning;
+       end if;	
+       wait for spi_clk_period;
 	 end loop;
 		
-		--stop_spi_clk <= '1';
-		--wait for 100 ns;
+    --stop_spi_clk <= '1';
+    --wait for 100 ns;
 	--	assert spi_miso ='0' report "spi_miso not low after request bussy while bussy done" severity warning; --controleer default
-		busy <= '0';
-		stop_spi_clk <= '0';
+    busy <= '0';
+    stop_spi_clk <= '0';
 	report "get busy state second attempt";
-	 for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
-		if i <= g_MOSI_DATA_BITS-1 then --write part of spi
-			spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
-		elsif i = (g_MOSI_DATA_BITS+1) then 		
---	assert spi_miso ='0' report "spi_miso not low after request bussy while not bussy" severity warning;
-		end if;	
-		wait for spi_clk_period;
-	 end loop;
+    for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
+      if i <= g_MOSI_DATA_BITS-1 then --write part of spi
+        spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
+      elsif i = (g_MOSI_DATA_BITS+1) then 		
+      -- assert spi_miso ='0' report "spi_miso not low after request bussy while not bussy" severity warning;
+      end if;	
+      wait for spi_clk_period;
+    end loop;
 	 
-	 busy <= '1';
-		stop_spi_clk <= '0';
+    busy <= '1';
+    stop_spi_clk <= '0';
 	report "get busy state second attempt";
-	 for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
-		if i <= g_MOSI_DATA_BITS-1 then --write part of spi
-			spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
-		elsif i = (g_MOSI_DATA_BITS+1) then 		
---	assert spi_miso ='0' report "spi_miso not low after request bussy while not bussy" severity warning;
-		end if;	
-		wait for spi_clk_period;
-	 end loop;
+    for i in 0 to (g_MOSI_DATA_BITS + g_DATA_OUT_BITS)-1 loop
+      if i <= g_MOSI_DATA_BITS-1 then --write part of spi
+        spi_mosi <= to_stdulogic (mosi_data((g_MOSI_DATA_BITS-1)-i));
+      elsif i = (g_MOSI_DATA_BITS+1) then 		
+      --	assert spi_miso ='0' report "spi_miso not low after request bussy while not bussy" severity warning;
+      end if;	
+      wait for spi_clk_period;
+    end loop;
 	 
 	stop_spi_clk <= '1'; 
 	wait for 100 ns;
 	--assert spi_miso ='0' report "spi_miso not low after request bussy done" severity warning; --controleer default 
     
 		
-		report "stop_spi";
+    report "stop_spi";
     
 	stop <= '1';
     wait;
