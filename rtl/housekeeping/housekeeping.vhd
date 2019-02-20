@@ -109,6 +109,7 @@ begin
       case r_write_state is
         when s_idle =>
           o_spi_miso <= 'U';
+          r_output_ready <= '0';
           if r_trigger_busy_out = '1' or r_trigger_data_out = '1' then
             r_write_state <= s_busy;
             r_write_count <= 0;
