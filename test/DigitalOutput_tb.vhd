@@ -71,7 +71,7 @@ begin
 	assert dataout = "0000000011111111" report "o_DataOut is not initialized all systems on" severity warning;
 	wait for 50 ns;
 	wait until clk ='1';	
-	cmd <= "0000"; 			--write command
+	cmd <= "0000"; 			--write vector command
 	addr <= "UUUUUUUUUUUU";	--Dont care 
 	datain <= "01010101";	
 	enable <= '1';
@@ -82,7 +82,7 @@ begin
 	wait for 50 ns;	
 	
 	wait until clk ='1';	
-	cmd <=  "0010"; 		-- set to default
+	cmd <=  "0011"; 		-- set to default
 	addr <= "UUUUUUUUUUUU";	--Dont care 
 	datain <= "UUUUUUUU";	
 	enable <= '1';
@@ -91,14 +91,24 @@ begin
 	assert dataout = "0000000011111111" report "o_DataOut is not set to default" severity warning;
 	wait for 50 ns;
 	
-		wait until clk ='1';	
-	cmd <=  "0001"; 		-- read data
+	wait until clk ='1';	
+	cmd <=  "0010"; 		-- reset bit
 	addr <= "UUUUUUUUUUUU";	--Dont care 
-	datain <= "UUUUUUUU";	
+	datain <= "01010101";	
 	enable <= '1';
  	wait for clk_period;
 	enable <= '0';
-	assert dataout = "0000000011111111" report "o_DataOut is not set to default" severity warning;
+	assert dataout = "0000000010101010" report "o_DataOut is not set to default" severity warning;
+	wait for 50 ns;
+	
+	wait until clk ='1';	
+	cmd <=  "0001"; 		-- set bit
+	addr <= "UUUUUUUUUUUU";	--Dont care 
+	datain <= "00010100";	
+	enable <= '1';
+ 	wait for clk_period;
+	enable <= '0';
+	assert dataout = "0000000010111110" report "o_DataOut is not set to default" severity warning;
 	wait for 50 ns;
 	
 	stop <= '1';

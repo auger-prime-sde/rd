@@ -4,7 +4,7 @@ use IEEE.numeric_std.all;
 
 entity DigitalOutput is
 generic (
-    g_CMD_BITS        : natural :=  4;
+    g_CMD_BITS        : natural :=  4;  
     g_ADDR_BITS       : natural := 12;
     g_DATA_IN_BITS    : natural :=  8;
     g_DATA_OUT_BITS   : natural := 16;
@@ -24,6 +24,9 @@ port(	--inputs
 end  DigitalOutput;
 
 architecture Behavioral of DigitalOutput is
+signal s_data : std_logic_vector(g_DATA_IN_BITS-1 downto 0) := g_DEFAULT_OUTPUT(g_DATA_IN_BITS-1 downto 0);
+signal s_prev_data : std_logic_vector(g_DATA_IN_BITS-1 downto 0) := g_DEFAULT_OUTPUT(g_DATA_IN_BITS-1 downto 0);
+
 begin
 
 process (i_Clk)
@@ -31,16 +34,25 @@ process (i_Clk)
 begin
 if  falling_edge(i_clk) then
 	
-	if (i_enable = '1' and i_cmd = "0000") then ---Write command
+	if (i_enable = '1' and i_cmd = "0000") then ---Write vector
 	o_busy <='1';
 	o_dataOut (g_DATA_IN_BITS-1 downto 0) <= i_data;
-	elsif (i_enable = '1' and i_cmd = "0001") then --Read command
-	--we dont have to do anything because data is already on the dataout bus
-	elsif (i_enable = '1' and i_cmd = "0010") then --Set default command
+	s_prev_data <= i_data;
+	elsif (i_enable = '1' and i_cmd = "0001") then --set bit
+	o_busy <='1';
+	o_dataOut (g_DATA_IN_BITS-1 downto 0) <= i_data or  s_data ;	
+	s_prev_data <= i_data or  s_data ;
+	elsif (i_enable = '1' and i_cmd = "0010") then --reset bit
+	o_busy <='1';
+	o_dataOut (g_DATA_IN_BITS-1 downto 0) <= not i_data and  s_data ;	
+	s_prev_data <= not i_data and  s_data ;
+	elsif (i_enable = '1' and i_cmd = "0011") then --set to default
 	o_busy <='1';
 	o_dataOut <= g_DEFAULT_OUTPUT;
+	s_prev_data <= g_DEFAULT_OUTPUT (g_DATA_IN_BITS-1 downto 0);
 	else 
 	o_busy <='0';
+	s_data <= s_prev_data;
 	end if;
 end if;
 	end process;
