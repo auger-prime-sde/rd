@@ -6,7 +6,7 @@ entity spi_decoder_tb is
 end spi_decoder_tb;
 
 architecture behave of spi_decoder_tb is
-  constant clk_period : time := 20 ns; -- 50.0 MHz
+  constant clk_period : time := 20.2 ns; -- 50.0 MHz
   constant spi_period : time := 80 ns; -- 12.5 MHz
 
   constant c_WORDSIZE : natural := 8 ;
