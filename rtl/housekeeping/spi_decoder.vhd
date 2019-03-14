@@ -2,32 +2,43 @@ library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
--- translator between spi and a parallel bus at two different clock speeds
--- it is assumed that the parallel clock is faster than the spi clock.
--- On the parallel side a flag (i_transmit) is available to indicate that the
--- data on i_data should be written to miso. The data must be present at the
--- first rising edge during which i_transmit is high. o_recv_count is available
--- for the subsystem to determine how many bits have been received. Note that
--- in typical use cases you'll have 0 clock cycles between finding the last bit
--- and writing i_transmit and i_data. This means data must be immediately
--- available or the command must be split into a fetch_ and a get_ command.
--- It is assumed that each transaction consists of 1 read phase and 1 write
--- phase of maximum length g_INPUT_BITS and g_OUTPUT_BITS respectively.
+-- translator between spi and a parallel bus at two different clock
+-- speeds. It is assumed that the parallel clock is at least twice
+-- faster than the spi clock.  On the parallel side a counter
+-- (o_recv_count) is available to indicate how many bits have been
+-- received. When this counter overflows to 0 the last word is
+-- available in full at the bus. This is not latched so the contents
+-- on the bus must be captured at that clock transition. Reading and
+-- writing happens in parallel but the input and output widths do not
+-- have to be identical. Technically there are no further constraints
+-- on the bus widths but in practice we will likely have to use
+-- multiples of 32 bits to fit the buswidth at the UUB side. The data
+-- must be present at the falling edge of the spi clock. This is
+-- guaranteed if the subsystem writes its data to the output bus on
+-- the rising edge of the fast clock at which the desired value of
+-- o_recv_count is first seen (usually 0). This means the subsystem
+-- has no further clock cycles available for processing the request
+-- and must immediately respond. This can be alleviated by defining a
+-- wider input bus than needed and using the remaining clock cycles to
+-- come up with the appropriate response. E.g. by processing the
+-- request when o_recv_count=30, at least 8 clock cycles can be used
+-- before the response must be written (at
+-- o_recv_count=0). Alternatively the request could be split in a
+-- fetch, a poll and a get command spread over multiple
+-- transactions. Notable difference to earlier design: there is no
+-- ready line back to the controller. This functionality must be
+-- implemented as an spi command if needed.
 
--- update: let's assume transactions occur in multiples of 32 bit words and
--- that all subsystems have i/o busses smaller than 32 bits and therefore just
--- one word in and one word out is needed.  
+
 
 entity spi_decoder is
   generic (
-    -- width of the parallel busses.
-    -- must be multiples of wordsize. If larger than wordsize, blocks will be
-    -- aligned to multiples of this. I.e. bit 0 is read/written at clock 0 and
-    -- N*g_*_BITS-1. Consequently, if you wish to receive 8 bits and then
-    -- transmit 16, you'll have to either 1) set g_OUTPUT_BITS to 24 and write
-    -- the 16 output bits to the last 16 bits in the output bus. (bus is not
-    -- latched so that should work); or 2) set g_OUTPUT_BITS to 8 and delay the
-    -- writing of the last 8 bits until the first 8 have been written. 
+    -- width of the parallel busses.  Take care if not identical: If
+    -- you wish to receive 8 bits and then transmit 16, you'll have to
+    -- either 1) set g_OUTPUT_BITS to 24 and write the 16 output bits
+    -- to the last 16 bits in the output bus. (bus is not latched so
+    -- that should work); or 2) set g_OUTPUT_BITS to 8 and delay the
+    -- writing of the last 8 bits until the first 8 have been written.
     g_INPUT_BITS : natural := 32;
     g_OUTPUT_BITS : natural := 32
     );
@@ -102,7 +113,7 @@ begin
             r_stabilizer <= s_Low;
           end if;
       end case;
-    end if; -- rising_edge(i_clk)
+    end if; -- i_clk'event
   end process;
 end behave;
 
