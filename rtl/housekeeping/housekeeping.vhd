@@ -10,7 +10,8 @@ entity housekeeping is
     i_spi_clk        : in std_logic;
     i_spi_mosi       : in std_logic;
     o_spi_miso       : out std_logic;
-    i_spi_ce         : in std_logic  );
+    i_spi_ce         : in std_logic;
+    o_digitalout     : out std_logic_vector(7 downto 0));
 
 end housekeeping;
 
@@ -25,13 +26,14 @@ architecture behaviour of housekeeping is
   signal r_gpio_in    : std_logic_vector(31 downto 0);
   signal r_gpio_out   : std_logic_vector(31 downto 0);
   signal r_gpio_count : std_logic_vector(31 downto 0);
+  signal r_gpio_trigger : std_logic;
   
   component spi_demux is
     generic ( g_DEV_SELECT_BITS : natural := g_DEV_SELECT_BITS );
     port (
       i_spi_clk    : in  std_logic;
       i_spi_mosi   : in  std_logic;
-      o_spi_miso   : out std_logic;
+      --o_spi_miso   : out std_logic;
       i_spi_ce     : in  std_logic;
       o_dev_select : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
       );
@@ -52,13 +54,33 @@ architecture behaviour of housekeeping is
       o_recv_count : out std_logic_vector(g_INPUT_BITS-1 downto 0) );
   end component;
 
+  component Digitaloutput is
+    generic (
+      g_CMD_BITS        : natural := 4;  
+      g_DATA_IN_BITS    : natural := 8;
+      g_DATA_OUT_BITS   : natural := 8;
+      g_DEFAULT_OUTPUT  : std_logic_vector (15 downto 0) := "0000000011111111" --we only use the last 8 bits for output so default all outputs are high
+      );
+    port(	--inputs
+      i_clk : in std_logic;
+      i_enable : in std_logic;
+      i_cmd : in std_logic_vector(g_CMD_BITS-1 downto 0);
+      i_data : in std_logic_vector(g_DATA_IN_BITS-1 downto 0);
+      
+      --outputs
+      o_DataOut : out std_logic_vector (g_DATA_OUT_BITS-1 downto 0) := g_DEFAULT_OUTPUT; 
+      o_busy	  : out std_logic
+      );
+  end component;
 begin
 
-  -- code for subsystem select address to one-hot:
+  -- code for subsystem select address to one-low:
   g_GENERATE_FOR: for s in 1 to c_NUM_SUBSYTEMS generate
-    r_subsystem_ce_lines(s) <= '1' when to_integer(unsigned(r_subsystem_select)) = s else '0';
+    r_subsystem_ce_lines(s) <= '0' when to_integer(unsigned(r_subsystem_select)) = s else '1';
   end generate;
 
+  r_gpio_trigger <= '1' when r_gpio_count = std_logic_vector(to_unsigned(0, 32)) else '0';
+  o_digitalout <= r_gpio_out(7 downto 0);
   
   -- instantiate one spi demuxer
   spi_demux_1 : spi_demux
@@ -66,7 +88,7 @@ begin
     port map (
       i_spi_clk    => i_spi_clk,
       i_spi_mosi   => i_spi_mosi,
-      o_spi_miso   => o_spi_miso,
+      --o_spi_miso   => o_spi_miso,
       i_spi_ce     => i_spi_ce,
       o_dev_select => r_subsystem_select
       );
@@ -81,17 +103,17 @@ begin
       i_spi_ce     => r_subsystem_ce_lines(1),
       i_clk        => i_clk,
       o_data       => r_gpio_in,
-      i_data       => r_gpio_out
+      i_data       => r_gpio_out,
+      o_recv_count => r_gpio_count
       );
-  -- gpio_1 : gpio
-  --   port map (
-  --     i_cmd               => r_gpio_in(31 downto 28),
-  --     i_addr              => r_gpio_in(27 downto 20),
-  --     i_data              => r_gpio_in(19 downto 12),
-  --     o_data( 7 downto 0) => r_gpio_out,
-  --     o_data(31 downto 8) => (others => '0'),
-  --     i_enable            => r_subsystem_ce_lines(1),
-  --     i_recv_count        => r_gpio_count );
+   digitalout_1 : Digitaloutput
+     port map (
+       i_clk         => i_clk,
+       i_enable      => r_gpio_trigger,
+       i_cmd         => r_gpio_in(31 downto 28),
+       i_data        => r_gpio_in(27 downto 20),
+       o_dataout     => r_gpio_out(7 downto 0)
+       );
       
   
   

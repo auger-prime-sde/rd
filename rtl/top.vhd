@@ -30,7 +30,8 @@ entity top is
     i_housekeeping_clk  : in std_logic;
     i_housekeeping_mosi : in std_logic;
     i_housekeeping_ce   : in std_logic;
-    o_housekeeping_miso : out std_logic  );
+    o_housekeeping_miso : out std_logic;
+    o_housekeeping_dout : out std_logic_vector(7 downto 0) );
   end top;
 
 architecture behaviour of top is
@@ -94,11 +95,12 @@ architecture behaviour of top is
   component housekeeping
     generic (g_DEV_SELECT_BITS : natural := 32);
     port (
-      i_clk      : in  std_logic;
-      i_spi_clk  : in  std_logic;
-      i_spi_mosi : in  std_logic;
-      o_spi_miso : out std_logic;
-      i_spi_ce   : in  std_logic );
+      i_clk        : in  std_logic;
+      i_spi_clk    : in  std_logic;
+      i_spi_mosi   : in  std_logic;
+      o_spi_miso   : out std_logic;
+      i_spi_ce     : in  std_logic;
+      o_digitalout : out std_logic_vector(7 downto 0) );
   end component;
 
   
@@ -146,11 +148,12 @@ begin
   housekeeping_1 : housekeeping
     generic map (g_DEV_SELECT_BITS => 32)
     port map (
-      i_clk      => i_slow_clk,
-      i_spi_clk  => i_housekeeping_clk,
-      i_spi_mosi => i_housekeeping_mosi,
-      o_spi_miso => o_housekeeping_miso,
-      i_spi_ce   => i_housekeeping_ce );
+      i_clk        => i_slow_clk,
+      i_spi_clk    => i_housekeeping_clk,
+      i_spi_mosi   => i_housekeeping_mosi,
+      o_spi_miso   => o_housekeeping_miso,
+      i_spi_ce     => i_housekeeping_ce,
+      o_digitalout => o_housekeeping_dout );
   
   data_streamer_1 : data_streamer
     generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
