@@ -30,7 +30,7 @@ architecture behave of spi_demux_tb is
     port (
       i_spi_clk    : in  std_logic;
       i_spi_mosi   : in  std_logic;
-      o_spi_miso   : out std_logic;
+      --o_spi_miso   : out std_logic;
       i_spi_ce     : in  std_logic;
       o_dev_select : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
       );
@@ -42,7 +42,7 @@ begin
     port map (
       i_spi_clk    => i_spi_clk,
       i_spi_mosi   => i_spi_mosi,
-      o_spi_miso   => o_spi_miso,
+      --o_spi_miso   => o_spi_miso,
       i_spi_ce     => i_spi_ce,
       o_dev_select => o_dev_select
       );

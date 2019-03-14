@@ -40,9 +40,9 @@ architecture behave of spi_decoder_tb is
       i_spi_mosi   : in  std_logic;
       o_spi_miso   : out std_logic;
       i_spi_ce     : in  std_logic;
-      i_clk        : in std_logic;
+      i_clk        : in  std_logic;
       o_data       : out std_logic_vector(g_INPUT_BITS-1 downto 0) := (others => '0');
-      i_data       : in std_logic_vector(g_OUTPUT_BITS-1 downto 0);
+      i_data       : in  std_logic_vector(g_OUTPUT_BITS-1 downto 0);
       o_recv_count : out std_logic_vector(g_INPUT_BITS-1 downto 0) );
   end component;
 

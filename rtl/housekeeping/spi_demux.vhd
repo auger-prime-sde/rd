@@ -12,7 +12,7 @@ entity spi_demux is
     -- SPI interface to UUB:
     i_spi_clk  : in  std_logic;
     i_spi_mosi : in  std_logic;
-    o_spi_miso : out std_logic;
+    --o_spi_miso : out std_logic;
     i_spi_ce   : in  std_logic;
     -- muxer target output:
     o_dev_select   : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
@@ -35,8 +35,8 @@ architecture behave of spi_demux is
   
 begin
 
-  -- only output the 
-  o_dev_select <= (others => '0') when (r_flag_state /= r_reset_flag) or (r_count /= g_DEV_SELECT_BITS-1) else r_device;
+  -- output the addr of the selected device when active:
+  --o_dev_select <= (others => '0') when (r_flag_state /= r_reset_flag) or (r_count /= g_DEV_SELECT_BITS-1) else r_device;
     
 
 
@@ -56,18 +56,24 @@ begin
         -- latch first bit:
         r_device(g_DEV_SELECT_BITS-1) <= i_spi_mosi;
         r_count <= 0;
-        --r_dev_out <= (others => '0');
+        o_dev_select <= (others => '0');
       else
         if r_count < g_DEV_SELECT_BITS - 1  then
           -- latch further dev bits:
           r_device(g_DEV_SELECT_BITS-r_count-2) <= i_spi_mosi;
           r_count <= r_count + 1;
-          --if r_count = g_DEV_SELECT_BITS - 2 then
+
+          
+          if r_count = g_DEV_SELECT_BITS - 2 then
+            o_dev_select <= r_device;
+            o_dev_select(g_DEV_SELECT_BITS-r_count-2) <= i_spi_mosi;
+          
           --  r_dev_out(g_DEV_SELECT_BITS-1 downto 1) <= r_device(g_DEV_SELECT_BITS-1 downto 1);
           --  r_dev_out(0) <= i_spi_mosi;
-          --end if;
+          end if;
           
         else
+          
         -- forward
         end if;
       end if;
