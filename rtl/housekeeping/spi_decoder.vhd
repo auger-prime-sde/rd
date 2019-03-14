@@ -100,6 +100,7 @@ begin
   p_recv_trig : process(i_clk) is
   begin
     if i_clk'event then
+    --if rising_edge(i_clk) then
       case r_stabilizer is
         when s_Low =>
           if i_spi_clk = '1' then

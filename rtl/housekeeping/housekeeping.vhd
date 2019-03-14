@@ -6,12 +6,20 @@ entity housekeeping is
   generic ( g_DEV_SELECT_BITS : natural :=  32 );
   port (
     i_clk            : in std_logic; -- 50 MHz for internal operations
-    -- signals to/from UUB
+    -- signals to/from UUB:
     i_spi_clk        : in std_logic;
     i_spi_mosi       : in std_logic;
     o_spi_miso       : out std_logic;
     i_spi_ce         : in std_logic;
-    o_digitalout     : out std_logic_vector(7 downto 0));
+    -- pins to/from subsystems:
+    -- digitalout:
+    o_digitalout     : out std_logic_vector(7 downto 0);
+    -- flash:
+    o_flash_ce       : out std_logic
+    
+    );
+
+  
 
 end housekeeping;
 
@@ -81,6 +89,8 @@ begin
 
   r_gpio_trigger <= '1' when r_gpio_count = std_logic_vector(to_unsigned(0, 32)) else '0';
   o_digitalout <= r_gpio_out(7 downto 0);
+
+  o_flash_ce <= r_subsystem_ce_lines(2);
   
   -- instantiate one spi demuxer
   spi_demux_1 : spi_demux

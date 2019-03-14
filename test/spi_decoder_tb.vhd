@@ -73,7 +73,7 @@ begin
 
   p_test : process is
   begin
-    wait for 152 ns;
+    wait for 146 ns;
 
     -- simulate an incomming spi packet with input data only
     i_spi_ce <= '0';

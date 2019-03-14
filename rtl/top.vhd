@@ -26,7 +26,7 @@ entity top is
     -- signals for eeprom
     i_eeprom_miso       : in std_logic;
     o_eeprom_mosi       : out std_logic;
-    o_eeprom_ce         : inout std_logic;
+    o_eeprom_ce         : out std_logic;
     i_housekeeping_clk  : in std_logic;
     i_housekeeping_mosi : in std_logic;
     i_housekeeping_ce   : in std_logic;
@@ -42,14 +42,11 @@ architecture behaviour of top is
   signal internal_clk : std_logic;
   signal tx_clk : std_logic;
 
-  signal eeprom_clk : std_logic;
-  --signal mclk_init : std_logic := '0';
-  --signal mclk_tristate : std_logic := '0';
-  --attribute syn_keep: boolean;
-  --attribute syn_keep of mclk_tristate : signal is true;
-  --attribute syn_keep of mclk_init : signal is true;
+  signal eeprom_ce : std_logic;
 
-  
+  signal housekeeping_miso : std_logic;
+
+    
 
   component adc_driver
     port (
@@ -100,7 +97,8 @@ architecture behaviour of top is
       i_spi_mosi   : in  std_logic;
       o_spi_miso   : out std_logic;
       i_spi_ce     : in  std_logic;
-      o_digitalout : out std_logic_vector(7 downto 0) );
+      o_digitalout : out std_logic_vector(7 downto 0);
+      o_flash_ce   : out std_logic  );
   end component;
 
   
@@ -125,7 +123,10 @@ begin
       --end if;
     --end if;
   --end process;
-  
+
+  o_eeprom_ce <= eeprom_ce;
+  o_eeprom_mosi <= i_housekeeping_mosi;
+  o_housekeeping_miso <=  housekeeping_miso or i_eeprom_miso;
 
   tx_clock_synthesizer : tx_clock_pll
     port map (
@@ -141,8 +142,8 @@ begin
       q      => adc_data);
   
   u1: USRMCLK port map (
-    USRMCLKI => eeprom_clk,
-    USRMCLKTS => o_eeprom_ce);
+    USRMCLKI => i_housekeeping_clk,
+    USRMCLKTS => eeprom_ce);
 
 
   housekeeping_1 : housekeeping
@@ -151,9 +152,10 @@ begin
       i_clk        => i_slow_clk,
       i_spi_clk    => i_housekeeping_clk,
       i_spi_mosi   => i_housekeeping_mosi,
-      o_spi_miso   => o_housekeeping_miso,
+      o_spi_miso   => housekeeping_miso,
       i_spi_ce     => i_housekeeping_ce,
-      o_digitalout => o_housekeeping_dout );
+      o_digitalout => o_housekeeping_dout,
+      o_flash_ce   => eeprom_ce );
   
   data_streamer_1 : data_streamer
     generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)

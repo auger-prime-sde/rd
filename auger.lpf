@@ -1,10 +1,10 @@
-RVL_ALIAS "i_slow_clk" "i_slow_clk";
-RVL_ALIAS "slow_clk" "slow_clk";
+RVL_ALIAS "i_slow_clk" "i_slow_clk"; 
+RVL_ALIAS "slow_clk" "slow_clk"; 
 BLOCK RESETPATHS ;
 BLOCK ASYNCPATHS ;
 BLOCK JTAGPATHS ;
 # Input clock
-FREQUENCY PORT "i_slow_clk" 40.000000 MHz ;
+FREQUENCY PORT "i_slow_clk" 50.000000 MHz ;
 FREQUENCY PORT "i_adc_clk" 200.000000 MHz ;
 FREQUENCY NET "internal_clk" 200.000000 MHz ;
 # Bank voltages
@@ -46,8 +46,6 @@ IOBUF PORT "i_data_in[9]" DIFFRESISTOR=100 IO_TYPE=LVDS ;
 IOBUF PORT "i_data_in[10]" DIFFRESISTOR=100 IO_TYPE=LVDS ;
 IOBUF PORT "i_data_in[11]" DIFFRESISTOR=100 IO_TYPE=LVDS ;
 # Control interface
-LOCATE COMP "i_slow_clk" SITE "H4" ;
-LOCATE COMP "i_rst" SITE "B2" ;
 IOBUF PORT "i_slow_clk" IO_TYPE=LVCMOS33 ;
 IOBUF PORT "i_trigger" IO_TYPE=LVDS DIFFRESISTOR=100 ;
 IOBUF PORT "i_rst" IO_TYPE=LVCMOS33 ;
@@ -68,11 +66,14 @@ LOCATE COMP "o_eeprom_mosi" SITE "W2" ;
 IOBUF PORT "o_eeprom_mosi" IO_TYPE=LVCMOS33 ;
 LOCATE COMP "o_eeprom_ce" SITE "R2" ;
 IOBUF PORT "o_eeprom_ce" IO_TYPE=LVCMOS33 ;
-IOBUF PORT "i_housekeeping_clk" IO_TYPE=LVTTL33 SLEWRATE=NA DRIVE=NA PULLMODE=DOWN OPENDRAIN=OFF DIFFRESISTOR=OFF DIFFDRIVE="NA" HYSTERESIS=ON TERMINATION=OFF CLAMP=ON ;
 IOBUF PORT "o_housekeeping_miso" IO_TYPE=LVCMOS33 ;
 LOCATE COMP "o_housekeeping_miso" SITE "D1" ;
 LOCATE COMP "i_housekeeping_mosi" SITE "C1" ;
 IOBUF PORT "i_housekeeping_mosi" IO_TYPE=LVCMOS33 ;
-FREQUENCY PORT "o_eeprom_ce" 20.000000 MHz ;
-FREQUENCY NET "i_housekeeping_clk_c" 12.500000 MHz HOLD_MARGIN 10.000000 ns ;
+IOBUF PORT "i_housekeeping_clk" IO_TYPE=LVCMOS33 ;
+LOCATE COMP "i_slow_clk" SITE "H4" ;
 LOCATE COMP "i_housekeeping_clk" SITE "E1" ;
+LOCATE COMP "i_housekeeping_ce" SITE "A5" ;
+IOBUF PORT "i_housekeeping_ce" IO_TYPE=LVCMOS33 ;
+FREQUENCY PORT "i_housekeeping_clk" 12.500000 MHz HOLD_MARGIN 0.500000 ns ;
+LOCATE COMP "i_rst" SITE "B2" ;
