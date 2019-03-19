@@ -32,19 +32,19 @@ process (i_Clk)
 begin
 if  falling_edge(i_clk) then
 	
-	if (i_enable = '1' and i_cmd = "0000") then ---Write vector
+	if (i_enable = '1' and i_cmd = "00000000") then ---Write vector
 	o_busy <='1';
 	o_dataOut (g_DATA_IN_BITS-1 downto 0) <= i_data;
 	s_prev_data <= i_data;
-	elsif (i_enable = '1' and i_cmd = "0001") then --set bit
+	elsif (i_enable = '1' and i_cmd = "00000001") then --set bit
 	o_busy <='1';
 	o_dataOut (g_DATA_IN_BITS-1 downto 0) <= i_data or  s_data ;	
 	s_prev_data <= i_data or  s_data ;
-	elsif (i_enable = '1' and i_cmd = "0010") then --reset bit
+	elsif (i_enable = '1' and i_cmd = "00000010") then --reset bit
 	o_busy <='1';
 	o_dataOut (g_DATA_IN_BITS-1 downto 0) <= not i_data and  s_data ;	
 	s_prev_data <= not i_data and  s_data ;
-	elsif (i_enable = '1' and i_cmd = "0011") then --set to default
+	elsif (i_enable = '1' and i_cmd = "00000011") then --set to default
 	o_busy <='1';
 	o_dataOut <= g_DEFAULT_OUTPUT;
 	s_prev_data <= g_DEFAULT_OUTPUT (g_DATA_IN_BITS-1 downto 0);
