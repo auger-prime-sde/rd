@@ -64,10 +64,10 @@ architecture behaviour of housekeeping is
 
   component Digitaloutput is
     generic (
-      g_CMD_BITS        : natural := 4;  
+      g_CMD_BITS        : natural := 8;  
       g_DATA_IN_BITS    : natural := 8;
       g_DATA_OUT_BITS   : natural := 8;
-      g_DEFAULT_OUTPUT  : std_logic_vector (15 downto 0) := "0000000011111111" --we only use the last 8 bits for output so default all outputs are high
+      g_DEFAULT_OUTPUT  : std_logic_vector (7 downto 0) := "11111111" --we only use the last 8 bits for output so default all outputs are high
       );
     port(	--inputs
       i_clk : in std_logic;
@@ -120,8 +120,8 @@ begin
      port map (
        i_clk         => i_clk,
        i_enable      => r_gpio_trigger,
-       i_cmd         => r_gpio_in(31 downto 28),
-       i_data        => r_gpio_in(27 downto 20),
+       i_cmd         => r_gpio_in(31 downto 24),
+       i_data        => r_gpio_in(23 downto 16),
        o_dataout     => r_gpio_out(7 downto 0)
        );
       
