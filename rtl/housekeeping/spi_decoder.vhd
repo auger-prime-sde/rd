@@ -61,28 +61,38 @@ architecture behave of spi_decoder is
   signal r_read_count   : natural range 0 to g_INPUT_BITS-1 := g_INPUT_BITS-1;
   signal r_write_count  : natural range 0 to g_OUTPUT_BITS-1 := g_OUTPUT_BITS-1;
 
+  signal r_read_count_test : std_logic_vector(g_INPUT_BITS-1 downto 0) := (others => '0');
+  signal r_write_count_test : std_logic_vector(g_OUTPUT_BITS-1 downto 0) := (others => '0');
   type t_stabilizer is (s_Low, s_Delay, s_High);
   signal r_stabilizer : t_stabilizer := s_High; -- start by waiting for a low transition
   
   
 begin
 
+  r_read_count_test  <= std_logic_vector(to_unsigned(r_read_count,  g_INPUT_BITS));
+  r_write_count_test <= std_logic_vector(to_unsigned(r_write_count, g_OUTPUT_BITS));
+  
+  
   p_read : process(i_spi_clk) is
   begin
     
     if rising_edge(i_spi_clk) then
-      o_data(r_read_count) <= i_spi_mosi;
-      if r_read_count = 0 then
-        r_read_count <= g_INPUT_BITS-1;
+      if  i_spi_ce = '0' then
+        o_data(r_read_count) <= i_spi_mosi;
+        if r_read_count = 0 then
+          r_read_count <= g_INPUT_BITS-1;
+        else
+          r_read_count <= r_read_count - 1;
+        end if;
       else
-        r_read_count <= r_read_count - 1;
+        r_read_count <= g_INPUT_BITS-1;
       end if;
     end if; -- rising_edge(i_spi_clk)
   end process;
 
   p_write : process(i_spi_clk) is
   begin
-    if falling_edge(i_spi_clk) then
+    if falling_edge(i_spi_clk) and i_spi_ce = '0' then
       o_spi_miso <= i_data(r_write_count);
       if r_write_count = 0 then
         r_write_count <= g_OUTPUT_BITS-1;
@@ -95,7 +105,7 @@ begin
 
   -- the moment we 'see' a spi_clk='1' on the spi clk we may not have all data
   -- because of meta-stability. Therefore we delay the increment of the
-  -- o_recv_count to the next rising edge of i_clk. It is guaranteed that the
+  -- o_recv_count to the next edge flank of i_clk. It is guaranteed that the
   -- bus data is stable at that time. 
   p_recv_trig : process(i_clk) is
   begin
@@ -103,14 +113,14 @@ begin
     --if rising_edge(i_clk) then
       case r_stabilizer is
         when s_Low =>
-          if i_spi_clk = '1' then
+          if i_spi_clk = '1' and i_spi_ce = '0' then
             r_stabilizer <= s_Delay;
           end if;
         when s_Delay =>
           o_recv_count <= std_logic_vector(to_unsigned(g_INPUT_BITS-r_read_count-1, g_INPUT_BITS));
           r_stabilizer <= s_High;
         when s_High =>
-          if i_spi_clk = '0' then
+          if i_spi_clk = '0' and i_spi_ce = '0' then
             r_stabilizer <= s_Low;
           end if;
       end case;

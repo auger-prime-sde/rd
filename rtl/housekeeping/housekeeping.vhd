@@ -35,6 +35,8 @@ architecture behaviour of housekeeping is
   signal r_gpio_out   : std_logic_vector(31 downto 0);
   signal r_gpio_count : std_logic_vector(31 downto 0);
   signal r_gpio_trigger : std_logic;
+
+  signal r_halfclock : std_logic := '0';
   
   component spi_demux is
     generic ( g_DEV_SELECT_BITS : natural := g_DEV_SELECT_BITS );
@@ -82,12 +84,21 @@ architecture behaviour of housekeeping is
   end component;
 begin
 
+  p_halfclock : process(i_clk) is
+  begin
+    if rising_edge(i_clk) then
+      r_halfclock <= not r_halfclock;
+    end if;
+  end process;
+  
+
+    
   -- code for subsystem select address to one-low:
   g_GENERATE_FOR: for s in 1 to c_NUM_SUBSYTEMS generate
     r_subsystem_ce_lines(s) <= '0' when to_integer(unsigned(r_subsystem_select)) = s else '1';
   end generate;
 
-  r_gpio_trigger <= '1' when r_gpio_count = std_logic_vector(to_unsigned(0, 32)) else '0';
+  r_gpio_trigger <= '1' when r_gpio_count = std_logic_vector(to_unsigned(31, 32)) else '0';
   o_digitalout <= r_gpio_out(7 downto 0);
 
   o_flash_ce <= r_subsystem_ce_lines(2);
