@@ -76,7 +76,7 @@ architecture behaviour of housekeeping is
       i_data : in std_logic_vector(g_DATA_IN_BITS-1 downto 0);
       
       --outputs
-      o_DataOut : out std_logic_vector (g_DATA_OUT_BITS-1 downto 0) := g_DEFAULT_OUTPUT; 
+      o_data : out std_logic_vector (g_DATA_OUT_BITS-1 downto 0) := g_DEFAULT_OUTPUT; 
       o_busy	  : out std_logic
       );
   end component;
@@ -123,7 +123,7 @@ begin
        i_enable      => r_gpio_trigger,
        i_cmd         => r_gpio_in(31 downto 24),
        i_data        => r_gpio_in(23 downto 16),
-       o_dataout     => r_gpio_out(7 downto 0)
+       o_data        => r_gpio_out(7 downto 0)
        );
       
   

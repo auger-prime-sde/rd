@@ -16,43 +16,34 @@ port(	--inputs
 		i_data : in std_logic_vector(g_DATA_IN_BITS-1 downto 0);
 
 		--outputs
-		o_DataOut : out std_logic_vector (g_DATA_OUT_BITS-1 downto 0) := g_DEFAULT_OUTPUT; 
+		o_data : out std_logic_vector (g_DATA_OUT_BITS-1 downto 0) := g_DEFAULT_OUTPUT; 
 		o_busy	  : out std_logic
 );
 end  DigitalOutput;
 
 architecture Behavioral of DigitalOutput is
-signal s_data : std_logic_vector(g_DATA_IN_BITS-1 downto 0) := g_DEFAULT_OUTPUT(g_DATA_IN_BITS-1 downto 0);
-signal s_prev_data : std_logic_vector(g_DATA_IN_BITS-1 downto 0) := g_DEFAULT_OUTPUT(g_DATA_IN_BITS-1 downto 0);
+signal r_data : std_logic_vector(g_DATA_IN_BITS-1 downto 0) := g_DEFAULT_OUTPUT(g_DATA_IN_BITS-1 downto 0);
 
 begin
-
-process (i_Clk)
-
-begin
-if  falling_edge(i_clk) then
-	
-	if (i_enable = '1' and i_cmd = "00000000") then ---Write vector
-	o_busy <='1';
-	o_dataOut (g_DATA_IN_BITS-1 downto 0) <= i_data;
-	s_prev_data <= i_data;
-	elsif (i_enable = '1' and i_cmd = "00000001") then --set bit
-	o_busy <='1';
-	o_dataOut (g_DATA_IN_BITS-1 downto 0) <= i_data or  s_data ;	
-	s_prev_data <= i_data or  s_data ;
-	elsif (i_enable = '1' and i_cmd = "00000010") then --reset bit
-	o_busy <='1';
-	o_dataOut (g_DATA_IN_BITS-1 downto 0) <= not i_data and  s_data ;	
-	s_prev_data <= not i_data and  s_data ;
-	elsif (i_enable = '1' and i_cmd = "00000011") then --set to default
-	o_busy <='1';
-	o_dataOut <= g_DEFAULT_OUTPUT;
-	s_prev_data <= g_DEFAULT_OUTPUT (g_DATA_IN_BITS-1 downto 0);
-	else 
-	o_busy <='0';
-	s_data <= s_prev_data;
-	end if;
-end if;
-	end process;
+  o_data <= r_data;
+  process (i_Clk)
+  begin
+    if  falling_edge(i_clk) then
+      o_busy <= '1';
+      if (i_enable = '1' and i_cmd = "00000000") then
+        -- just read. don't change anything
+      elsif (i_enable = '1' and i_cmd = "00000001") then ---Write vector
+        r_data <= i_data;
+      elsif (i_enable = '1' and i_cmd = "00000010") then --set bit
+        r_data <= i_data or  r_data;	
+      elsif (i_enable = '1' and i_cmd = "00000011") then --reset bit
+        r_data <= not i_data and r_data ;	
+      elsif (i_enable = '1' and i_cmd = "00000100") then --set to default
+        r_data <= g_DEFAULT_OUTPUT;
+      else 
+        o_busy <='0';
+      end if;
+    end if;
+  end process;
 		
 end Behavioral;
