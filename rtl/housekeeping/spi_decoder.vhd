@@ -65,7 +65,7 @@ architecture behave of spi_decoder is
   signal r_write_count_test : std_logic_vector(g_OUTPUT_BITS-1 downto 0) := (others => '0');
   type t_stabilizer is (s_Low, s_Delay, s_High);
   signal r_stabilizer : t_stabilizer := s_High; -- start by waiting for a low transition
-  
+  signal r_fault_count : std_logic_vector(16 downto 0) := (others => '0');
   
 begin
 
@@ -77,7 +77,7 @@ begin
   begin
     
     if rising_edge(i_spi_clk) then
-      if  i_spi_ce = '0' then
+      if i_spi_ce = '0' then
         o_data(r_read_count) <= i_spi_mosi;
         if r_read_count = 0 then
           r_read_count <= g_INPUT_BITS-1;
@@ -85,19 +85,28 @@ begin
           r_read_count <= r_read_count - 1;
         end if;
       else
-        r_read_count <= g_INPUT_BITS-1;
+        -- TODO: this reset should not be necessary: investigate at which point
+        -- this gets shifted to a bad value if if that is problematic
+        --r_read_count <= g_INPUT_BITS-1;
+        if r_read_count /= g_INPUT_BITS-1 then
+          r_fault_count <= std_logic_vector(unsigned(r_fault_count)+1);
+        end if;
       end if;
     end if; -- rising_edge(i_spi_clk)
   end process;
 
   p_write : process(i_spi_clk) is
   begin
-    if falling_edge(i_spi_clk) and i_spi_ce = '0' then
-      o_spi_miso <= i_data(r_write_count);
-      if r_write_count = 0 then
-        r_write_count <= g_OUTPUT_BITS-1;
+    if falling_edge(i_spi_clk) then
+      if i_spi_ce = '0' then
+        o_spi_miso <= i_data(r_write_count);
+        if r_write_count = 0 then
+          r_write_count <= g_OUTPUT_BITS-1;
+        else
+          r_write_count <= r_write_count - 1;
+        end if;
       else
-        r_write_count <= r_write_count - 1;
+        r_write_count <= g_OUTPUT_BITS-1;
       end if;
     end if; -- falling_edge(i_spi_clk)
   end process;
