@@ -36,8 +36,17 @@ while True:
     print("What to do:\nt\tToggle Leds\nr\tRead led state\nc\tClear fault state")
     c = getch()
     if 't' == c:
-        #ledstate = 0xFF if ledstate==0x00 else 0x00
+        ledstate = 0xFF if ledstate==0x00 else 0x00
         writecommand[1] = ledstate
+        res = spi.exchange(devselect_leds+writecommand, 0, True, True)
+        print(res)
+    if '1' == c:
+        #ledstate = 0xFF if ledstate==0x00 else 0x00
+        writecommand[1] = 0xFF
+        res = spi.exchange(devselect_leds+writecommand, 0, True, True)
+        print(res)
+    if '0' == c:
+        writecommand[1] = 0x00
         res = spi.exchange(devselect_leds+writecommand, 0, True, True)
         print(res)
     if 'r' == c:

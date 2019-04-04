@@ -65,7 +65,6 @@ architecture behave of spi_decoder is
   signal r_write_count_test : std_logic_vector(g_OUTPUT_BITS-1 downto 0) := (others => '0');
   type t_stabilizer is (s_Low, s_Delay, s_High);
   signal r_stabilizer : t_stabilizer := s_High; -- start by waiting for a low transition
-  signal r_fault_count : std_logic_vector(16 downto 0) := (others => '0');
   
 begin
 
@@ -75,7 +74,7 @@ begin
   
   p_read : process(i_spi_clk) is
   begin
-    
+
     if rising_edge(i_spi_clk) then
       if i_spi_ce = '0' then
         o_data(r_read_count) <= i_spi_mosi;
@@ -87,10 +86,7 @@ begin
       else
         -- TODO: this reset should not be necessary: investigate at which point
         -- this gets shifted to a bad value if if that is problematic
-        --r_read_count <= g_INPUT_BITS-1;
-        if r_read_count /= g_INPUT_BITS-1 then
-          r_fault_count <= std_logic_vector(unsigned(r_fault_count)+1);
-        end if;
+        r_read_count <= g_INPUT_BITS-1;
       end if;
     end if; -- rising_edge(i_spi_clk)
   end process;

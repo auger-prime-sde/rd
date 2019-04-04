@@ -31,9 +31,7 @@ entity top is
     i_housekeeping_mosi : in std_logic;
     i_housekeeping_ce   : in std_logic;
     o_housekeeping_miso : out std_logic;
-    o_housekeeping_dout : out std_logic_vector(7 downto 0);
-    o_housekeeping_flag_state : out std_logic;
-    o_housekeeping_reset_flag : out std_logic
+    o_housekeeping_dout : out std_logic_vector(7 downto 0)
     );
   end top;
 
@@ -101,9 +99,7 @@ architecture behaviour of top is
       o_spi_miso   : out std_logic;
       i_spi_ce     : in  std_logic;
       o_digitalout : out std_logic_vector(7 downto 0);
-      o_flash_ce   : out std_logic;
-      o_flag_state : out std_logic;
-      o_reset_flag : out std_logic
+      o_flash_ce   : out std_logic
       );
   end component;
 
@@ -161,9 +157,7 @@ begin
       o_spi_miso   => housekeeping_miso,
       i_spi_ce     => i_housekeeping_ce,
       o_digitalout => o_housekeeping_dout,
-      o_flash_ce   => eeprom_ce,
-      o_flag_state => o_housekeeping_flag_state,
-      o_reset_flag => o_housekeeping_reset_flag
+      o_flash_ce   => eeprom_ce
       );
   
   data_streamer_1 : data_streamer

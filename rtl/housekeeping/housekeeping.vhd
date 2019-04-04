@@ -15,10 +15,7 @@ entity housekeeping is
     -- digitalout:
     o_digitalout     : out std_logic_vector(7 downto 0);
     -- flash:
-    o_flash_ce       : out std_logic;
-    o_flag_state     : out std_logic;
-    o_reset_flag     : out std_logic
-    
+    o_flash_ce       : out std_logic
     );
 
   
@@ -38,9 +35,7 @@ architecture behaviour of housekeeping is
   signal r_gpio_count : std_logic_vector(31 downto 0);
   signal r_gpio_trigger : std_logic;
 
-  signal r_reveal_clk : std_logic := '0';
-  signal r_reveal_count : natural range 0 to 3;
-  
+
   component spi_demux is
     generic ( g_DEV_SELECT_BITS : natural := g_DEV_SELECT_BITS );
     port (
@@ -48,9 +43,7 @@ architecture behaviour of housekeeping is
       i_sample_clk : in  std_logic;
       i_spi_mosi   : in  std_logic;
       i_spi_ce     : in  std_logic;
-      o_dev_select : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0');
-      o_flag_state : out std_logic;
-      o_reset_flag : out std_logic
+      o_dev_select : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
       );
   end component;
 
@@ -89,18 +82,6 @@ architecture behaviour of housekeeping is
   end component;
 begin
 
-  p_halfclock : process(i_clk) is
-  begin
-    if rising_edge(i_clk) then
-      r_reveal_count <= r_reveal_count + 1 mod 4;
-      if r_reveal_count = 0 then
-        r_reveal_clk <= not r_reveal_clk;
-      end if;
-    end if;
-  end process;
-  
-
-    
   -- code for subsystem select address to one-low:
   g_GENERATE_FOR: for s in 1 to c_NUM_SUBSYTEMS generate
     r_subsystem_ce_lines(s) <= '0' when to_integer(unsigned(r_subsystem_select)) = s else '1';
@@ -120,9 +101,7 @@ begin
       i_spi_mosi   => i_spi_mosi,
       --o_spi_miso   => o_spi_miso,
       i_spi_ce     => i_spi_ce,
-      o_dev_select => r_subsystem_select,
-      o_flag_state => o_flag_state,
-      o_reset_flag => o_reset_flag
+      o_dev_select => r_subsystem_select
       );
 
 
