@@ -25,8 +25,8 @@ ledstate = 0x00
 devselect_leds  = [0x00, 0x00, 0x00, 0x01]
 devselect_flash = [0x00, 0x00, 0x00, 0x02]
 #devselect2 = [0b00010001, 0b00000000, 0b11111111, 0b10101010]
-writecommand = [0b00000000, ledstate, 0x00, 0x00]
-readcommand  = [0b00000001, 0x00, 0x00, 0x00]  # technically this sets bits but with 0x00 it does nothing
+writecommand = [0b00000001, ledstate, 0x00, 0x00]
+readcommand  = [0b00000000, 0x00, 0x00, 0x00]  # technically this sets bits but with 0x00 it does nothing
 clearcommand = [0xFF, 0x00, 0x00, 0x00] # caught by the decoder. 
 #command2   = [0x00, 0b00000000, 0x00, 0x00]
 
