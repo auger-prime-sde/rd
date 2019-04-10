@@ -32,22 +32,17 @@ architecture behave of spi_demux is
   signal r_reset_flag : std_logic := '1';
   signal r_prev_ce_0 : std_logic := '1';
   signal r_prev_ce_1 : std_logic := '1';
-  
-  
   -- and the main process remembers the flag state to detect toggles
   signal r_flag_state : std_logic := '0';
 
-  signal r_fault : std_logic;
 
+  -- only for debugging:
+  signal r_count_t : std_logic_vector(3 downto 0);
   
 begin
   o_dev_select <= (others => '0') when r_flag_state /= r_reset_flag else r_dev_out;
-  
-  r_fault <= '1' when i_spi_clk = '0' and  i_spi_ce = '1' and o_dev_select(0) = '1' else '0';
+  r_count_t <= std_logic_vector(to_unsigned(r_count, 4));
 
-  
-
-  
   p_reset : process(i_sample_clk) is
   begin
     if rising_edge(i_sample_clk) then

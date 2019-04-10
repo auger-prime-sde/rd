@@ -4,57 +4,57 @@ from pyftdi.spi import SpiController
 import time
 import sys, termios, tty, os
  
-def getch():
-    fd = sys.stdin.fileno()
-    old_settings = termios.tcgetattr(fd)
-    try:
-        tty.setraw(sys.stdin.fileno())
-        ch = sys.stdin.read(1)
- 
-    finally:
-        termios.tcsetattr(fd, termios.TCSADRAIN, old_settings)
-    return ch
- 
 
 # start controllre and open an spi port mode 3(cpha=1,cpol=1)
 ctrl = SpiController()
-ctrl.configure('ftdi://ftdi:232h:1/1')
+ctrl.configure('ftdi://ftdi:232h:FTU7EF6B/1')
 spi = ctrl.get_port(cs=0, freq=5E6, mode=3)
-
-ledstate = 0x00
-devselect_leds  = [0x00, 0x00, 0x00, 0x01]
-devselect_flash = [0x00, 0x00, 0x00, 0x02]
-#devselect2 = [0b00010001, 0b00000000, 0b11111111, 0b10101010]
-writecommand = [0b00000001, ledstate, 0x00, 0x00]
-readcommand  = [0b00000000, 0x00, 0x00, 0x00]  # technically this sets bits but with 0x00 it does nothing
-clearcommand = [0xFF, 0x00, 0x00, 0x00] # caught by the decoder. 
-#command2   = [0x00, 0b00000000, 0x00, 0x00]
-
 
 
 while True:
-    print("What to do:\nt\tToggle Leds\nr\tRead led state\nc\tClear fault state")
-    c = getch()
-    if 't' == c:
-        ledstate = 0xFF if ledstate==0x00 else 0x00
-        writecommand[1] = ledstate
-        res = spi.exchange(devselect_leds+writecommand, 0, True, True)
-        print(res)
-    if '1' == c:
-        #ledstate = 0xFF if ledstate==0x00 else 0x00
-        writecommand[1] = 0xFF
-        res = spi.exchange(devselect_leds+writecommand, 0, True, True)
-        print(res)
-    if '0' == c:
-        writecommand[1] = 0x00
-        res = spi.exchange(devselect_leds+writecommand, 0, True, True)
-        print(res)
-    if 'r' == c:
-        res = spi.exchange(devselect_leds+readcommand, 4, True, True)
-        print(res)
-    if 'c' == c:
-        res = spi.exchange(devselect_leds+clearcommand, 0, True, True)
-        print(res)
-        
+    print("Command: ", end="", flush=True)
+    l = sys.stdin.readline()
+    # some shortcuts for common commands:
+    if l.startswith("i"):
+        bytes_out = [0x01, 0x01, 0xFF]
+        count_in  = 0
+    elif l.startswith("o"):
+        bytes_out = [0x01, 0x01, 0x00]
+        count_in  = 0
+    elif l.startswith("r"):
+        bytes_out = [0x01, 0x00, 0x00]
+        count_in  = 1
+    elif l.startswith("j"):
+        bytes_out = [0x02, 0x9F]
+        count_in = 3
+    elif l.startswith("s"):
+        bytes_out = [0x02, 0x05]
+        count_in = 4
+    elif l.startswith("c"):
+        bytes_out = [0x02, 0x35]
+        count_in = 4
+
+    else: # the option to enter bytes manually
+        try:
+            bytes_out = [int(w,0) for w in l.split()]
+            print("How many bytes to read: ", end="", flush=True)
+            l = sys.stdin.readline()
+            count_in = int(l)
+        except:
+            print("FAILED TO PARSE!\n")
+            continue
+    
+    res = spi.exchange(bytes_out, count_in, True, True)
+    if count_in > 0:
+        print("result (int): ", end="", flush=True)
+        print([x for x in res])
+        print("result (hex): ", end="", flush=True)
+        print([hex(x) for x in res])
+        print("result(char): ", end="", flush=True)
+        print([chr(x) for x in res])
+        print("result (bin): ", end="", flush=True)
+        print([bin(x) for x in res])
+
+    print()
     time.sleep(0.2)
 

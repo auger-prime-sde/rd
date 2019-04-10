@@ -3,7 +3,7 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 
 entity housekeeping is
-  generic ( g_DEV_SELECT_BITS : natural :=  32 );
+  generic ( g_DEV_SELECT_BITS : natural :=  8 );
   port (
     i_clk            : in std_logic; -- 50 MHz for internal operations
     -- signals to/from UUB:
@@ -30,9 +30,9 @@ architecture behaviour of housekeeping is
   signal r_subsystem_ce_lines : std_logic_vector(c_NUM_SUBSYTEMS downto 1);
 
   -- define lines for gpio:
-  signal r_gpio_in    : std_logic_vector(31 downto 0);
-  signal r_gpio_out   : std_logic_vector(31 downto 0);
-  signal r_gpio_count : std_logic_vector(31 downto 0);
+  signal r_gpio_in    : std_logic_vector(15 downto 0);
+  signal r_gpio_out   : std_logic_vector(7 downto 0);
+  signal r_gpio_count : std_logic_vector(15 downto 0);
   signal r_gpio_trigger : std_logic;
 
 
@@ -87,7 +87,7 @@ begin
     r_subsystem_ce_lines(s) <= '0' when to_integer(unsigned(r_subsystem_select)) = s else '1';
   end generate;
 
-  r_gpio_trigger <= '1' when r_gpio_count = std_logic_vector(to_unsigned(31, 32)) else '0';
+  r_gpio_trigger <= '1' when r_gpio_count = std_logic_vector(to_unsigned(15, 16)) else '0';
   o_digitalout <= r_gpio_out(7 downto 0);
 
   o_flash_ce <= r_subsystem_ce_lines(2);
@@ -107,6 +107,10 @@ begin
 
   -- instantiate one spi_decoder and one gpio subsystem
   spi_decoder_gpio : spi_decoder
+    generic map (
+      g_INPUT_BITS => 16,
+      g_OUTPUT_BITS => 8
+      )
     port map (
       i_spi_clk    => i_spi_clk,
       i_spi_mosi   => i_spi_mosi,
@@ -117,14 +121,19 @@ begin
       i_data       => r_gpio_out,
       o_recv_count => r_gpio_count
       );
-   digitalout_1 : Digitaloutput
-     port map (
-       i_clk         => i_clk,
-       i_enable      => r_gpio_trigger,
-       i_cmd         => r_gpio_in(31 downto 24),
-       i_data        => r_gpio_in(23 downto 16),
-       o_data        => r_gpio_out(7 downto 0)
-       );
+  digitalout_1 : Digitaloutput
+    generic map (
+      g_CMD_BITS => 8,
+      g_DATA_IN_BITS => 8,
+      g_DATA_OUT_BITS => 8
+      )
+    port map (
+      i_clk         => i_clk,
+      i_enable      => r_gpio_trigger,
+      i_cmd         => r_gpio_in(15 downto 8),
+      i_data        => r_gpio_in(7 downto 0),
+      o_data        => r_gpio_out
+      );
       
   
   

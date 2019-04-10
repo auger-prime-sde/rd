@@ -91,7 +91,7 @@ architecture behaviour of top is
   end component;
 
   component housekeeping
-    generic (g_DEV_SELECT_BITS : natural := 32);
+    generic (g_DEV_SELECT_BITS : natural := 8);
     port (
       i_clk        : in  std_logic;
       i_spi_clk    : in  std_logic;
@@ -149,7 +149,7 @@ begin
 
 
   housekeeping_1 : housekeeping
-    generic map (g_DEV_SELECT_BITS => 32)
+    generic map (g_DEV_SELECT_BITS => 8)
     port map (
       i_clk        => i_slow_clk,
       i_spi_clk    => i_housekeeping_clk,
