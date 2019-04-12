@@ -24,9 +24,9 @@ entity top is
     o_tx_clk            : out std_logic;
     o_tx_datavalid      : out std_logic;
     -- signals for eeprom
-    i_eeprom_miso       : in std_logic;
-    o_eeprom_mosi       : out std_logic;
-    o_eeprom_ce         : out std_logic;
+    i_flash_miso       : in std_logic;
+    o_flash_mosi       : out std_logic;
+    o_flash_ce         : out std_logic;
     -- signals to/from science ADC
     io_adc_dio          : inout std_logic;
     o_adc_ce            : out std_logic;
@@ -48,14 +48,8 @@ architecture behaviour of top is
   signal internal_clk : std_logic;
   signal tx_clk : std_logic;
 
-  signal eeprom_ce : std_logic;
-  signal adc_ce : std_logic;
-
-  signal adc_recv_count : std_logic_vector(23 downto 0);
-  signal adc_tx_phase : std_logic;
-
-  signal housekeeping_miso : std_logic;
-
+  signal r_flash_clk : std_logic;
+  signal r_flash_ce : std_logic;
     
 
   component adc_driver
@@ -102,14 +96,19 @@ architecture behaviour of top is
   component housekeeping
     generic (g_DEV_SELECT_BITS : natural := 8);
     port (
-      i_clk        : in  std_logic;
-      i_spi_clk    : in  std_logic;
-      i_spi_mosi   : in  std_logic;
-      o_spi_miso   : out std_logic;
-      i_spi_ce     : in  std_logic;
-      o_digitalout : out std_logic_vector(7 downto 0);
-      o_flash_ce   : out std_logic;
-      o_adc_ce     : out std_logic
+      i_sample_clk          : in    std_logic;
+      i_housekeeping_clk    : in    std_logic;
+      i_housekeeping_mosi   : in    std_logic;
+      o_housekeeping_miso   : out   std_logic;
+      i_housekeeping_ce     : in    std_logic;
+      o_gpio_data           : out   std_logic_vector(7 downto 0);
+      o_flash_clk           : out   std_logic;
+      i_flash_miso          : in    std_logic;
+      o_flash_mosi          : out   std_logic;
+      o_flash_ce            : out   std_logic;
+      o_adc_clk             : out   std_logic;
+      io_adc_dio            : inout std_logic;
+      o_adc_ce              : out   std_logic
       );
   end component;
 
@@ -142,50 +141,8 @@ architecture behaviour of top is
 
 begin
 
-  --p_mclk : process(i_slow_clk) is
-  --begin
-    --if rising_edge(i_slow_clk) then
-      --if mclk_init = '0' then
-        --mclk_tristate <= '0';
-        --mclk_init <= '1';
-      --end if;
-    --end if;
-  --end process;
-
-  o_eeprom_ce <= eeprom_ce;
-  o_eeprom_mosi <= i_housekeeping_mosi;
-  --o_housekeeping_miso <=  i_eeprom_miso when eeprom_ce='0' else io_adc_dio when adc_ce = '0' and adc_tx_phase = '1' else housekeeping_miso;
-  o_housekeeping_miso <=
-    i_eeprom_miso when eeprom_ce='0'
-    else housekeeping_miso when adc_ce = '1'
-    else io_adc_dio when adc_tx_phase = '1'
-    else '0'; 
-
-  o_adc_ce   <= adc_ce;
-  o_adc_clk  <= i_housekeeping_clk;
-  io_adc_dio <= i_housekeeping_mosi when adc_tx_phase = '0' else 'Z';
-  adc_tx_phase <= '0' when to_integer(unsigned(adc_recv_count)) < 16 else '1';
-
-
-  adc_spi_decoder : spi_decoder
-    generic map (
-      -- this is not true but we abuse the decoder for it's progress counter to
-      -- distinguish between the read and the write phase
-      g_INPUT_BITS => 24,
-      g_OUTPUT_BITS => 1
-      )
-    port map (
-      i_spi_clk => i_housekeeping_clk,
-      i_spi_mosi => i_housekeeping_mosi,
-      o_spi_miso => open,
-      i_spi_ce => adc_ce,
-      i_clk => i_slow_clk,
-      o_data => open,
-      i_data => (others =>'0'),
-      o_recv_count => adc_recv_count
-      );
+  o_flash_ce <= r_flash_ce;
   
-
   tx_clock_synthesizer : tx_clock_pll
     port map (
       CLKI => i_slow_clk,
@@ -200,21 +157,26 @@ begin
       q      => adc_data);
   
   u1: USRMCLK port map (
-    USRMCLKI => i_housekeeping_clk,
-    USRMCLKTS => eeprom_ce);
+    USRMCLKI => r_flash_clk,
+    USRMCLKTS => r_flash_ce);
 
 
   housekeeping_1 : housekeeping
     generic map (g_DEV_SELECT_BITS => 8)
     port map (
-      i_clk        => i_slow_clk,
-      i_spi_clk    => i_housekeeping_clk,
-      i_spi_mosi   => i_housekeeping_mosi,
-      o_spi_miso   => housekeeping_miso,
-      i_spi_ce     => i_housekeeping_ce,
-      o_digitalout => o_housekeeping_dout,
-      o_flash_ce   => eeprom_ce,
-      o_adc_ce     => adc_ce
+      i_sample_clk        => i_slow_clk,
+      i_housekeeping_clk  => i_housekeeping_clk,
+      i_housekeeping_mosi => i_housekeeping_mosi,
+      o_housekeeping_miso => o_housekeeping_miso,
+      i_housekeeping_ce   => i_housekeeping_ce,
+      o_gpio_data         => o_housekeeping_dout,
+      o_flash_clk         => r_flash_clk,
+      i_flash_miso        => i_flash_miso,
+      o_flash_mosi        => o_flash_mosi,
+      o_flash_ce          => r_flash_ce,
+      o_adc_clk           => o_adc_clk,
+      io_adc_dio          => io_adc_dio,
+      o_adc_ce            => o_adc_ce
       );
   
   data_streamer_1 : data_streamer
