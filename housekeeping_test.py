@@ -10,6 +10,8 @@ ctrl = SpiController()
 ctrl.configure('ftdi://ftdi:232h:FTU7EF6B/1')
 spi = ctrl.get_port(cs=0, freq=5E6, mode=3)
 
+# other commands:
+# [0x03, 0b10100000, 0x01] read=1  read adc id, should be 0x82
 
 while True:
     print("Command: ", end="", flush=True)

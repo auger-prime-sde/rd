@@ -15,7 +15,8 @@ entity housekeeping is
     -- digitalout:
     o_digitalout     : out std_logic_vector(7 downto 0);
     -- flash:
-    o_flash_ce       : out std_logic
+    o_flash_ce       : out std_logic;
+    o_adc_ce         : out std_logic
     );
 
   
@@ -91,6 +92,7 @@ begin
   o_digitalout <= r_gpio_out(7 downto 0);
 
   o_flash_ce <= r_subsystem_ce_lines(2);
+  o_adc_ce   <= r_subsystem_ce_lines(3);
   
   -- instantiate one spi demuxer
   spi_demux_1 : spi_demux
