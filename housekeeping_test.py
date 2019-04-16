@@ -35,7 +35,9 @@ while True:
     elif l.startswith("c"):
         bytes_out = [0x02, 0x35]
         count_in = 4
-
+    elif l.startswith("a"):
+        bytes_out = [0x03, 0x80, 0x01]
+        count_in = 1
     else: # the option to enter bytes manually
         try:
             bytes_out = [int(w,0) for w in l.split()]
