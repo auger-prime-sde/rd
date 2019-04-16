@@ -28,7 +28,8 @@ entity top is
     o_flash_mosi       : out std_logic;
     o_flash_ce         : out std_logic;
     -- signals to/from science ADC
-    io_adc_dio          : inout std_logic;
+    i_adc_miso          : in std_logic;
+    o_adc_mosi          : out std_logic;
     o_adc_ce            : out std_logic;
     o_adc_clk           : out std_logic;
     -- signals for housekeeping
@@ -107,7 +108,8 @@ architecture behaviour of top is
       o_flash_mosi          : out   std_logic;
       o_flash_ce            : out   std_logic;
       o_adc_clk             : out   std_logic;
-      io_adc_dio            : inout std_logic;
+      i_adc_miso          : in std_logic;
+      o_adc_mosi          : out std_logic;
       o_adc_ce              : out   std_logic
       );
   end component;
@@ -175,7 +177,8 @@ begin
       o_flash_mosi        => o_flash_mosi,
       o_flash_ce          => r_flash_ce,
       o_adc_clk           => o_adc_clk,
-      io_adc_dio          => io_adc_dio,
+      i_adc_miso          => i_adc_miso,
+      o_adc_mosi          => o_adc_mosi,
       o_adc_ce            => o_adc_ce
       );
   

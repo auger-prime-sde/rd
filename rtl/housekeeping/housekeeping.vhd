@@ -21,7 +21,8 @@ entity housekeeping is
     o_flash_ce          : out std_logic;
     -- science adc
     o_adc_clk           : out std_logic;
-    io_adc_dio          : inout std_logic;
+    i_adc_miso          : in std_logic;
+    o_adc_mosi          : out std_logic;
     o_adc_ce            : out std_logic
     );
 
@@ -47,8 +48,6 @@ architecture behaviour of housekeeping is
   
   -- wires for adc:
   signal r_adc_ce         : std_logic;
-  signal r_adc_recv_count : std_logic_vector(23 downto 0);
-  signal r_adc_tx_phase   : std_logic;
 
 
   component spi_demux is
@@ -115,15 +114,12 @@ begin
   -- wiring adc: 
   o_adc_ce       <= r_adc_ce;
   o_adc_clk      <= i_housekeeping_clk;
-  io_adc_dio     <= i_housekeeping_mosi when r_adc_tx_phase = '0' else 'Z';
-  r_adc_tx_phase <= '0' when to_integer(unsigned(r_adc_recv_count)) < 16 else '1';
+  o_adc_mosi     <= i_housekeeping_mosi;
 
   -- mux the housekeeping output miso depending on the selected peripheral 
   o_housekeeping_miso <=
-    i_flash_miso when r_flash_ce='0'
-    else r_gpio_miso when r_adc_ce = '1'
-    else io_adc_dio when r_adc_tx_phase = '1'
-    else '0'; 
+    i_flash_miso when r_flash_ce='0' else 
+    i_adc_miso   when r_adc_ce='0' else r_gpio_miso;
 
   
   -- instantiate one spi demuxer
@@ -155,25 +151,6 @@ begin
       o_recv_count => r_gpio_count
       );
 
-
-  spi_decoder_adc : spi_decoder
-    generic map (
-      -- this is not true but we abuse the decoder for it's progress counter to
-      -- distinguish between the read and the write phase
-      g_INPUT_BITS => 24,
-      g_OUTPUT_BITS => 1
-      )
-    port map (
-      i_spi_clk    => i_housekeeping_clk,
-      i_spi_mosi   => i_housekeeping_mosi,
-      o_spi_miso   => open,
-      i_spi_ce     => r_adc_ce,
-      i_clk        => i_sample_clk,
-      o_data       => open,
-      i_data       => (others =>'0'),
-      o_recv_count => r_adc_recv_count
-      );
-  
 
   
   digitalout_1 : Digitaloutput
