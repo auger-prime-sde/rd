@@ -8,7 +8,7 @@ import sys, termios, tty, os
 # start controllre and open an spi port mode 3(cpha=1,cpol=1)
 ctrl = SpiController()
 ctrl.configure('ftdi://ftdi:232h:FTU7EF6B/1')
-spi = ctrl.get_port(cs=0, freq=5E6, mode=3)
+spi = ctrl.get_port(cs=0, freq=19E6, mode=3)
 
 # other commands:
 # [0x03, 0b10100000, 0x01] read=1  read adc id, should be 0x82
@@ -17,25 +17,25 @@ while True:
     print("Command: ", end="", flush=True)
     l = sys.stdin.readline()
     # some shortcuts for common commands:
-    if l.startswith("i"):
+    if l.startswith("i"): # all leds off
         bytes_out = [0x01, 0x01, 0xFF]
         count_in  = 0
-    elif l.startswith("o"):
+    elif l.startswith("o"): # all leds on
         bytes_out = [0x01, 0x01, 0x00]
         count_in  = 0
-    elif l.startswith("r"):
+    elif l.startswith("r"): # read led state
         bytes_out = [0x01, 0x00, 0x00]
         count_in  = 1
-    elif l.startswith("j"):
+    elif l.startswith("j"): # read flash jedec id
         bytes_out = [0x02, 0x9F]
         count_in = 3
-    elif l.startswith("s"):
+    elif l.startswith("s"): # read flash status reg
         bytes_out = [0x02, 0x05]
         count_in = 4
-    elif l.startswith("c"):
+    elif l.startswith("c"): # read flash config ref
         bytes_out = [0x02, 0x35]
         count_in = 4
-    elif l.startswith("a"):
+    elif l.startswith("a"): # read adc id 
         bytes_out = [0x03, 0x80, 0x01]
         count_in = 1
     else: # the option to enter bytes manually
