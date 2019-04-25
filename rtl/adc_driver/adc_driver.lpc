@@ -1,8 +1,8 @@
 [Device]
 Family=ecp5u
 PartType=LFE5U-12F
-PartName=LFE5U-12F-6BG381I
-SpeedGrade=6
+PartName=LFE5U-12F-8BG381I
+SpeedGrade=8
 Package=CABGA381
 OperatingCondition=IND
 Status=S
@@ -16,8 +16,8 @@ CoreRevision=6.0
 ModuleName=adc_driver
 SourceFormat=vhdl
 ParameterFileVersion=1.0
-Date=10/31/2018
-Time=12:12:21
+Date=04/25/2019
+Time=13:15:55
 
 [Parameters]
 Verilog=0
@@ -31,20 +31,20 @@ mode=Receive
 trioddr=0
 io_type=LVDS
 width=12
-freq_in=200
-bandwidth=4800
+freq_in=250
+bandwidth=6000
 aligned=Centered
 pre-configuration=ENABLED
 mode2=Receive
 trioddr2=0
 io_type2=LVDS
-freq_in2=200
-gear=2:1
+freq_in2=250
+gear=4:1
 aligned2=Centered
 width2=12
 DataLane=By Time
 EnECLK=0
-Interface=GDDRX1_RX.SCLK.Centered
+Interface=GDDRX2_RX.ECLK.Centered
 Delay=Static Default
 DelVal=
 EnInEdge=
@@ -63,4 +63,4 @@ enClkIBuf=0
 ClkIBuf=LVDS
 
 [Command]
-cmd_line= -w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 200 -gear 2 -del 128
+cmd_line= -w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 250 -gear 4 -del 128

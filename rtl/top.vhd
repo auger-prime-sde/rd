@@ -23,6 +23,7 @@ entity top is
     o_tx_data           : out std_logic_vector(1 downto 0);
     o_tx_clk            : out std_logic;
     o_tx_datavalid      : out std_logic;
+    o_adc_ready         : out std_logic;
     -- signals for eeprom
     i_flash_miso       : in std_logic;
     o_flash_mosi       : out std_logic;
@@ -37,14 +38,16 @@ entity top is
     i_housekeeping_mosi : in std_logic;
     i_housekeeping_ce   : in std_logic;
     o_housekeeping_miso : out std_logic;
-    o_housekeeping_dout : out std_logic_vector(7 downto 0)
+    o_housekeeping_dout : out std_logic_vector(7 downto 0);
+    --
+    i_adc_start : in std_logic
     );
   end top;
 
 architecture behaviour of top is
   constant c_STORAGE_WIDTH : natural := 2*g_ADC_BITS;
 
-  signal adc_data : std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
+  signal adc_data : std_logic_vector(2*c_STORAGE_WIDTH-1 downto 0);
 
   signal internal_clk : std_logic;
   signal tx_clk : std_logic;
@@ -52,13 +55,14 @@ architecture behaviour of top is
   signal r_flash_clk : std_logic;
   signal r_flash_ce : std_logic;
     
-
   component adc_driver
-    port (
-      clkin  : in  std_logic; reset: in  std_logic; sclk: out  std_logic;
-      datain : in  std_logic_vector(g_ADC_BITS-1 downto 0);
-      q      : out std_logic_vector(c_STORAGE_WIDTH-1 downto 0)
-    );
+    port (alignwd: in  std_logic; clkin: in  std_logic; 
+        ready: out  std_logic; sclk: out  std_logic; 
+        start: in  std_logic; sync_clk: in  std_logic; 
+
+        sync_reset: in  std_logic; 
+        datain: in  std_logic_vector(11 downto 0); 
+        q: out  std_logic_vector(47 downto 0));
   end component;
 
   -- start of magic MCLK block
@@ -82,7 +86,7 @@ architecture behaviour of top is
     g_BUFFER_INDEXSIZE : natural := 11 );
 
     port (
-      i_adc_data       : in std_logic_vector(2*g_ADC_BITS-1 downto 0);
+      i_adc_data       : in std_logic_vector(4*g_ADC_BITS-1 downto 0);
       i_clk            : in std_logic;
       i_tx_clk         : in std_logic;
       i_rst            : in std_logic;
@@ -152,11 +156,15 @@ begin
 
   adc_driver_1 : adc_driver
     port map (
-      clkin  => i_adc_clk,
-      reset  => i_rst,
-      sclk   => internal_clk,
-      datain => i_data_in,
-      q      => adc_data);
+      alignwd => '0',
+      clkin   => i_adc_clk,
+      ready   => o_adc_ready,
+      sclk    => internal_clk,
+      start   => i_adc_start,
+      sync_clk => i_slow_clk,
+      sync_reset => '0',
+      datain  => i_data_in,
+      q       => adc_data);
   
   u1: USRMCLK port map (
     USRMCLKI => r_flash_clk,

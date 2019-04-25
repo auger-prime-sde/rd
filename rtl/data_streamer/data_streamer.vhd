@@ -16,7 +16,7 @@ entity data_streamer is
     g_BUFFER_INDEXSIZE : natural := 11 );
 
   port (
-    i_adc_data       : in std_logic_vector(2*g_ADC_BITS-1 downto 0);
+    i_adc_data       : in std_logic_vector(4*g_ADC_BITS-1 downto 0);
     i_clk            : in std_logic;
     i_tx_clk         : in std_logic;
     i_rst            : in std_logic;
@@ -34,7 +34,7 @@ architecture behaviour of data_streamer is
 
   signal buffer_write_en : std_logic;
   signal buffer_read_en : std_logic;
-  signal write_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
+  signal write_address : std_logic_vector(g_BUFFER_INDEXSIZE-2 downto 0);
   signal read_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
   signal start_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
 
@@ -48,8 +48,8 @@ architecture behaviour of data_streamer is
     port (
       i_write_clk   : in  std_logic;
       i_write_enable: in  std_logic;
-      i_write_addr  : in  std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
-      i_write_data  : in  std_logic_vector(c_STORAGE_WIDTH-1 downto 0);
+      i_write_addr  : in  std_logic_vector(g_BUFFER_INDEXSIZE-2 downto 0);
+      i_write_data  : in  std_logic_vector(2*c_STORAGE_WIDTH-1 downto 0);
       i_read_clk    : in  std_logic;
       i_read_enable : in  std_logic;
       i_read_addr   : in  std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
@@ -61,7 +61,7 @@ architecture behaviour of data_streamer is
     generic ( g_SIZE : natural );
     port (
       i_clk: in std_logic;
-      o_count: out std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0)
+      o_count: out std_logic_vector(g_BUFFER_INDEXSIZE-2 downto 0)
     );
   end component;
 
@@ -108,7 +108,7 @@ architecture behaviour of data_streamer is
 begin
 
 write_index_counter : simple_counter
-  generic map (g_SIZE => g_BUFFER_INDEXSIZE)
+  generic map (g_SIZE => g_BUFFER_INDEXSIZE-1)
   port map (
     i_clk   => i_clk,
     o_count => write_address);
@@ -139,13 +139,14 @@ data_writer_1 : data_writer
 write_controller_1 : write_controller
   generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 1024)
   port map (
-    i_clk          => i_clk,
-    i_trigger      => i_trigger,
-    i_curr_addr    => write_address,
-    i_arm          => arm,
-    o_write_en     => buffer_write_en,
-    o_start_addr   => start_address,
-    o_trigger_done => trigger_done);
+    i_clk                                         => i_clk,
+    i_trigger                                     => i_trigger,
+    i_curr_addr(g_BUFFER_INDEXSIZE-1 downto 1)    => write_address,
+    i_curr_addr(0)                                => '0',
+    i_arm                                         => arm,
+    o_write_en                                    => buffer_write_en,
+    o_start_addr                                  => start_address,
+    o_trigger_done                                => trigger_done);
 
 readout_controller_1 : readout_controller
   generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_WORDSIZE => g_ADC_BITS)
