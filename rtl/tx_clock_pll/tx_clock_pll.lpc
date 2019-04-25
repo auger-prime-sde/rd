@@ -1,8 +1,8 @@
 [Device]
 Family=ecp5u
 PartType=LFE5U-12F
-PartName=LFE5U-12F-6BG381I
-SpeedGrade=6
+PartName=LFE5U-12F-8BG381I
+SpeedGrade=8
 Package=CABGA381
 OperatingCondition=IND
 Status=S
@@ -16,8 +16,8 @@ CoreRevision=5.8
 ModuleName=tx_clock_pll
 SourceFormat=vhdl
 ParameterFileVersion=1.0
-Date=11/27/2018
-Time=17:20:41
+Date=04/25/2019
+Time=11:29:46
 
 [Parameters]
 Verilog=0
@@ -27,8 +27,8 @@ Destination=Synplicity
 Expression=BusA(0 to 7)
 Order=Big Endian [MSB:LSB]
 IO=0
-CLKI_FREQ=40.00
-CLKI_DIV=2
+CLKI_FREQ=100
+CLKI_DIV=5
 ENABLE_HBW=DISABLED
 REFERENCE=0
 IOBUF=LVDS
@@ -90,4 +90,4 @@ PLL_LOCK_STK=DISABLED
 PLL_USE_SMI=DISABLED
 
 [Command]
-cmd_line= -w -n tx_clock_pll -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type pll -fin 40.00 -fclkop 60 -fclkop_tol 5.0 -phase_cntl STATIC -fb_mode 1
+cmd_line= -w -n tx_clock_pll -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type pll -fin 100 -fclkop 60 -fclkop_tol 5.0 -phase_cntl STATIC -fb_mode 1

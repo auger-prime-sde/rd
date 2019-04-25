@@ -4,7 +4,7 @@ BLOCK RESETPATHS ;
 BLOCK ASYNCPATHS ;
 BLOCK JTAGPATHS ;
 # Input clock
-FREQUENCY PORT "i_slow_clk" 50.000000 MHz ;
+FREQUENCY PORT "i_slow_clk" 100.000000 MHz ;
 FREQUENCY PORT "i_adc_clk" 250.000000 MHz ;
 FREQUENCY NET "internal_clk" 250.000000 MHz ;
 # Bank voltages
@@ -93,3 +93,4 @@ LOCATE COMP "i_housekeeping_clk" SITE "J3" ;
 LOCATE COMP "i_housekeeping_ce" SITE "N4" ;
 LOCATE COMP "i_housekeeping_mosi" SITE "L4" ;
 LOCATE COMP "i_trigger" SITE "P3" ;
+FREQUENCY NET "i_slow_clk_c" 100.000000 MHz ;
