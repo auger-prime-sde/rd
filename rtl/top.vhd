@@ -33,14 +33,13 @@ entity top is
     o_adc_mosi          : out std_logic;
     o_adc_ce            : out std_logic;
     o_adc_clk           : out std_logic;
+    o_adc_reset         : out std_logic;
     -- signals for housekeeping
     i_housekeeping_clk  : in std_logic;
     i_housekeeping_mosi : in std_logic;
     i_housekeeping_ce   : in std_logic;
     o_housekeeping_miso : out std_logic;
-    o_housekeeping_dout : out std_logic_vector(7 downto 0);
-    --
-    i_adc_start : in std_logic
+    o_housekeeping_dout : out std_logic_vector(7 downto 0)
     );
   end top;
 
@@ -48,7 +47,9 @@ architecture behaviour of top is
   constant c_STORAGE_WIDTH : natural := 2*g_ADC_BITS;
 
   signal adc_data : std_logic_vector(2*c_STORAGE_WIDTH-1 downto 0);
-
+  signal adc_clk : std_logic;
+  signal adc_ce: std_logic;
+  
   signal internal_clk : std_logic;
   signal tx_clk : std_logic;
 
@@ -65,6 +66,17 @@ architecture behaviour of top is
         q: out  std_logic_vector(47 downto 0));
   end component;
 
+  component adc_boot
+    port (
+      i_clk       : in  std_logic;
+      i_adc_clk   : in  std_logic;
+      i_adc_ce    : in  std_logic;
+      o_adc_reset : out std_logic;
+      o_adc_clk   : out std_logic;
+      o_adc_ce    : out std_logic
+      );
+  end component;
+  
   -- start of magic MCLK block
   -- (see ECP5 sysCONFIG manual section 6.1.2)
   component USRMCLK
@@ -156,15 +168,25 @@ begin
 
   adc_driver_1 : adc_driver
     port map (
-      alignwd => '0',
-      clkin   => i_adc_clk,
-      ready   => o_adc_ready,
-      sclk    => internal_clk,
-      start   => i_adc_start,
-      sync_clk => i_slow_clk,
+      alignwd    => '0',
+      clkin      => i_adc_clk,
+      ready      => o_adc_ready,
+      sclk       => internal_clk,
+      start      => '1',
+      sync_clk   => i_slow_clk,
       sync_reset => '0',
-      datain  => i_data_in,
-      q       => adc_data);
+      datain     => i_data_in,
+      q          => adc_data);
+
+  adc_boot_1 : adc_boot
+    port map (
+      i_clk       => i_slow_clk,
+      i_adc_clk   => adc_clk,
+      i_adc_ce    => adc_ce,
+      o_adc_reset => o_adc_reset,
+      o_adc_clk   => o_adc_clk,
+      o_adc_ce    => o_adc_ce
+      );
   
   u1: USRMCLK port map (
     USRMCLKI => r_flash_clk,
@@ -184,10 +206,10 @@ begin
       i_flash_miso        => i_flash_miso,
       o_flash_mosi        => o_flash_mosi,
       o_flash_ce          => r_flash_ce,
-      o_adc_clk           => o_adc_clk,
+      o_adc_clk           => adc_clk,
       i_adc_miso          => i_adc_miso,
       o_adc_mosi          => o_adc_mosi,
-      o_adc_ce            => o_adc_ce
+      o_adc_ce            => adc_ce
       );
   
   data_streamer_1 : data_streamer
