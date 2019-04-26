@@ -45,7 +45,7 @@
             <lattice:device>LFE5U-12F-8BG381I</lattice:device>
             <lattice:synthesis>lse</lattice:synthesis>
             <lattice:date>2018-07-11.11:42:52</lattice:date>
-            <lattice:modified>2019-04-25.01:15:56 PM</lattice:modified>
+            <lattice:modified>2019-04-25.04:28:22 PM</lattice:modified>
             <lattice:diamond>3.10.3.144.3</lattice:diamond>
             <lattice:language>VHDL</lattice:language>
             <lattice:attributes>
@@ -131,7 +131,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Time</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">13:15:55</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">16:27:41</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>VendorName</lattice:lpckey>
@@ -180,7 +180,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>EnECLK</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">0</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">1</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>EnInEdge</lattice:lpckey>
@@ -305,7 +305,7 @@
                 <lattice:lpcsection lattice:name="Command"/>
                 <lattice:lpcentry>
                     <lattice:lpckey>cmd_line</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">-w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 250 -gear 4 -del 128</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">-w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 250 -gear 4 -eclk_bridge -del 128</lattice:lpcvalue>
                 </lattice:lpcentry>
             </lattice:lpc>
             <lattice:groups/>

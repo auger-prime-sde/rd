@@ -17,7 +17,7 @@ ModuleName=adc_driver
 SourceFormat=vhdl
 ParameterFileVersion=1.0
 Date=04/25/2019
-Time=13:15:55
+Time=16:27:41
 
 [Parameters]
 Verilog=0
@@ -43,7 +43,7 @@ gear=4:1
 aligned2=Centered
 width2=12
 DataLane=By Time
-EnECLK=0
+EnECLK=1
 Interface=GDDRX2_RX.ECLK.Centered
 Delay=Static Default
 DelVal=
@@ -63,4 +63,4 @@ enClkIBuf=0
 ClkIBuf=LVDS
 
 [Command]
-cmd_line= -w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 250 -gear 4 -del 128
+cmd_line= -w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 250 -gear 4 -eclk_bridge -del 128
