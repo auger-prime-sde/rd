@@ -22,7 +22,7 @@ end write_controller;
 
 architecture behavior of write_controller is
   -- Number of bytes to read, block size minus start offset
-  constant c_DELAY_COUNT : natural := 2**g_ADDRESS_BITS - g_START_OFFSET;
+  constant c_DELAY_COUNT : natural := (2**g_ADDRESS_BITS - g_START_OFFSET); --512
   -- state machine type:
   type t_controller_state is (s_Idle, s_Armed, s_ArmReady, s_Triggered);
   -- variables
@@ -53,7 +53,7 @@ begin
         when s_Armed =>
           -- wait for at least half the buffer to be filled
           r_start_addr <= r_start_addr;
-          r_count <= r_count + 1;
+          r_count <= r_count + 2;
 
           if r_count < c_DELAY_COUNT - 1 then
             r_controller_state <= s_Armed;
@@ -67,7 +67,7 @@ begin
           r_count <= 0;
 
           if r_trigger = '1' then
-            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET -2) mod 2**o_start_addr'length;
+            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET +2) mod 2**o_start_addr'length;
             -- still don't fully understand the -2 here. 
             r_controller_state <= s_Triggered;
           else
@@ -80,9 +80,9 @@ begin
           --    send signal to the read controller,
           --    and go to idle
           r_start_addr <= r_start_addr;
-          r_count <= (r_count + 1) ;
+          r_count <= (r_count + 2) ;
 
-          if r_count < c_DELAY_COUNT - 5 then
+          if r_count < c_DELAY_COUNT - 5 then 
             -- -1 because c_DELAY_COUNT is the last address that we don't want
             -- (i.e. we must stop at 2047 not 2048)
             -- -2 because the counter actually starts counting 2 cycles after

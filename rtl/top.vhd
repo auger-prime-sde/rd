@@ -17,9 +17,7 @@ entity top is
     i_data_in           : in std_logic_vector (g_ADC_BITS-1 downto 0);
     i_adc_clk           : in std_logic;
     i_slow_clk          : in std_logic;
-    i_rst               : in std_logic;
     i_trigger           : in std_logic;
-    i_start_transfer    : in std_logic;
     o_tx_data           : out std_logic_vector(1 downto 0);
     o_tx_clk            : out std_logic;
     o_tx_datavalid      : out std_logic;
@@ -39,7 +37,9 @@ entity top is
     i_housekeeping_mosi : in std_logic;
     i_housekeeping_ce   : in std_logic;
     o_housekeeping_miso : out std_logic;
-    o_housekeeping_dout : out std_logic_vector(7 downto 0)
+    o_housekeeping_dout : out std_logic_vector(7 downto 0);
+    --
+    o_bias_t            : out std_logic
     );
   end top;
 
@@ -49,6 +49,9 @@ architecture behaviour of top is
   signal adc_data : std_logic_vector(2*c_STORAGE_WIDTH-1 downto 0);
   signal adc_clk : std_logic;
   signal adc_ce: std_logic;
+
+  signal fast_clk    : std_logic;
+  signal slow_slow_clk : std_logic;
   
   signal internal_clk : std_logic;
   signal tx_clk : std_logic;
@@ -101,7 +104,6 @@ architecture behaviour of top is
       i_adc_data       : in std_logic_vector(4*g_ADC_BITS-1 downto 0);
       i_clk            : in std_logic;
       i_tx_clk         : in std_logic;
-      i_rst            : in std_logic;
       i_trigger        : in std_logic;
       i_start_transfer : in std_logic;
       o_tx_data        : out std_logic_vector(1 downto 0);
@@ -150,7 +152,8 @@ architecture behaviour of top is
   component tx_clock_pll
     port (
       CLKI: in std_logic;
-      CLKOP: out std_logic
+      CLKOP: out std_logic;
+      CLKOS: out std_logic
     );
   end component;
 
@@ -159,12 +162,16 @@ architecture behaviour of top is
 
 begin
 
+  o_bias_t <= '1';
   o_flash_ce <= r_flash_ce;
   
   tx_clock_synthesizer : tx_clock_pll
     port map (
       CLKI => i_slow_clk,
-      CLKOP => tx_clk);
+      CLKOP => tx_clk,
+      CLKOS => slow_slow_clk -- TODO: rename
+      );
+
 
   adc_driver_1 : adc_driver
     port map (
@@ -173,14 +180,14 @@ begin
       ready      => o_adc_ready,
       sclk       => internal_clk,
       start      => '1',
-      sync_clk   => i_slow_clk,
+      sync_clk   => slow_slow_clk,
       sync_reset => '0',
       datain     => i_data_in,
       q          => adc_data);
 
   adc_boot_1 : adc_boot
     port map (
-      i_clk       => i_slow_clk,
+      i_clk       => slow_slow_clk,
       i_adc_clk   => adc_clk,
       i_adc_ce    => adc_ce,
       o_adc_reset => o_adc_reset,
@@ -196,7 +203,7 @@ begin
   housekeeping_1 : housekeeping
     generic map (g_DEV_SELECT_BITS => 8)
     port map (
-      i_sample_clk        => i_slow_clk,
+      i_sample_clk        => slow_slow_clk,
       i_housekeeping_clk  => i_housekeeping_clk,
       i_housekeeping_mosi => i_housekeeping_mosi,
       o_housekeeping_miso => o_housekeeping_miso,
@@ -209,8 +216,7 @@ begin
       o_adc_clk           => adc_clk,
       i_adc_miso          => i_adc_miso,
       o_adc_mosi          => o_adc_mosi,
-      o_adc_ce            => adc_ce
-      );
+      o_adc_ce            => adc_ce      );
   
   data_streamer_1 : data_streamer
     generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
@@ -218,9 +224,8 @@ begin
       i_adc_data       => adc_data,
       i_clk            => internal_clk,
       i_tx_clk         => tx_clk,
-      i_rst            => i_rst,
       i_trigger        => i_trigger,
-      i_start_transfer => i_start_transfer,
+      i_start_transfer => '1',
       o_tx_data        => o_tx_data,
       o_tx_clk         => o_tx_clk,
       o_tx_datavalid   => o_tx_datavalid );

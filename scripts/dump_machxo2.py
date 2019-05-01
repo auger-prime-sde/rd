@@ -9,7 +9,7 @@ from pprint import pprint
 
 
 ## Number of FFTs to average
-averages = 10
+averages = 1
 
 
 dev          = serial.Serial()
@@ -49,6 +49,11 @@ def dump_to_uart():
 ##
 def val_from_raw(raw1, raw0):
   val_unsigned = ((raw0 & 0x3F) << 6) + (raw1 & 0x3F)
+  bits0 = bin(raw0)[2:]
+  bits1 = bin(raw1)[2:]
+  numones = len([x for x in bits0+bits1 if x=='1'])
+  if (numones % 2) == 0:
+      print("parity mismatch!")
   if val_unsigned > 2047:
     return val_unsigned - 4096
   else:
@@ -77,7 +82,7 @@ def read_samples():
 
         ch2 = val_from_raw(raw[1], raw[0])
         ch2_data.append(ch2)
-        print("{0:b} {1:b} = {2}".format(raw[0], raw[1], ch2))
+        print("{0:06b} {1:07b} = {2}".format(raw[0], raw[1], ch2))
 
     #pprint("raw data:")
     #for i in range(100):
@@ -96,12 +101,12 @@ def read_samples():
 ##
 def fft_from_samples(data):
     # Scale data to voltages
-    y = np.asarray(data) / 2048. * 1.75/2.0;
+    y = np.asarray(data) / 2048. * 2.0/2.0;
 
     # Number of samplepoints
     N = len(y)
     # sample spacing
-    T = 1.0 / 200.0
+    T = 1.0 / 250.0
     x = np.linspace(0.0, N*T, N)
     xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
 
@@ -156,7 +161,7 @@ def print_fft(xf, ypow):
 ##
 ypow = np.zeros(1024, dtype='float')
 for i in range(0, averages):
-    time.sleep(0.1)
+    time.sleep(0.2)
     dev.reset_input_buffer()
     trigger()
     time.sleep(0.1)
@@ -165,7 +170,7 @@ for i in range(0, averages):
    
     
     (ch1, ch2) = read_samples()
-    (xf, ypow_new) = fft_from_samples(ch2)
+    (xf, ypow_new) = fft_from_samples(ch1)
     ypow += ypow_new
 
 ypow = ypow / averages

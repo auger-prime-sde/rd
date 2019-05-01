@@ -19,7 +19,6 @@ entity data_streamer is
     i_adc_data       : in std_logic_vector(4*g_ADC_BITS-1 downto 0);
     i_clk            : in std_logic;
     i_tx_clk         : in std_logic;
-    i_rst            : in std_logic;
     i_trigger        : in std_logic;
     i_start_transfer : in std_logic;
     o_tx_data        : out std_logic_vector(1 downto 0);
@@ -38,6 +37,8 @@ architecture behaviour of data_streamer is
   signal read_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
   signal start_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
 
+  signal mangled_data : std_logic_vector(4*g_ADC_BITS-1 downto 0);
+  
   signal trigger_done : std_logic;
   signal arm : std_logic;
 
@@ -113,6 +114,65 @@ write_index_counter : simple_counter
     i_clk   => i_clk,
     o_count => write_address);
 
+  mangled_data(47 downto 36)  <= (
+      47=>i_adc_data(17),
+      46=>i_adc_data(5),
+      45=>i_adc_data(16),
+      44=>i_adc_data(4),
+      43=>i_adc_data(15),
+      42=>i_adc_data(3),
+      41=>i_adc_data(14),
+      40=>i_adc_data(2),
+      39=>i_adc_data(13),
+      38=>i_adc_data(1),
+      37=>i_adc_data(12),
+      36=>i_adc_data(0)      );
+    -- channel B, first sample, MSB
+  mangled_data(35 downto 24)  <= (
+      35=>i_adc_data(23),
+      34=>i_adc_data(11),
+      33=>i_adc_data(22),
+      32=>i_adc_data(10),
+      31=>i_adc_data(21),
+      30=>i_adc_data(9),
+      29=>i_adc_data(20),
+      28=>i_adc_data(8),
+      27=>i_adc_data(19),
+      26=>i_adc_data(7),
+      25=>i_adc_data(18),
+      24=>i_adc_data(6)      );
+    -- channel A, second sample, MSB
+    mangled_data(23 downto 12)  <= (
+      23=>i_adc_data(41),
+      22=>i_adc_data(29),
+      21=>i_adc_data(40),
+      20=>i_adc_data(28),
+      19=>i_adc_data(39),
+      18=>i_adc_data(27),
+      17=>i_adc_data(38),
+      16=>i_adc_data(26),
+      15=>i_adc_data(37),
+      14=>i_adc_data(25),
+      13=>i_adc_data(36),
+      12=>i_adc_data(24)      );
+    -- channel B, second sample, MSB
+    mangled_data(11 downto 0)  <= (
+      11=>i_adc_data(47),
+      10=>i_adc_data(35),
+      9 =>i_adc_data(46),
+      8 =>i_adc_data(34),
+      7 =>i_adc_data(45),
+      6 =>i_adc_data(33),
+      5 =>i_adc_data(44),
+      4 =>i_adc_data(32),
+      3 =>i_adc_data(43),
+      2 =>i_adc_data(31),
+      1 =>i_adc_data(42),
+      0 =>i_adc_data(30)  );
+
+
+
+
 data_buffer_1 : data_buffer
   generic map (g_ADDRESS_WIDTH => g_BUFFER_INDEXSIZE, g_DATA_WIDTH => c_STORAGE_WIDTH)
   port map (
@@ -122,7 +182,62 @@ data_buffer_1 : data_buffer
     i_read_clk     => i_tx_clk,
     i_read_enable  => buffer_read_en,
     i_read_addr    => read_address,
-    i_write_data   => i_adc_data,
+    -- channel A, first sample, MSB
+    i_write_data(47 downto 36)  => (
+      47=>i_adc_data(17),
+      46=>i_adc_data(5),
+      45=>i_adc_data(16),
+      44=>i_adc_data(4),
+      43=>i_adc_data(15),
+      42=>i_adc_data(3),
+      41=>i_adc_data(14),
+      40=>i_adc_data(2),
+      39=>i_adc_data(13),
+      38=>i_adc_data(1),
+      37=>i_adc_data(12),
+      36=>i_adc_data(0)      ),
+    -- channel B, first sample, MSB
+    i_write_data(35 downto 24)  => (
+      35=>i_adc_data(23),
+      34=>i_adc_data(11),
+      33=>i_adc_data(22),
+      32=>i_adc_data(10),
+      31=>i_adc_data(21),
+      30=>i_adc_data(9),
+      29=>i_adc_data(20),
+      28=>i_adc_data(8),
+      27=>i_adc_data(19),
+      26=>i_adc_data(7),
+      25=>i_adc_data(18),
+      24=>i_adc_data(6)      ),
+    -- channel A, second sample, MSB
+    i_write_data(23 downto 12)  => (
+      23=>i_adc_data(41),
+      22=>i_adc_data(29),
+      21=>i_adc_data(40),
+      20=>i_adc_data(28),
+      19=>i_adc_data(39),
+      18=>i_adc_data(27),
+      17=>i_adc_data(38),
+      16=>i_adc_data(26),
+      15=>i_adc_data(37),
+      14=>i_adc_data(25),
+      13=>i_adc_data(36),
+      12=>i_adc_data(24)      ),
+    -- channel B, second sample, MSB
+    i_write_data(11 downto 0)  => (
+      11=>i_adc_data(47),
+      10=>i_adc_data(35),
+      9 =>i_adc_data(46),
+      8 =>i_adc_data(34),
+      7 =>i_adc_data(45),
+      6 =>i_adc_data(33),
+      5 =>i_adc_data(44),
+      4 =>i_adc_data(32),
+      3 =>i_adc_data(43),
+      2 =>i_adc_data(31),
+      1 =>i_adc_data(42),
+      0 =>i_adc_data(30)      ),
     o_read_data    => data_output_bus);
 
 data_writer_1 : data_writer

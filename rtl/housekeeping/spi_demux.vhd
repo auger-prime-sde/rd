@@ -56,6 +56,13 @@ begin
 
   p_main : process(i_spi_clk) is
   begin
+    if falling_edge(i_spi_clk) then
+      if r_count = g_DEV_SELECT_BITS-1 then
+        r_dev_out <= r_device;
+        r_dev_out(g_DEV_SELECT_BITS-r_count-2) <= i_spi_mosi;
+      end if;
+    end if;
+    
     if rising_edge(i_spi_clk) then
       if i_spi_ce = '0' then
         if r_flag_state /= r_reset_flag then
@@ -69,8 +76,8 @@ begin
             r_device(g_DEV_SELECT_BITS-r_count-2) <= i_spi_mosi;
             r_count <= r_count + 1;
             if r_count = g_DEV_SELECT_BITS - 2 then
-              r_dev_out <= r_device;
-              r_dev_out(g_DEV_SELECT_BITS-r_count-2) <= i_spi_mosi;
+              --r_dev_out <= r_device;
+              --r_dev_out(g_DEV_SELECT_BITS-r_count-2) <= i_spi_mosi;
             end if;
           end if;
         end if; -- r_flag_state /= r_reset_flag

@@ -2,7 +2,7 @@
 -- Module  Version: 5.8
 --/usr/local/diamond/3.10_x64/ispfpga/bin/lin64/scuba -w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 250 -gear 4 -eclk_bridge -del 128 -fdc /home/themba/synced/auger-radio-extension/rtl/adc_driver/adc_driver.fdc 
 
--- Thu Apr 25 16:28:22 2019
+-- Wed May  1 11:10:44 2019
 
 
 library ieee;

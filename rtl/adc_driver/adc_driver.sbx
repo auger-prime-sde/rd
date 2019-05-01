@@ -45,7 +45,7 @@
             <lattice:device>LFE5U-12F-8BG381I</lattice:device>
             <lattice:synthesis>lse</lattice:synthesis>
             <lattice:date>2018-07-11.11:42:52</lattice:date>
-            <lattice:modified>2019-04-25.04:28:22 PM</lattice:modified>
+            <lattice:modified>2019-05-01.11:10:44 AM</lattice:modified>
             <lattice:diamond>3.10.3.144.3</lattice:diamond>
             <lattice:language>VHDL</lattice:language>
             <lattice:attributes>
@@ -115,7 +115,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Date</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">04/25/2019</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">05/01/2019</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>ModuleName</lattice:lpckey>
@@ -131,7 +131,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Time</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">16:27:41</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">11:10:42</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>VendorName</lattice:lpckey>
