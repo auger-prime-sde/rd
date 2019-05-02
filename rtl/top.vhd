@@ -52,6 +52,7 @@ architecture behaviour of top is
   -- wires for internal spi connections
   signal w_adc_clk   : std_logic;
   signal w_adc_ce    : std_logic;
+  signal w_adc_mosi  : std_logic;
   signal w_flash_clk : std_logic;
   signal w_flash_ce  : std_logic;
   -- miso and mosi are directly connected to pins
@@ -79,9 +80,11 @@ architecture behaviour of top is
       i_hk_fast_clk  : in  std_logic;
       i_hk_adc_clk   : in  std_logic;
       i_hk_adc_ce    : in  std_logic;
+      i_hk_adc_mosi  : in  std_logic;
       o_hk_adc_reset : out std_logic;
       o_hk_adc_clk   : out std_logic;
-      o_hk_adc_ce    : out std_logic
+      o_hk_adc_ce    : out std_logic;
+      o_hk_adc_mosi  : out std_logic
       );
   end component;
   
@@ -196,9 +199,11 @@ begin
       i_hk_fast_clk  => w_hk_fast_clk,
       i_hk_adc_clk   => w_adc_clk,
       i_hk_adc_ce    => w_adc_ce,
+      i_hk_adc_mosi  => w_adc_mosi,
       o_hk_adc_reset => o_hk_adc_reset,
       o_hk_adc_clk   => o_hk_adc_clk,
-      o_hk_adc_ce    => o_hk_adc_ce
+      o_hk_adc_ce    => o_hk_adc_ce,
+      o_hk_adc_mosi  => o_hk_adc_mosi
       );
   
   u1: USRMCLK port map (
@@ -225,7 +230,7 @@ begin
       o_flash_ce          => w_flash_ce,
       o_adc_clk           => w_adc_clk,
       i_adc_miso          => i_hk_adc_miso,
-      o_adc_mosi          => o_hk_adc_mosi,
+      o_adc_mosi          => w_adc_mosi,
       o_adc_ce            => w_adc_ce      );
   
   data_streamer_1 : data_streamer
