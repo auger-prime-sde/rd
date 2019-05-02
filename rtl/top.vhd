@@ -210,10 +210,14 @@ begin
     generic map (g_DEV_SELECT_BITS => 8)
     port map (
       i_hk_fast_clk       => w_hk_fast_clk,
-      i_hk_uub_clk        => i_hk_uub_clk,
-      i_hk_uub_mosi       => i_hk_uub_mosi,
+      -- we temporarily silence the housekeeping lines in case the incomming
+      -- lines are connected to an LVDS-cmos driver with floating input which
+      -- could cause erratic input at these ports which would not be remedied
+      -- by a pull-up:
+      i_hk_uub_clk        => '1',--i_hk_uub_clk,
+      i_hk_uub_mosi       => '1',--i_hk_uub_mosi,
       o_hk_uub_miso       => o_hk_uub_miso,
-      i_hk_uub_ce         => i_hk_uub_ce,
+      i_hk_uub_ce         => '1',--i_hk_uub_ce,
       o_gpio_data         => o_hk_gpio,
       o_flash_clk         => w_flash_clk,
       i_flash_miso        => i_hk_flash_miso,
