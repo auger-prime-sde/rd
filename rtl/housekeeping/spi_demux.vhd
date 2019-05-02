@@ -10,7 +10,7 @@ entity spi_demux is
   port (
     -- SPI interface to UUB:
     i_spi_clk  : in  std_logic;
-    i_sample_clk: in std_logic;
+    i_hk_fast_clk: in std_logic;
     i_spi_mosi : in  std_logic;
     --o_spi_miso : out std_logic;
     i_spi_ce   : in  std_logic;
@@ -43,9 +43,9 @@ begin
   o_dev_select <= (others => '0') when r_flag_state /= r_reset_flag else r_dev_out;
   r_count_t <= std_logic_vector(to_unsigned(r_count, 4));
 
-  p_reset : process(i_sample_clk) is
+  p_reset : process(i_hk_fast_clk) is
   begin
-    if rising_edge(i_sample_clk) then
+    if rising_edge(i_hk_fast_clk) then
       if r_prev_ce_0='1' and r_prev_ce_1='0' then -- i.e. rising edge
         r_reset_flag <= not r_reset_flag;
       end if;

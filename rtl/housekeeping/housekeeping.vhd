@@ -5,12 +5,12 @@ use ieee.numeric_std.all;
 entity housekeeping is
   generic ( g_DEV_SELECT_BITS : natural :=  8 );
   port (
-    i_sample_clk        : in  std_logic; -- 50 MHz for internal operations
+    i_hk_fast_clk        : in  std_logic; -- 50 MHz for internal operations
     -- signals to/from UUB:
-    i_housekeeping_clk  : in  std_logic;
-    i_housekeeping_mosi : in  std_logic;
-    o_housekeeping_miso : out std_logic;
-    i_housekeeping_ce   : in  std_logic;
+    i_hk_uub_clk  : in  std_logic;
+    i_hk_uub_mosi : in  std_logic;
+    o_hk_uub_miso : out std_logic;
+    i_hk_uub_ce   : in  std_logic;
     -- pins to/from subsystems:
     -- digitalout:
     o_gpio_data         : out std_logic_vector(7 downto 0);
@@ -25,9 +25,6 @@ entity housekeeping is
     o_adc_mosi          : out std_logic;
     o_adc_ce            : out std_logic
     );
-
-  
-
 end housekeeping;
 
 
@@ -44,9 +41,9 @@ architecture behaviour of housekeeping is
   signal r_gpio_miso    : std_logic;
 
   -- internal lines between the boot seq injector and the demuxer:
-  signal r_housekeeping_clk  : std_logic;
-  signal r_housekeeping_ce   : std_logic;
-  signal r_housekeeping_mosi : std_logic;
+  signal r_internal_clk  : std_logic;
+  signal r_internal_ce   : std_logic;
+  signal r_internal_mosi : std_logic;
 
   -- wires for flash
   signal r_flash_ce : std_logic;
@@ -54,16 +51,12 @@ architecture behaviour of housekeeping is
   -- wires for adc:
   signal r_adc_ce         : std_logic;
 
-  --signal r_reboot : std_logic;
-  --constant c_REBOOT_INT : natural := 100000;
-  --signal r_reboot_count : natural range 0 to c_REBOOT_INT-1 := 0;
-
 
   component spi_demux is
     generic ( g_DEV_SELECT_BITS : natural := g_DEV_SELECT_BITS );
     port (
       i_spi_clk    : in  std_logic;
-      i_sample_clk : in  std_logic;
+      i_hk_fast_clk : in  std_logic;
       i_spi_mosi   : in  std_logic;
       i_spi_ce     : in  std_logic;
       o_dev_select : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
@@ -87,14 +80,14 @@ architecture behaviour of housekeeping is
 
   component boot_sequence is
   port (
-    i_clk : in std_logic;
-    i_rst : in std_logic;
-    i_housekeeping_clk: in std_logic;
-    i_housekeeping_ce: in std_logic;
-    i_housekeeping_mosi: in std_logic;
-    o_housekeeping_clk: out std_logic;
-    o_housekeeping_ce: out std_logic;
-    o_housekeeping_mosi: out  std_logic
+    i_clk     : in std_logic;
+    i_rst     : in std_logic;
+    i_hk_clk  : in std_logic;
+    i_hk_ce   : in std_logic;
+    i_hk_mosi : in std_logic;
+    o_hk_clk  : out std_logic;
+    o_hk_ce   : out std_logic;
+    o_hk_mosi : out  std_logic
     );
   end component;
 
@@ -118,18 +111,6 @@ architecture behaviour of housekeeping is
   end component;
 begin
 
-  --process (i_sample_clk) is
-  --begin
-    --if rising_edge(i_sample_clk) then
-    --  if r_reboot_count < 400 then
-    --    r_reboot <= '0';
-    --  else
-    --    r_reboot <= '1';
-    --  end if;
-    --  r_reboot_count <= (r_reboot_count + 1) mod c_REBOOT_INT;
-    --end if;
-  --end process;
-  
 
   -- make sub-system select lines
   r_gpio_ce      <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(1, g_DEV_SELECT_BITS)) else '1';
@@ -144,16 +125,16 @@ begin
     
   -- wiring flash:
   o_flash_ce     <= r_flash_ce;
-  o_flash_clk    <= r_housekeeping_clk;
-  o_flash_mosi   <= r_housekeeping_mosi;
+  o_flash_clk    <= r_internal_clk;
+  o_flash_mosi   <= r_internal_mosi;
   
   -- wiring adc: 
   o_adc_ce       <= r_adc_ce;
-  o_adc_clk      <= r_housekeeping_clk;
-  o_adc_mosi     <= r_housekeeping_mosi;
+  o_adc_clk      <= r_internal_clk;
+  o_adc_mosi     <= r_internal_mosi;
 
   -- mux the housekeeping output miso depending on the selected peripheral 
-  o_housekeeping_miso <=
+  o_hk_uub_miso <=
     i_flash_miso when r_flash_ce='0' else 
     i_adc_miso   when r_adc_ce='0' else r_gpio_miso;
 
@@ -161,25 +142,25 @@ begin
   -- instantiate one boot sequence injector:
   boot_sequence_1 : boot_sequence
     port map (
-      i_clk               => i_sample_clk,
-      i_rst               => '1',
-      i_housekeeping_clk  => i_housekeeping_clk,
-      i_housekeeping_ce   => i_housekeeping_ce,
-      i_housekeeping_mosi => i_housekeeping_mosi,
-      o_housekeeping_clk  => r_housekeeping_clk,
-      o_housekeeping_ce   => r_housekeeping_ce,
-      o_housekeeping_mosi => r_housekeeping_mosi
+      i_clk     => i_hk_fast_clk,
+      i_rst     => '1',
+      i_hk_clk  => i_hk_uub_clk,
+      i_hk_ce   => i_hk_uub_ce,
+      i_hk_mosi => i_hk_uub_mosi,
+      o_hk_clk  => r_internal_clk,
+      o_hk_ce   => r_internal_ce,
+      o_hk_mosi => r_internal_mosi
     );
   
   -- instantiate one spi demuxer
   spi_demux_1 : spi_demux
     generic map (g_DEV_SELECT_BITS => g_DEV_SELECT_BITS)
     port map (
-      i_spi_clk    => r_housekeeping_clk,
-      i_sample_clk => i_sample_clk,
-      i_spi_mosi   => r_housekeeping_mosi,
-      i_spi_ce     => r_housekeeping_ce,
-      o_dev_select => r_subsystem_select
+      i_spi_clk     => r_internal_clk,
+      i_hk_fast_clk => i_hk_fast_clk,
+      i_spi_mosi    => r_internal_mosi,
+      i_spi_ce      => r_internal_ce,
+      o_dev_select  => r_subsystem_select
       );
 
 
@@ -190,11 +171,11 @@ begin
       g_OUTPUT_BITS => 8
       )
     port map (
-      i_spi_clk    => r_housekeeping_clk,
-      i_spi_mosi   => r_housekeeping_mosi,
+      i_spi_clk    => r_internal_clk,
+      i_spi_mosi   => r_internal_mosi,
       o_spi_miso   => r_gpio_miso,
       i_spi_ce     => r_gpio_ce,
-      i_clk        => i_sample_clk,
+      i_clk        => i_hk_fast_clk,
       o_data       => r_gpio_in,
       i_data       => r_gpio_out,
       o_recv_count => r_gpio_count
@@ -209,7 +190,7 @@ begin
       g_DATA_OUT_BITS => 8
       )
     port map (
-      i_clk         => i_sample_clk,
+      i_clk         => i_hk_fast_clk,
       i_enable      => r_gpio_trigger,
       i_cmd         => r_gpio_in(15 downto 8),
       i_data        => r_gpio_in(7 downto 0),

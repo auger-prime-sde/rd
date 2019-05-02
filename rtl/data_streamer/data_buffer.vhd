@@ -26,8 +26,6 @@ architecture behavioral of data_buffer is
 	type ram_type is array (2**(g_ADDRESS_WIDTH-1)-1 downto 0) of std_logic_vector (2*g_DATA_WIDTH-1 downto 0);
 	signal ram : ram_type;
 	signal data_out_reg : std_logic_vector(g_DATA_WIDTH-1 downto 0) := (others => '0');
-
-
 	--attribute syn_ramstyle : string;
 	--attribute syn_ramstyle of ram : signal is "block_ram";
 
@@ -37,8 +35,6 @@ begin
 		if rising_edge(i_write_clk) then
             if i_write_enable='1' then
                 ram(to_integer(unsigned(i_write_addr))) <= i_write_data;
-                --ram(to_integer(unsigned(i_write_addr & '0')))<=i_write_data(2*g_DATA_WIDTH-1 downto g_DATA_WIDTH);
-                --ram(to_integer(unsigned(i_write_addr & '1')))<=i_write_data(g_DATA_WIDTH-1 downto 0);
 			end if;
 		end if;
 	end process;

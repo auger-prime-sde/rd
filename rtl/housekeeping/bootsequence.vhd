@@ -22,14 +22,14 @@ use ieee.numeric_std.all;
 
 entity boot_sequence is
   port (
-    i_clk : in std_logic;
-    i_rst : in std_logic;
-    i_housekeeping_clk:  in std_logic;
-    i_housekeeping_ce:   in std_logic;
-    i_housekeeping_mosi: in std_logic;
-    o_housekeeping_clk:  out std_logic;
-    o_housekeeping_ce:   out std_logic;
-    o_housekeeping_mosi: out std_logic
+    i_clk     : in std_logic;
+    i_rst     : in std_logic;
+    i_hk_clk  :  in std_logic;
+    i_hk_ce   :   in std_logic;
+    i_hk_mosi : in std_logic;
+    o_hk_clk  :  out std_logic;
+    o_hk_ce   :   out std_logic;
+    o_hk_mosi : out std_logic
     );
 end boot_sequence;
 
@@ -72,9 +72,9 @@ begin
   r_bytecount_test <= std_logic_vector(to_unsigned(r_ByteCount, 8));
 
   -- forward after boot is over
-  o_housekeeping_clk  <= i_housekeeping_clk  when r_done = '1' else r_clk;
-  o_housekeeping_ce   <= i_housekeeping_ce   when r_done = '1' else r_ce;
-  o_housekeeping_mosi <= i_housekeeping_mosi when r_done = '1' else r_mosi;
+  o_hk_clk  <= i_hk_clk  when r_done = '1' else r_clk;
+  o_hk_ce   <= i_hk_ce   when r_done = '1' else r_ce;
+  o_hk_mosi <= i_hk_mosi when r_done = '1' else r_mosi;
 
   -- generate sufficiently slow clock
   process(i_clk) is

@@ -1,6 +1,5 @@
 --- AUGER radio extension FPGA toplevel design
 
-
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
@@ -9,55 +8,61 @@ entity top is
   generic (
     -- Number of data bits from the ADC channels
     g_ADC_BITS : natural := 12;
-    -- Number of bits in index counters (11 gives 2048 samples stored)
+    -- Number of bits in index counters (11 gives 2048 samples stored on each channel)
     g_BUFFER_INDEXSIZE : natural := 11 );
 
   port (
-    -- signals for data streamer
+    -- signals for adc driver:
     i_data_in           : in std_logic_vector (g_ADC_BITS-1 downto 0);
     i_adc_clk           : in std_logic;
-    i_slow_clk          : in std_logic;
+    -- signals for data streamer
+    i_xtal_clk          : in std_logic;
     i_trigger           : in std_logic;
     o_tx_data           : out std_logic_vector(1 downto 0);
     o_tx_clk            : out std_logic;
     o_tx_datavalid      : out std_logic;
-    o_adc_ready         : out std_logic;
     -- signals for eeprom
-    i_flash_miso       : in std_logic;
-    o_flash_mosi       : out std_logic;
-    o_flash_ce         : out std_logic;
+    i_hk_flash_miso     : in std_logic;
+    o_hk_flash_mosi     : out std_logic;
+    o_hk_flash_ce       : out std_logic;
     -- signals to/from science ADC
-    i_adc_miso          : in std_logic;
-    o_adc_mosi          : out std_logic;
-    o_adc_ce            : out std_logic;
-    o_adc_clk           : out std_logic;
-    o_adc_reset         : out std_logic;
+    i_hk_adc_miso       : in std_logic;
+    o_hk_adc_mosi       : out std_logic;
+    o_hk_adc_ce         : out std_logic;
+    o_hk_adc_clk        : out std_logic;
+    o_hk_adc_reset      : out std_logic;
     -- signals for housekeeping
-    i_housekeeping_clk  : in std_logic;
-    i_housekeeping_mosi : in std_logic;
-    i_housekeeping_ce   : in std_logic;
-    o_housekeeping_miso : out std_logic;
-    o_housekeeping_dout : out std_logic_vector(7 downto 0);
-    --
+    i_hk_uub_clk        : in std_logic;
+    i_hk_uub_mosi       : in std_logic;
+    i_hk_uub_ce         : in std_logic;
+    o_hk_uub_miso       : out std_logic;
+    -- signals for gpio from housekeeping
+    o_hk_gpio           : out std_logic_vector(7 downto 0);
+    -- TODO: put this as one of the gpio lines, for now this is tied high
     o_bias_t            : out std_logic
     );
-  end top;
+end top;
+
 
 architecture behaviour of top is
-  constant c_STORAGE_WIDTH : natural := 2*g_ADC_BITS;
+  -- wires from adc driver to data streamer:
+  signal w_adc_data  : std_logic_vector(4*g_ADC_BITS-1 downto 0);
+  signal w_ddr_clk   : std_logic;
 
-  signal adc_data : std_logic_vector(2*c_STORAGE_WIDTH-1 downto 0);
-  signal adc_clk : std_logic;
-  signal adc_ce: std_logic;
+  -- wires for internal spi connections
+  signal w_adc_clk   : std_logic;
+  signal w_adc_ce    : std_logic;
+  signal w_flash_clk : std_logic;
+  signal w_flash_ce  : std_logic;
+  -- miso and mosi are directly connected to pins
 
-  signal fast_clk    : std_logic;
-  signal slow_slow_clk : std_logic;
+  --signal fast_clk    : std_logic;??
+  -- wire for fast 50MHz housekeeping clock used in some parts of housekeeping
+  signal w_hk_fast_clk : std_logic;
   
-  signal internal_clk : std_logic;
-  signal tx_clk : std_logic;
+  -- wire for transmission clock
+  signal w_tx_clk : std_logic;
 
-  signal r_flash_clk : std_logic;
-  signal r_flash_ce : std_logic;
     
   component adc_driver
     port (alignwd: in  std_logic; clkin: in  std_logic; 
@@ -71,12 +76,12 @@ architecture behaviour of top is
 
   component adc_boot
     port (
-      i_clk       : in  std_logic;
-      i_adc_clk   : in  std_logic;
-      i_adc_ce    : in  std_logic;
-      o_adc_reset : out std_logic;
-      o_adc_clk   : out std_logic;
-      o_adc_ce    : out std_logic
+      i_hk_fast_clk  : in  std_logic;
+      i_hk_adc_clk   : in  std_logic;
+      i_hk_adc_ce    : in  std_logic;
+      o_hk_adc_reset : out std_logic;
+      o_hk_adc_clk   : out std_logic;
+      o_hk_adc_ce    : out std_logic
       );
   end component;
   
@@ -115,23 +120,22 @@ architecture behaviour of top is
   component housekeeping
     generic (g_DEV_SELECT_BITS : natural := 8);
     port (
-      i_sample_clk          : in    std_logic;
-      i_housekeeping_clk    : in    std_logic;
-      i_housekeeping_mosi   : in    std_logic;
-      o_housekeeping_miso   : out   std_logic;
-      i_housekeeping_ce     : in    std_logic;
-      o_gpio_data           : out   std_logic_vector(7 downto 0);
-      o_flash_clk           : out   std_logic;
-      i_flash_miso          : in    std_logic;
-      o_flash_mosi          : out   std_logic;
-      o_flash_ce            : out   std_logic;
-      o_adc_clk             : out   std_logic;
-      i_adc_miso          : in std_logic;
-      o_adc_mosi          : out std_logic;
-      o_adc_ce              : out   std_logic
+      i_hk_fast_clk  : in   std_logic;
+      i_hk_uub_clk   : in   std_logic;
+      i_hk_uub_mosi  : in   std_logic;
+      o_hk_uub_miso  : out  std_logic;
+      i_hk_uub_ce    : in   std_logic;
+      o_gpio_data    : out  std_logic_vector(7 downto 0);
+      o_flash_clk    : out  std_logic;
+      i_flash_miso   : in   std_logic;
+      o_flash_mosi   : out  std_logic;
+      o_flash_ce     : out  std_logic;
+      o_adc_clk      : out  std_logic;
+      i_adc_miso     : in   std_logic;
+      o_adc_mosi     : out  std_logic;
+      o_adc_ce       : out  std_logic
       );
   end component;
-
 
   component spi_decoder is
     generic (
@@ -147,7 +151,6 @@ architecture behaviour of top is
       i_data       : in  std_logic_vector(g_OUTPUT_BITS-1 downto 0);
       o_recv_count : out std_logic_vector(g_INPUT_BITS-1 downto 0) );
   end component;
-
   
   component tx_clock_pll
     port (
@@ -162,14 +165,17 @@ architecture behaviour of top is
 
 begin
 
+  -- pull bias T high
   o_bias_t <= '1';
-  o_flash_ce <= r_flash_ce;
+
+  -- connect ce line of flash chip to the correct housekeeping line
+  o_hk_flash_ce <= w_flash_ce;
   
   tx_clock_synthesizer : tx_clock_pll
     port map (
-      CLKI => i_slow_clk,
-      CLKOP => tx_clk,
-      CLKOS => slow_slow_clk -- TODO: rename
+      CLKI => i_xtal_clk,
+      CLKOP => w_tx_clk,
+      CLKOS => w_hk_fast_clk 
       );
 
 
@@ -177,53 +183,53 @@ begin
     port map (
       alignwd    => '0',
       clkin      => i_adc_clk,
-      ready      => o_adc_ready,
-      sclk       => internal_clk,
+      ready      => open,
+      sclk       => w_ddr_clk,
       start      => '1',
-      sync_clk   => slow_slow_clk,
+      sync_clk   => w_hk_fast_clk,
       sync_reset => '0',
       datain     => i_data_in,
-      q          => adc_data);
+      q          => w_adc_data);
 
   adc_boot_1 : adc_boot
     port map (
-      i_clk       => slow_slow_clk,
-      i_adc_clk   => adc_clk,
-      i_adc_ce    => adc_ce,
-      o_adc_reset => o_adc_reset,
-      o_adc_clk   => o_adc_clk,
-      o_adc_ce    => o_adc_ce
+      i_hk_fast_clk  => w_hk_fast_clk,
+      i_hk_adc_clk   => w_adc_clk,
+      i_hk_adc_ce    => w_adc_ce,
+      o_hk_adc_reset => o_hk_adc_reset,
+      o_hk_adc_clk   => o_hk_adc_clk,
+      o_hk_adc_ce    => o_hk_adc_ce
       );
   
   u1: USRMCLK port map (
-    USRMCLKI => r_flash_clk,
-    USRMCLKTS => r_flash_ce);
+    USRMCLKI => w_flash_clk,
+    USRMCLKTS => w_flash_ce);
 
 
   housekeeping_1 : housekeeping
     generic map (g_DEV_SELECT_BITS => 8)
     port map (
-      i_sample_clk        => slow_slow_clk,
-      i_housekeeping_clk  => i_housekeeping_clk,
-      i_housekeeping_mosi => i_housekeeping_mosi,
-      o_housekeeping_miso => o_housekeeping_miso,
-      i_housekeeping_ce   => i_housekeeping_ce,
-      o_gpio_data         => o_housekeeping_dout,
-      o_flash_clk         => r_flash_clk,
-      i_flash_miso        => i_flash_miso,
-      o_flash_mosi        => o_flash_mosi,
-      o_flash_ce          => r_flash_ce,
-      o_adc_clk           => adc_clk,
-      i_adc_miso          => i_adc_miso,
-      o_adc_mosi          => o_adc_mosi,
-      o_adc_ce            => adc_ce      );
+      i_hk_fast_clk       => w_hk_fast_clk,
+      i_hk_uub_clk        => i_hk_uub_clk,
+      i_hk_uub_mosi       => i_hk_uub_mosi,
+      o_hk_uub_miso       => o_hk_uub_miso,
+      i_hk_uub_ce         => i_hk_uub_ce,
+      o_gpio_data         => o_hk_gpio,
+      o_flash_clk         => w_flash_clk,
+      i_flash_miso        => i_hk_flash_miso,
+      o_flash_mosi        => o_hk_flash_mosi,
+      o_flash_ce          => w_flash_ce,
+      o_adc_clk           => w_adc_clk,
+      i_adc_miso          => i_hk_adc_miso,
+      o_adc_mosi          => o_hk_adc_mosi,
+      o_adc_ce            => w_adc_ce      );
   
   data_streamer_1 : data_streamer
     generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
     port map (
-      i_adc_data       => adc_data,
-      i_clk            => internal_clk,
-      i_tx_clk         => tx_clk,
+      i_adc_data       => w_adc_data,
+      i_clk            => w_ddr_clk,
+      i_tx_clk         => w_tx_clk,
       i_trigger        => i_trigger,
       i_start_transfer => '1',
       o_tx_data        => o_tx_data,
