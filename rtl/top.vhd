@@ -164,7 +164,11 @@ architecture behaviour of top is
   end component;
 
 
-
+  signal r_hk_clk  : std_logic;
+  signal r_hk_ce   : std_logic;
+  signal r_hk_mosi : std_logic;
+  attribute syn_keep: boolean;
+  attribute syn_keep of r_hk_mosi,r_hk_ce,r_hk_clk: signal is true;
 
 begin
 
@@ -173,7 +177,15 @@ begin
 
   -- connect ce line of flash chip to the correct housekeeping line
   o_hk_flash_ce <= w_flash_ce;
+
   
+  process(i_xtal_clk) is
+  begin
+    r_hk_mosi <= i_hk_uub_mosi;
+    r_hk_ce   <= i_hk_uub_ce;
+    r_hk_clk  <= i_hk_uub_clk;
+  end process;
+    
   tx_clock_synthesizer : tx_clock_pll
     port map (
       CLKI => i_xtal_clk,
