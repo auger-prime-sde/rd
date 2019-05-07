@@ -6,6 +6,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import scipy.signal as sig
 from pprint import pprint
+import sys
+import json
 
 
 ## Number of FFTs to average
@@ -48,16 +50,37 @@ def dump_to_uart():
 # Convert a single sample value (as 2 byte pair) into a signed integer representation
 ##
 def val_from_raw(raw1, raw0):
-  val_unsigned = ((raw0 & 0x3F) << 6) + (raw1 & 0x3F)
-  bits0 = bin(raw0)[2:]
-  bits1 = bin(raw1)[2:]
-  numones = len([x for x in bits0+bits1 if x=='1'])
-  if (numones % 2) == 0:
-      print("parity mismatch!")
-  if val_unsigned > 2047:
-    return val_unsigned - 4096
-  else:
-    return val_unsigned
+    val_unsigned = ((raw0 & 0x3F) << 6) + (raw1 & 0x3F)
+    bits0 = bin(raw0)[2:]
+    bits1 = bin(raw1)[2:]
+    numones = len([x for x in bits0+bits1 if x=='1'])
+    if (numones % 2) == 0:
+        print("parity mismatch!")
+    if val_unsigned > 2047:
+        return val_unsigned - 4096
+    else:
+        return val_unsigned
+
+def val_from_int(i):
+    bits = bin(i)[2:]
+    numones = len([x for x in bits if x=='1'])
+    if (numones % 2) == 0:
+        print("parity mismatch!")
+    # val_unsigned = int(bin(i)[2:][-12:],2) # take the last 12 bits
+    val_unsigned = i & (2**12-1)
+    if val_unsigned > 2047:
+        return val_unsigned - 4096
+    else:
+        return val_unsigned
+
+def int_from_val(val):
+    if val < 0:
+        val = val + 4096
+    numones = len([x for x in bin(val)[2:] if x=='1'])
+    parity  = (1+numones) % 2
+    return val + (parity << 12)
+    
+    
 
 ##
 # Trigger the digitizer and read the resulting set of samples from the UART.  Return a list of samples for each channel separately.
@@ -95,6 +118,15 @@ def read_samples():
     #junk = dev.read(10000)
     #print("%d bytes remained in buffer after read"%len(junk))
     return (ch1_data, ch2_data)
+
+def read_samples_from_file(fname):
+    with open(fname) as f:
+        data = json.load(f)
+        ch1 = [val_from_int(int(x['adc0'])) for x in data]
+        ch2 = [val_from_int(int(x['adc1'])) for x in data]
+        return (ch1, ch2)
+        
+        
 
 ##
 # Compute the FFT of a sample sequence and plot it using matplotlib.
@@ -160,6 +192,7 @@ def print_fft(xf, ypow):
 # Example run code
 ##
 ypow = np.zeros(1024, dtype='float')
+        
 for i in range(0, averages):
     time.sleep(0.2)
     dev.reset_input_buffer()
@@ -167,9 +200,18 @@ for i in range(0, averages):
     time.sleep(0.1)
     start_transfer()
     time.sleep(0.1)
-   
     
-    (ch1, ch2) = read_samples()
+    if len(sys.argv) > 1:
+        # read from file
+        (ch1, ch2) = read_samples_from_file(sys.argv[1])
+    else:
+        (ch1, ch2) = read_samples()
+        #with open("test.json", "w+") as f:
+        #    jsondata = [{"adc0": str(int_from_val(ch1[i])), "adc1": str(int_from_val(ch2[i]))} for i in range(2048)]
+        #    json.dump(jsondata, f)
+            
+    pprint(ch1)
+    pprint(ch2)
     (xf, ypow_new) = fft_from_samples(ch1)
     ypow += ypow_new
 
