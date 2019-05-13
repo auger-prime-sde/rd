@@ -255,7 +255,7 @@ for i in range(0, averages):
             
     #pprint(ch1)
     #pprint([(s) for s in ch2])
-    (xf, ypow_new) = fft_from_samples(ch2)
+    (xf, ypow_new) = fft_from_samples(ch1)
     ypow += ypow_new
 
 ypow = ypow / averages

@@ -32,22 +32,37 @@ end boot_sequence;
 
 architecture behave of boot_sequence is
 
-  signal spi_clk : std_logic;
-  constant SPI_DIV : natural := 20;
-  signal spi_clk_counter : natural range 0 to SPI_DIV-1 := 0;
+  --signal spi_clk : std_logic;
+  --constant SPI_DIV : natural := 20;
+  --signal spi_clk_counter : natural range 0 to SPI_DIV-1 := 0;
   
-  constant c_NUMBYTES : natural := 29;
+  constant c_NUMBYTES : natural := 47;
   type t_BYTESEQ is array(0 to c_NUMBYTES-1) of bit_vector(11 downto 0);
   signal c_BOOTSEQUENCE : t_BYTESEQ := (
     -- the first bit indicates if this is a transaction separatator
     -- if it is 1 then the value of the byte does not matter
-    --X"100", X"003", X"000", X"002",
-    --X"100", X"003", X"042", X"008",
+    -- after a reboot 1ns is needed. at 2MHz each clock cycle already lasts
+    -- 500ns but we wait 1 byte (8 clock cycles) anyway.
+    -- after each register write 10 ns is enough. Again we wait 8 clock cycles.
+    -- just a bit of waiting for the ADC to boot:
     X"100", X"100", X"100", X"100",
+    -- software reset
+    X"100", X"000", X"002",
+    -- re-apply what should already be the default
+    X"100", X"029", X"000",
+    X"100", X"041", X"000",
+    -- enable checker-board
+    X"100", X"042", X"008",
+    X"100", X"025", X"003",
+    X"100", X"02B", X"003",
+    -- enable high performance mode:
     X"100", X"003", X"003",
+    -- disable low speed mode, should already by off:
     X"100", X"0F2", X"000",
     X"100", X"0EF", X"000",
+    -- cmos mode off, should already be off:
     X"100", X"041", X"000",
+    -- high performance mode
     X"100", X"002", X"040",
     X"100", X"0D5", X"018",
     X"100", X"0D7", X"00C",
@@ -60,7 +75,6 @@ architecture behave of boot_sequence is
   signal r_BitCount  : natural range 0 to 7 := 0;
   signal r_done : std_logic := '0';
   
-
   signal r_bitcount_test : std_logic_vector(7 downto 0);
   signal r_bytecount_test : std_logic_vector(7 downto 0);
 
@@ -69,22 +83,22 @@ begin
   r_bytecount_test <= std_logic_vector(to_unsigned(r_ByteCount, 8));
 
   -- generate sufficiently slow clock
+  --process(i_clk) is
+  --begin
+  --  if rising_edge(i_clk) then
+  --    if spi_clk_counter < SPI_DIV-1 then
+  --      spi_clk_counter <= spi_clk_counter + 1;
+  --    else
+  --      spi_clk_counter <= 0;
+  --      spi_clk <= not spi_clk;
+  --    end if;
+  --  end if;
+  --end process;
+
+  -- main process
   process(i_clk) is
   begin
     if rising_edge(i_clk) then
-      if spi_clk_counter < SPI_DIV-1 then
-        spi_clk_counter <= spi_clk_counter + 1;
-      else
-        spi_clk_counter <= 0;
-        spi_clk <= not spi_clk;
-      end if;
-    end if;
-  end process;
-
-  -- main process
-  process(spi_clk) is
-  begin
-    if rising_edge(spi_clk) then
 
       case r_State is
         when s_Initial =>
@@ -93,7 +107,7 @@ begin
           o_hk_clk <= '1';
         when s_HighClk =>
           r_State <= s_LowClk;
-          o_hk_clk <= '0';
+          o_hk_clk <= '1';
           o_hk_mosi <= to_stdulogic(c_BOOTSEQUENCE(r_ByteCount)(7-r_BitCount));
           -- set the ce line
           if r_BitCount = 0 then
@@ -107,7 +121,7 @@ begin
 
         when s_LowClk =>
           r_State <= s_HighClk;
-          o_hk_clk <= '1';
+          o_hk_clk <= '0';
           -- increment counters
           r_BitCount <= (r_BitCount + 1) mod 8;
           if r_BitCount = 7 then
@@ -121,7 +135,7 @@ begin
           o_hk_ce   <= '1';
           r_done <= '1';
           if r_BitCount = 7 then
-            if i_rst = '0' then
+            if i_rst = '1' then
               r_State <= s_Initial;
               r_done <= '0';
             end if;

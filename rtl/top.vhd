@@ -42,7 +42,11 @@ architecture behaviour of top is
   -- wire for transmission clock
   signal w_tx_clk : std_logic;
 
-    
+  constant c_ADC_RESET_CYCLES: natural := 5e6;-- 10 times per second at 50MHz
+  signal r_adc_rst_count : natural := 0;
+  signal r_adc_rst : std_logic := '1';
+
+     
   component adc_driver
     port (alignwd: in  std_logic; clkin: in  std_logic; 
         ready: out  std_logic; sclk: out  std_logic; 
@@ -53,19 +57,7 @@ architecture behaviour of top is
         q: out  std_logic_vector(47 downto 0));
   end component;
 
-  -- start of magic MCLK block
-  -- (see ECP5 sysCONFIG manual section 6.1.2)
-  component USRMCLK
-    port(
-      USRMCLKI : in std_ulogic;
-      USRMCLKTS : in std_ulogic
-      );
-  end component;
-  attribute syn_noprune: boolean ;
-  attribute syn_noprune of USRMCLK: component is true;
-  -- end of magic block
 
-  
   component boot_sequence is
   port (
     i_clk     : in std_logic;
@@ -111,12 +103,26 @@ begin
 
   -- pull bias T high
   o_bias_t <= '1';
+  o_hk_adc_reset <= '0';
+
+  process (w_hk_clk) is
+  begin
+    if rising_edge(w_hk_clk) then
+      r_adc_rst_count <= (r_adc_rst_count+1) mod c_ADC_RESET_CYCLES;
+      if r_adc_rst_count = 0 then
+        r_adc_rst <= '1';
+      else
+        r_adc_rst <= '0';
+      end if;
+    end if;
+  end process;
+  
 
   tx_clock_synthesizer : tx_clock_pll
     port map (
       CLKI => i_xtal_clk,
-      CLKOP => w_hk_clk,
-      CLKOS => w_tx_clk
+      CLKOP => w_tx_clk,
+      CLKOS => w_hk_clk
       --CLKOP => w_hk_fast_clk,
       --CLKOS => w_10M_clk
       );
