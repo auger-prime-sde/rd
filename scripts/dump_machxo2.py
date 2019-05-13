@@ -61,13 +61,32 @@ def val_from_raw(raw1, raw0):
     else:
         return val_unsigned
 
-def val_from_int(i):
-    bits = bin(i)[2:]
+def parity_from_raw(raw1, raw0):
+    val_unsigned = ((raw0 & 0x3F) << 6) + (raw1 & 0x3F)
+    bits0 = bin(raw0)[2:]
+    bits1 = bin(raw1)[2:]
+    numones = len([x for x in bits0+bits1 if x=='1'])
+    return numones % 2
+    
+    
+def parity_from_int(i):
+    bits = bin(i)[2:].rjust(13, '0') # make sure we get exactly 13 bits
     numones = len([x for x in bits if x=='1'])
-    if (numones % 2) == 0:
-        print("parity mismatch!")
+    return numones % 2
+    
+    
+def val_from_int(i):
+    bits = bin(i)[2:].rjust(13, '0') # make sure we get exactly 13 bits
+    #numones = len([x for x in bits if x=='1'])
+    #if (numones % 2) == 0:
+    #    print("parity mismatch!")
+    
+    #bits = bits[::-1] # reverse bit order
+    bits = bits[:-1] # cut parity bit
     # val_unsigned = int(bin(i)[2:][-12:],2) # take the last 12 bits
-    val_unsigned = i & (2**12-1)
+    #val_unsigned = i & (2**12-1)
+    val_unsigned = int(bits , 2)
+    #val_unsigned = i >> 1
     if val_unsigned > 2047:
         return val_unsigned - 4096
     else:
@@ -92,21 +111,26 @@ def read_samples():
     ch2_data = []
 
     dump_to_uart()
-     
+
+    par0,par1 = 0,0
     for b in range(2048):
         raw = dev.read(2)
-        #pprint(raw)
-        
+        print("raw: {}".format(raw))
         ch1 = val_from_raw(raw[1], raw[0])
+        par0 += parity_from_raw(raw[1], raw[0])
         ch1_data.append(ch1)
 
     for b in range(2048):
         raw = dev.read(2)
-
+        print("raw: {}".format(raw))
         ch2 = val_from_raw(raw[1], raw[0])
+        par1 += parity_from_raw(raw[1], raw[0])
         ch2_data.append(ch2)
-        print("{0:06b} {1:07b} = {2}".format(raw[0], raw[1], ch2))
+        #print("{0:06b} {1:07b} = {2}".format(raw[0], raw[1], ch2))
 
+    par0 = 2048 - par0
+    par1 = 2048 - par1
+    print("parity check errors: {} {}".format(par0, par1))
     #pprint("raw data:")
     #for i in range(100):
     #    print("{0:b}".format(ch2_data[i]))
@@ -122,8 +146,25 @@ def read_samples():
 def read_samples_from_file(fname):
     with open(fname) as f:
         data = json.load(f)
-        ch1 = [val_from_int(int(x['adc0'])) for x in data]
-        ch2 = [val_from_int(int(x['adc1'])) for x in data]
+
+        par0 = sum([parity_from_int(int(x['adc_rd0'])) for x in data])
+        par1 = sum([parity_from_int(int(x['adc_rd1'])) for x in data])
+        par0 = len(data) - par0
+        par1 = len(data) - par1
+        
+        for i in range(len(data)):
+            x = data[i]
+            x0 = int(x['adc_rd0'])
+            x1 = int(x['adc_rd1']) 
+            if parity_from_int(x0) != 1:
+                print("bad parity in channel {} sample {}:\t{}\t{}".format(0, i, x0, bin(x0)))
+            if parity_from_int(x1) != 1:
+                print("bad parity in channel {} sample {}:\t{}\t{}".format(1, i, x1, bin(x1)))
+        
+        print("parity check errors: {} {}".format(par0, par1))
+        
+        ch1 = [val_from_int(int(x['adc_rd0'])) for x in data]
+        ch2 = [val_from_int(int(x['adc_rd1'])) for x in data]
         return (ch1, ch2)
         
         
@@ -210,8 +251,8 @@ for i in range(0, averages):
         #    jsondata = [{"adc0": str(int_from_val(ch1[i])), "adc1": str(int_from_val(ch2[i]))} for i in range(2048)]
         #    json.dump(jsondata, f)
             
-    pprint(ch1)
-    pprint(ch2)
+    #pprint(ch1)
+    #pprint([(s) for s in ch2])
     (xf, ypow_new) = fft_from_samples(ch1)
     ypow += ypow_new
 

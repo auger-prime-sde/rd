@@ -170,6 +170,10 @@ architecture behaviour of top is
   attribute syn_keep: boolean;
   attribute syn_keep of r_hk_mosi,r_hk_ce,r_hk_clk: signal is true;
 
+  --signal w_10M_clk : std_logic;
+  --constant c_TX_CLK_DIV : natural := 10;
+  --signal r_tx_clk_count : natural range 0 to c_TX_CLK_DIV-1;
+  
 begin
 
   -- pull bias T high
@@ -185,12 +189,26 @@ begin
     r_hk_ce   <= i_hk_uub_ce;
     r_hk_clk  <= i_hk_uub_clk;
   end process;
+
+  --process(w_10M_clk) is
+  --begin
+  --  if rising_edge(w_10M_clk) then
+  --    r_tx_clk_count <= (r_tx_clk_count + 1) mod c_TX_CLK_DIV;
+  --    if r_tx_clk_count = 0 then
+  --      w_tx_clk <= not w_tx_clk;
+  --    end if;
+  --  end if;
+  --end process;
+  
+  
     
   tx_clock_synthesizer : tx_clock_pll
     port map (
       CLKI => i_xtal_clk,
-      CLKOP => w_tx_clk,
-      CLKOS => w_hk_fast_clk 
+      CLKOP => w_hk_fast_clk,
+      CLKOS => w_tx_clk
+      --CLKOP => w_hk_fast_clk,
+      --CLKOS => w_10M_clk
       );
 
 

@@ -1,0 +1,58 @@
+Auger SPI interface for housekeeping
+
+The SPI interface consists of 3 lines: clk, miso, and mosi. Each transaction has the same length. The following is subject to change: Each transactions consists of 3 device select bits, 4 command bits, 12 address bits, 8 data input bits, and 16 data output bits in that order. 
+
+The housekeeping controller will act as a SPI slave. There is no select/enable line.The SPI master must keep the clock line high when not in use.
+Data is latched on the rising edges of the clock and output on the falling edges of the clock.
+(I.e. CPOL=1, CPHA=1)
+
+Internally the housekeeping controller talks to a number of devices:
+| Addr | Device                                |
+|------+---------------------------------------|
+| 0x00 | the housekeeping controller itself    |
+| 0x01 | science adc                           |
+| 0x02 | temperature and current measuring adc |
+| 0x03 | fpga program flash                    |
+| 0x04 | science readout module                |
+
+Each device supports up to 16 commands. Many device/command combinations will only use part of the input. E.g. the fpga program flash has a command to read the chip id which takes no data and no address.
+In most cases the device will not immediately reply with the data. In such cases the busy state of the device must be polled using the special poll_busy command in the housekeeping device. After the poll busy returns false the data can be retrieved using the fetch_data command of the housekeeping device. It is allowed to send commands to different devices, but keep in mind that the poll_busy and fetch_data commands work on the most-recently selected device.
+
+
+Automatic timeout:
+To prevent the sytem from hanging mod-transaction, a watchdog timer will reset the input buffer after 1 second of inactivity.
+
+Maximum frequency:
+The housekeeping should not be operated above 20 Mhz.
+
+| Device | Command | Address            | Data           | Command name | Description                      | What you get back |
+| 3 bits |  4 bits | 12 bits            | 8 bits         |              |                                  |                   |
+|--------+---------+--------------------+----------------+--------------+----------------------------------+-------------------|
+| 0b000  |  0b0001 | don't care         | don't care     | poll_busy    | get busy state                   | 0x01 or 0x00      |
+| 0b000  |  0b0002 | don't care         | don't care     | fetch_data   | return data                      |                   |
+|--------+---------+--------------------+----------------+--------------+----------------------------------+-------------------|
+| 0b001  |     TBD |                    |                |              |                                  |                   |
+|        |         |                    |                |              |                                  |                   |
+|--------+---------+--------------------+----------------+--------------+----------------------------------+-------------------|
+| 0b010  |     TBD |                    |                |              |                                  |                   |
+|        |         |                    |                |              |                                  |                   |
+|--------+---------+--------------------+----------------+--------------+----------------------------------+-------------------|
+| 0b011  |    0x00 | don't care         | don't care     | idle         | do nothing                       |                   |
+|        |    0x01 | don't care         | don't care     |              | fetch chip info                  |                   |
+|        |    0x02 | don't care         | don't care     |              | fetch unique id                  |                   |
+|        |    0x03 | offset             | <id: 8 bits>   |              | set the unique id in flash       |                   |
+|        |    0x04 | <pagenum: 10 bits> | don't care     |              | load page from flash into buffer |                   |
+|        |    0x05 | <pagenum: 10 bits> | don't care     |              | write page buffer into flash     |                   |
+|        |    0x06 | <offset: 12 bits>  | <data: 8 bits> |              | write data at offset into buffer |                   |
+|        |    0x07 | <offset: 12 bits>  | don't care     |              | read data at offset in buffer    |                   |
+|        |    0x08 | don't care         | don't care     |              | reset                            |                   |
+|        |    0x09 | don't care         | don't care     |              | get flash status                 |                   |
+|        |    0x0A | don't care         | don't care     |              | get flash config                 |                   |
+|--------+---------+--------------------+----------------+--------------+----------------------------------+-------------------|
+| 0b100  |     TBD |                    |                |              |                                  |                   |
+|        |         |                    |                |              |                                  |                   |
+
+
+
+
+
