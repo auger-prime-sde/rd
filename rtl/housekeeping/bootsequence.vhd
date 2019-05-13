@@ -24,11 +24,8 @@ entity boot_sequence is
   port (
     i_clk     : in std_logic;
     i_rst     : in std_logic;
-    i_hk_clk  :  in std_logic;
-    i_hk_ce   :   in std_logic;
-    i_hk_mosi : in std_logic;
-    o_hk_clk  :  out std_logic;
-    o_hk_ce   :   out std_logic;
+    o_hk_clk  : out std_logic;
+    o_hk_ce   : out std_logic;
     o_hk_mosi : out std_logic
     );
 end boot_sequence;
@@ -39,7 +36,7 @@ architecture behave of boot_sequence is
   constant SPI_DIV : natural := 20;
   signal spi_clk_counter : natural range 0 to SPI_DIV-1 := 0;
   
-  constant c_NUMBYTES : natural := 41;
+  constant c_NUMBYTES : natural := 29;
   type t_BYTESEQ is array(0 to c_NUMBYTES-1) of bit_vector(11 downto 0);
   signal c_BOOTSEQUENCE : t_BYTESEQ := (
     -- the first bit indicates if this is a transaction separatator
@@ -47,15 +44,14 @@ architecture behave of boot_sequence is
     --X"100", X"003", X"000", X"002",
     --X"100", X"003", X"042", X"008",
     X"100", X"100", X"100", X"100",
-    X"100", X"003", X"003", X"003",
-    X"100", X"003", X"0F2", X"000",
-    X"100", X"003", X"0EF", X"000",
-    X"100", X"003", X"041", X"000",
-    X"100", X"003", X"002", X"040",
-    X"100", X"003", X"0D5", X"018",
-    X"100", X"003", X"0D7", X"00C",
-    X"100", X"003", X"0DB", X"020",
-    X"100", X"001", X"001", X"000",
+    X"100", X"003", X"003",
+    X"100", X"0F2", X"000",
+    X"100", X"0EF", X"000",
+    X"100", X"041", X"000",
+    X"100", X"002", X"040",
+    X"100", X"0D5", X"018",
+    X"100", X"0D7", X"00C",
+    X"100", X"0DB", X"020",
     X"100" );
   
   type t_State is (s_Initial, s_LowClk, s_HighClk, s_Done);
@@ -64,10 +60,6 @@ architecture behave of boot_sequence is
   signal r_BitCount  : natural range 0 to 7 := 0;
   signal r_done : std_logic := '0';
   
-  -- signal for the internal spi bus
-  signal r_clk : std_logic := '1';
-  signal r_ce  : std_logic := '1';
-  signal r_mosi: std_logic;
 
   signal r_bitcount_test : std_logic_vector(7 downto 0);
   signal r_bytecount_test : std_logic_vector(7 downto 0);
@@ -75,11 +67,6 @@ architecture behave of boot_sequence is
 begin
   r_bitcount_test <= std_logic_vector(to_unsigned(r_BitCount, 8));
   r_bytecount_test <= std_logic_vector(to_unsigned(r_ByteCount, 8));
-
-  -- forward after boot is over
-  o_hk_clk  <= i_hk_clk  when r_done = '1' else r_clk;
-  o_hk_ce   <= i_hk_ce   when r_done = '1' else r_ce;
-  o_hk_mosi <= i_hk_mosi when r_done = '1' else r_mosi;
 
   -- generate sufficiently slow clock
   process(i_clk) is
@@ -102,25 +89,25 @@ begin
       case r_State is
         when s_Initial =>
           r_State <= s_HighClk;
-          r_ce    <= '1';
-          r_clk   <= '1';
+          o_hk_ce  <= '1';
+          o_hk_clk <= '1';
         when s_HighClk =>
           r_State <= s_LowClk;
-          r_clk <= '0';
-          r_mosi <= to_stdulogic(c_BOOTSEQUENCE(r_ByteCount)(7-r_BitCount));
+          o_hk_clk <= '0';
+          o_hk_mosi <= to_stdulogic(c_BOOTSEQUENCE(r_ByteCount)(7-r_BitCount));
           -- set the ce line
           if r_BitCount = 0 then
             if c_BOOTSEQUENCE(r_ByteCount)(8) = '1' then
-              r_ce <= '1';
+              o_hk_ce <= '1';
             else
-              r_ce <= '0';
+              o_hk_ce <= '0';
             end if;
           end if;
           
 
         when s_LowClk =>
           r_State <= s_HighClk;
-          r_clk <= '1';
+          o_hk_clk <= '1';
           -- increment counters
           r_BitCount <= (r_BitCount + 1) mod 8;
           if r_BitCount = 7 then
@@ -131,7 +118,7 @@ begin
           end if;
           
         when s_Done =>
-          r_ce   <= '1';
+          o_hk_ce   <= '1';
           r_done <= '1';
           if r_BitCount = 7 then
             if i_rst = '0' then

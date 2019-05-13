@@ -54,8 +54,10 @@ def val_from_raw(raw1, raw0):
     bits0 = bin(raw0)[2:]
     bits1 = bin(raw1)[2:]
     numones = len([x for x in bits0+bits1 if x=='1'])
-    if (numones % 2) == 0:
-        print("parity mismatch!")
+    #print("raw: {} {}".format(bin(raw0)[2:].rjust(8,'0'),bin(raw1)[2:].rjust(8,'0')))
+    #print("numones: {}".format(numones))
+    #if (numones % 2) == 0:
+    #    print("parity mismatch!")
     if val_unsigned > 2047:
         return val_unsigned - 4096
     else:
@@ -115,14 +117,14 @@ def read_samples():
     par0,par1 = 0,0
     for b in range(2048):
         raw = dev.read(2)
-        print("raw: {}".format(raw))
+        #print("raw: {} {}".format(bin(raw[0]), bin(raw[1])))
         ch1 = val_from_raw(raw[1], raw[0])
         par0 += parity_from_raw(raw[1], raw[0])
         ch1_data.append(ch1)
 
     for b in range(2048):
         raw = dev.read(2)
-        print("raw: {}".format(raw))
+        #print("raw: {}".format(raw))
         ch2 = val_from_raw(raw[1], raw[0])
         par1 += parity_from_raw(raw[1], raw[0])
         ch2_data.append(ch2)
@@ -253,7 +255,7 @@ for i in range(0, averages):
             
     #pprint(ch1)
     #pprint([(s) for s in ch2])
-    (xf, ypow_new) = fft_from_samples(ch1)
+    (xf, ypow_new) = fft_from_samples(ch2)
     ypow += ypow_new
 
 ypow = ypow / averages

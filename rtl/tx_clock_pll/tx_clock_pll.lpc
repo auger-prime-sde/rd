@@ -17,7 +17,7 @@ ModuleName=tx_clock_pll
 SourceFormat=vhdl
 ParameterFileVersion=1.0
 Date=05/13/2019
-Time=09:54:40
+Time=15:11:07
 
 [Parameters]
 Verilog=0
