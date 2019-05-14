@@ -36,7 +36,7 @@ architecture behave of boot_sequence is
   --constant SPI_DIV : natural := 20;
   --signal spi_clk_counter : natural range 0 to SPI_DIV-1 := 0;
   
-  constant c_NUMBYTES : natural := 47;
+  constant c_NUMBYTES : natural := 38;
   type t_BYTESEQ is array(0 to c_NUMBYTES-1) of bit_vector(11 downto 0);
   signal c_BOOTSEQUENCE : t_BYTESEQ := (
     -- the first bit indicates if this is a transaction separatator
@@ -52,9 +52,9 @@ architecture behave of boot_sequence is
     X"100", X"029", X"000",
     X"100", X"041", X"000",
     -- enable checker-board
-    X"100", X"042", X"008",
-    X"100", X"025", X"003",
-    X"100", X"02B", X"003",
+    --X"100", X"042", X"008",
+    --X"100", X"025", X"003",
+    --X"100", X"02B", X"003",
     -- enable high performance mode:
     X"100", X"003", X"003",
     -- disable low speed mode, should already by off:
