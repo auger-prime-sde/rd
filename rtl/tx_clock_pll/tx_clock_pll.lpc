@@ -16,8 +16,8 @@ CoreRevision=5.8
 ModuleName=tx_clock_pll
 SourceFormat=vhdl
 ParameterFileVersion=1.0
-Date=05/14/2019
-Time=15:35:31
+Date=05/15/2019
+Time=14:38:02
 
 [Parameters]
 Verilog=0
@@ -27,8 +27,8 @@ Destination=Synplicity
 Expression=BusA(0 to 7)
 Order=Big Endian [MSB:LSB]
 IO=0
-CLKI_FREQ=60
-CLKI_DIV=1
+CLKI_FREQ=100
+CLKI_DIV=5
 ENABLE_HBW=DISABLED
 REFERENCE=0
 IOBUF=LVDS
@@ -56,11 +56,11 @@ CLKOS3_DIV=1
 CLKOS3_ACTUAL_FREQ=
 CLKOS3_MUXD=DISABLED
 FEEDBK_PATH=CLKOP
-CLKFB_DIV=1
+CLKFB_DIV=3
 FRACN_ENABLE=DISABLED
 FRACN_DIV=
 VCO_RATE=480.000
-PLL_BW=7.162
+PLL_BW=2.387
 CLKOP_DPHASE=0
 CLKOP_APHASE=0.00
 CLKOP_TRIM_POL=Rising
@@ -90,4 +90,4 @@ PLL_LOCK_STK=DISABLED
 PLL_USE_SMI=DISABLED
 
 [Command]
-cmd_line= -w -n tx_clock_pll -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type pll -fin 60 -fclkop 60 -fclkop_tol 0.0 -fclkos 4 -fclkos_tol 0.0 -phases 0 -phase_cntl STATIC -fb_mode 1
+cmd_line= -w -n tx_clock_pll -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type pll -fin 100 -fclkop 60 -fclkop_tol 0.0 -fclkos 4 -fclkos_tol 0.0 -phases 0 -phase_cntl STATIC -fb_mode 1
