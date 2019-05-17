@@ -9,17 +9,21 @@ from pprint import pprint
 import sys
 import json
 
+pprint(sys.argv)
+do_capture = len(sys.argv) < 2
 
 ## Number of FFTs to average
 averages = 1
-
 
 dev          = serial.Serial()
 dev.port     = '/dev/ttyUSB1'
 dev.baudrate = 115200
 dev.timeout  = 1
-dev.open()
-dev.write("r".encode('utf-8'))
+
+if do_capture:
+    dev.open()
+    dev.write("r".encode('utf-8'))
+
 ##
 # Detect if we're running in interactive mode to avoid problems with matplotlib
 ##
@@ -54,7 +58,7 @@ def val_from_raw(raw1, raw0):
     bits0 = bin(raw0)[2:]
     bits1 = bin(raw1)[2:]
     numones = len([x for x in bits0+bits1 if x=='1'])
-    #print("raw: {} {}".format(bin(raw0)[2:].rjust(8,'0'),bin(raw1)[2:].rjust(8,'0')))
+    print("raw: {} {}".format(bin(raw0)[2:].rjust(8,'0'),bin(raw1)[2:].rjust(8,'0')))
     #print("numones: {}".format(numones))
     #if (numones % 2) == 0:
     #    print("parity mismatch!")
@@ -157,7 +161,8 @@ def read_samples_from_file(fname):
         for i in range(len(data)):
             x = data[i]
             x0 = int(x['adc_rd0'])
-            x1 = int(x['adc_rd1']) 
+            x1 = int(x['adc_rd1'])
+            
             if parity_from_int(x0) != 1:
                 print("bad parity in channel {} sample {}:\t{}\t{}".format(0, i, x0, bin(x0)))
             if parity_from_int(x1) != 1:
@@ -165,11 +170,26 @@ def read_samples_from_file(fname):
         
         print("parity check errors: {} {}".format(par0, par1))
         
-        ch1 = [val_from_int(int(x['adc_rd0'])) for x in data]
-        ch2 = [val_from_int(int(x['adc_rd1'])) for x in data]
-        return (ch1, ch2)
+        rd1 = [val_from_int(int(x['adc_rd0'])) for x in data]
+        rd2 = [val_from_int(int(x['adc_rd1'])) for x in data]
+        pmt0 = [int(x['adc0']) for x in data]
+        pmt1 = [int(x['adc1']) for x in data]
+        
+        return (rd1, rd2, pmt0, pmt1)
         
         
+def plot_timeseries(data, labels=('RD0', 'RD1', 'PMT0', 'PMT1'), samprate = (250.0,250.0, 120.0, 120.0)):
+    for i, seriesdata in enumerate(data):
+        y = np.asarray(seriesdata) / 2048.0
+        N = len(y)
+        T = 1.0/samprate[i]
+        x = np.linspace(0.0, N*T, N)
+        line, = plt.plot(x, y, label=labels[i], linewidth=1)
+    plt.legend()
+        
+        
+
+
 
 ##
 # Compute the FFT of a sample sequence and plot it using matplotlib.
@@ -237,16 +257,17 @@ def print_fft(xf, ypow):
 ypow = np.zeros(1024, dtype='float')
         
 for i in range(0, averages):
-    time.sleep(0.2)
-    dev.reset_input_buffer()
-    trigger()
-    time.sleep(0.1)
-    start_transfer()
-    time.sleep(0.1)
+    if do_capture:
+        time.sleep(0.2)
+        dev.reset_input_buffer()
+        trigger()
+        time.sleep(0.1)
+        start_transfer()
+        time.sleep(0.1)
     
     if len(sys.argv) > 1:
         # read from file
-        (ch1, ch2) = read_samples_from_file(sys.argv[1])
+        (ch1, ch2, pmt1, pmt2) = read_samples_from_file(sys.argv[1])
     else:
         (ch1, ch2) = read_samples()
         #with open("test.json", "w+") as f:
@@ -256,6 +277,10 @@ for i in range(0, averages):
     #pprint(ch1)
     #pprint([(s) for s in ch2])
     (xf, ypow_new) = fft_from_samples(ch2)
+    if do_capture:
+        plot_timeseries((ch1, ch2))
+    else:
+        plot_timeseries((ch1, ch2, pmt1, pmt2))
     ypow += ypow_new
 
 ypow = ypow / averages
