@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<BaliProject version="3.2" title="auger" device="LFE5U-12F-8BG381I" default_implementation="impl1">
+<BaliProject version="3.2" title="auger" device="LFE5U-12F-6BG381I" default_implementation="impl1">
     <Options>
         <Option name="HDL type" value="VHDL"/>
     </Options>

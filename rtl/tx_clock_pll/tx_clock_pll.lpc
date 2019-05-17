@@ -1,8 +1,8 @@
 [Device]
 Family=ecp5u
 PartType=LFE5U-12F
-PartName=LFE5U-12F-8BG381I
-SpeedGrade=8
+PartName=LFE5U-12F-6BG381I
+SpeedGrade=6
 Package=CABGA381
 OperatingCondition=IND
 Status=S
@@ -16,8 +16,8 @@ CoreRevision=5.8
 ModuleName=tx_clock_pll
 SourceFormat=vhdl
 ParameterFileVersion=1.0
-Date=05/15/2019
-Time=14:38:02
+Date=05/17/2019
+Time=14:47:37
 
 [Parameters]
 Verilog=0

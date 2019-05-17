@@ -42,10 +42,10 @@
             <spirit:ports/>
         </spirit:model>
         <spirit:vendorExtensions>
-            <lattice:device>LFE5U-12F-8BG381I</lattice:device>
+            <lattice:device>LFE5U-12F-6BG381I</lattice:device>
             <lattice:synthesis>lse</lattice:synthesis>
             <lattice:date>2018-07-11.11:42:52</lattice:date>
-            <lattice:modified>2019-05-01.11:10:44 AM</lattice:modified>
+            <lattice:modified>2019-05-17.02:47:32 PM</lattice:modified>
             <lattice:diamond>3.10.3.144.3</lattice:diamond>
             <lattice:language>VHDL</lattice:language>
             <lattice:attributes>
@@ -82,7 +82,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>PartName</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">LFE5U-12F-8BG381I</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">LFE5U-12F-6BG381I</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>PartType</lattice:lpckey>
@@ -90,7 +90,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>SpeedGrade</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">8</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">6</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Status</lattice:lpckey>
@@ -115,7 +115,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Date</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">05/01/2019</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">05/17/2019</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>ModuleName</lattice:lpckey>
@@ -131,7 +131,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Time</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">11:10:42</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">14:47:31</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>VendorName</lattice:lpckey>

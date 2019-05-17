@@ -1,8 +1,8 @@
 [Device]
 Family=ecp5u
 PartType=LFE5U-12F
-PartName=LFE5U-12F-8BG381I
-SpeedGrade=8
+PartName=LFE5U-12F-6BG381I
+SpeedGrade=6
 Package=CABGA381
 OperatingCondition=IND
 Status=S
@@ -16,8 +16,8 @@ CoreRevision=6.0
 ModuleName=adc_driver
 SourceFormat=vhdl
 ParameterFileVersion=1.0
-Date=05/01/2019
-Time=11:10:42
+Date=05/17/2019
+Time=14:47:31
 
 [Parameters]
 Verilog=0

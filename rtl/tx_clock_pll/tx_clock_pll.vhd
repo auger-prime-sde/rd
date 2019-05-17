@@ -2,7 +2,7 @@
 -- Module  Version: 5.7
 --/usr/local/diamond/3.10_x64/ispfpga/bin/lin64/scuba -w -n tx_clock_pll -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type pll -fin 100 -fclkop 60 -fclkop_tol 0.0 -fclkos 4 -fclkos_tol 0.0 -phases 0 -phase_cntl STATIC -fb_mode 1 -fdc /home/themba/synced/auger-radio-extension/rtl/tx_clock_pll/tx_clock_pll.fdc 
 
--- Wed May 15 14:38:03 2019
+-- Fri May 17 14:47:38 2019
 
 library IEEE;
 use IEEE.std_logic_1164.all;
