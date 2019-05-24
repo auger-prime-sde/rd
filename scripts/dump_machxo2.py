@@ -7,12 +7,10 @@ import matplotlib.pyplot as plt
 import scipy.signal as sig
 from pprint import pprint
 import sys
-import json
 
 
 ## Number of FFTs to average
 averages = 1
-
 
 dev          = serial.Serial()
 dev.port     = '/dev/ttyUSB1'
@@ -20,6 +18,7 @@ dev.baudrate = 115200
 dev.timeout  = 1
 dev.open()
 dev.write("r".encode('utf-8'))
+
 ##
 # Detect if we're running in interactive mode to avoid problems with matplotlib
 ##
@@ -30,6 +29,7 @@ def in_ipython():
         return False
     else:
         return True
+
 ##
 # Trigger the digitizer using the DTR line on the UART.  The DTR line is active low so writing a 0 here gives a 1 on the physical line.
 ##
@@ -45,7 +45,7 @@ def start_transfer():
 
 def dump_to_uart():
     dev.write("d".encode('utf-8'))
-    
+
 ##
 # Convert a single sample value (as 2 byte pair) into a signed integer representation
 ##
@@ -69,39 +69,7 @@ def parity_from_raw(raw1, raw0):
     bits1 = bin(raw1)[2:]
     numones = len([x for x in bits0+bits1 if x=='1'])
     return numones % 2
-    
-    
-def parity_from_int(i):
-    bits = bin(i)[2:].rjust(13, '0') # make sure we get exactly 13 bits
-    numones = len([x for x in bits if x=='1'])
-    return numones % 2
-    
-    
-def val_from_int(i):
-    bits = bin(i)[2:].rjust(13, '0') # make sure we get exactly 13 bits
-    #numones = len([x for x in bits if x=='1'])
-    #if (numones % 2) == 0:
-    #    print("parity mismatch!")
-    
-    #bits = bits[::-1] # reverse bit order
-    bits = bits[:-1] # cut parity bit
-    # val_unsigned = int(bin(i)[2:][-12:],2) # take the last 12 bits
-    #val_unsigned = i & (2**12-1)
-    val_unsigned = int(bits , 2)
-    #val_unsigned = i >> 1
-    if val_unsigned > 2047:
-        return val_unsigned - 4096
-    else:
-        return val_unsigned
 
-def int_from_val(val):
-    if val < 0:
-        val = val + 4096
-    numones = len([x for x in bin(val)[2:] if x=='1'])
-    parity  = (1+numones) % 2
-    return val + (parity << 12)
-    
-    
 
 ##
 # Trigger the digitizer and read the resulting set of samples from the UART.  Return a list of samples for each channel separately.
@@ -138,38 +106,13 @@ def read_samples():
     #    print("{0:b}".format(ch2_data[i]))
     #pprint(ch1_data[0:99])
     #pprint(ch2_data[0:99])
-    
+
     print("done")
     #dev.timeout = 1
     #junk = dev.read(10000)
     #print("%d bytes remained in buffer after read"%len(junk))
     return (ch1_data, ch2_data)
 
-def read_samples_from_file(fname):
-    with open(fname) as f:
-        data = json.load(f)
-
-        par0 = sum([parity_from_int(int(x['adc_rd0'])) for x in data])
-        par1 = sum([parity_from_int(int(x['adc_rd1'])) for x in data])
-        par0 = len(data) - par0
-        par1 = len(data) - par1
-        
-        for i in range(len(data)):
-            x = data[i]
-            x0 = int(x['adc_rd0'])
-            x1 = int(x['adc_rd1']) 
-            if parity_from_int(x0) != 1:
-                print("bad parity in channel {} sample {}:\t{}\t{}".format(0, i, x0, bin(x0)))
-            if parity_from_int(x1) != 1:
-                print("bad parity in channel {} sample {}:\t{}\t{}".format(1, i, x1, bin(x1)))
-        
-        print("parity check errors: {} {}".format(par0, par1))
-        
-        ch1 = [val_from_int(int(x['adc_rd0'])) for x in data]
-        ch2 = [val_from_int(int(x['adc_rd1'])) for x in data]
-        return (ch1, ch2)
-        
-        
 
 ##
 # Compute the FFT of a sample sequence and plot it using matplotlib.
@@ -191,7 +134,7 @@ def fft_from_samples(data):
     line.set_markersize(3)
     ax.set_xlabel("time (us)")
     ax.set_ylabel("V")
-  
+
     # Apply windowing function (7-term Blackman-Harris)
     # Compute FFT, default size = data size
     w = np.zeros((N), dtype='float')
@@ -219,23 +162,29 @@ def fft_from_samples(data):
     return (xf, ypow+CPGdB)
 
 
-def print_fft(xf, ypow):
+def print_fft(xf, ypow0, ypow1):
     # Start plotting things
     fig, ax = plt.subplots()
-    ax.plot(xf, ypow)
+    ax.plot(xf, ypow0, label='ch0')
+    ax.plot(xf, ypow1, label='ch1')
     ax.set_ylabel("power (dBm)")
     ax.set_xlabel("frequency (MHz)")
 
-    # Locate peak value
-    peak = np.argmax(ypow)
-    ax.plot(xf[peak], ypow[peak], "ro")
+    # Locate peak values
+    peak = np.argmax(ypow0)
+    ax.plot(xf[peak], ypow0[peak], "ro")
+    peak = np.argmax(ypow1)
+    ax.plot(xf[peak], ypow1[peak], "ro")
 
-    
+    # add legend
+    ax.legend()
+
 ##
 # Example run code
 ##
-ypow = np.zeros(1024, dtype='float')
-        
+ypow0 = np.zeros(1024, dtype='float')
+ypow1 = np.zeros(1024, dtype='float')
+
 for i in range(0, averages):
     time.sleep(0.2)
     dev.reset_input_buffer()
@@ -243,25 +192,21 @@ for i in range(0, averages):
     time.sleep(0.1)
     start_transfer()
     time.sleep(0.1)
-    
-    if len(sys.argv) > 1:
-        # read from file
-        (ch1, ch2) = read_samples_from_file(sys.argv[1])
-    else:
-        (ch1, ch2) = read_samples()
-        #with open("test.json", "w+") as f:
-        #    jsondata = [{"adc0": str(int_from_val(ch1[i])), "adc1": str(int_from_val(ch2[i]))} for i in range(2048)]
-        #    json.dump(jsondata, f)
-            
+
+    (ch0, ch1) = read_samples()
+
     #pprint(ch1)
-    #pprint([(s) for s in ch2])
-    (xf, ypow_new) = fft_from_samples(ch2)
-    ypow += ypow_new
+    #pprint([(s) for s in ch1])
+    (xf, ypow0_new) = fft_from_samples(ch0)
+    (xf, ypow1_new) = fft_from_samples(ch1)
 
-ypow = ypow / averages
+    ypow0 += ypow_new
+    ypow1 += ypow_new
 
-print_fft(xf, ypow)
-#print_fft(xf, xt)
+ypow0 /= averages
+ypow1 /= averages
+
+print_fft(xf, ypow0, ypow1)
 
 ##
 # Fix plotting in interactive mode...
