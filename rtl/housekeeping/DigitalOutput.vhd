@@ -28,7 +28,7 @@ begin
   o_data <= r_data;
   process (i_Clk)
   begin
-    if  falling_edge(i_clk) then
+    if  rising_edge(i_clk) then
       o_busy <= '1';
       if (i_enable = '1' and i_cmd = "00000000") then
         -- just read. don't change anything

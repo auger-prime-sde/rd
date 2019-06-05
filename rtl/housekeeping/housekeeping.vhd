@@ -40,10 +40,15 @@ architecture behaviour of housekeeping is
   signal r_gpio_ce      : std_logic;
   signal r_gpio_miso    : std_logic;
 
-  -- internal lines between the boot seq injector and the demuxer:
-  signal r_internal_clk  : std_logic;
-  signal r_internal_ce   : std_logic;
-  signal r_internal_mosi : std_logic;
+  -- internal lines between boot seq and spi selector
+  signal r_boot_clk : std_logic;
+  signal r_boot_ce  : std_logic;
+  signal r_boot_mosi: std_logic;
+
+  -- internal lines between spi selector and spi demuxer
+  signal r_internal_clk : std_logic;
+  signal r_internal_ce  : std_logic;
+  signal r_internal_mosi: std_logic;
 
   -- wires for flash
   signal r_flash_ce : std_logic;
@@ -56,9 +61,11 @@ architecture behaviour of housekeeping is
     generic ( g_DEV_SELECT_BITS : natural := g_DEV_SELECT_BITS );
     port (
       i_spi_clk    : in  std_logic;
-      i_hk_fast_clk : in  std_logic;
+      i_hk_fast_clk: in  std_logic;
       i_spi_mosi   : in  std_logic;
       i_spi_ce     : in  std_logic;
+      o_spi_clk    : out std_logic;
+      o_spi_mosi   : out std_logic;
       o_dev_select : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
       );
   end component;
@@ -80,14 +87,14 @@ architecture behaviour of housekeeping is
 
   component boot_sequence is
   port (
-    i_clk     : in std_logic;
-    i_rst     : in std_logic;
-    i_hk_clk  : in std_logic;
-    i_hk_ce   : in std_logic;
-    i_hk_mosi : in std_logic;
+    i_clk     : in  std_logic;
+    i_rst     : in  std_logic;
+    i_hk_clk  : in  std_logic;
+    i_hk_ce   : in  std_logic;
+    i_hk_mosi : in  std_logic;
     o_hk_clk  : out std_logic;
     o_hk_ce   : out std_logic;
-    o_hk_mosi : out  std_logic
+    o_hk_mosi : out std_logic
     );
   end component;
 
@@ -147,19 +154,21 @@ begin
       i_hk_clk  => i_hk_uub_clk,
       i_hk_ce   => i_hk_uub_ce,
       i_hk_mosi => i_hk_uub_mosi,
-      o_hk_clk  => r_internal_clk,
-      o_hk_ce   => r_internal_ce,
-      o_hk_mosi => r_internal_mosi
+      o_hk_clk  => r_boot_clk,
+      o_hk_ce   => r_boot_ce,
+      o_hk_mosi => r_boot_mosi
     );
   
   -- instantiate one spi demuxer
   spi_demux_1 : spi_demux
     generic map (g_DEV_SELECT_BITS => g_DEV_SELECT_BITS)
     port map (
-      i_spi_clk     => r_internal_clk,
+      i_spi_clk     => r_boot_clk,
       i_hk_fast_clk => i_hk_fast_clk,
-      i_spi_mosi    => r_internal_mosi,
-      i_spi_ce      => r_internal_ce,
+      i_spi_mosi    => r_boot_mosi,
+      i_spi_ce      => r_boot_ce,
+      o_spi_clk     => r_internal_clk,
+      o_spi_mosi    => r_internal_mosi,
       o_dev_select  => r_subsystem_select
       );
 

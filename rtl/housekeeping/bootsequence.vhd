@@ -24,6 +24,9 @@ entity boot_sequence is
   port (
     i_clk     : in std_logic;
     i_rst     : in std_logic;
+    i_hk_clk  : in std_logic;
+    i_hk_ce   : in std_logic;
+    i_hk_mosi : in std_logic;
     o_hk_clk  : out std_logic;
     o_hk_ce   : out std_logic;
     o_hk_mosi : out std_logic
@@ -74,6 +77,10 @@ architecture behave of boot_sequence is
   signal r_ByteCount : natural range 0 to c_NUMBYTES-1 := 0;
   signal r_BitCount  : natural range 0 to 7 := 0;
   signal r_done : std_logic := '0';
+
+  -- signal r_boot_ce   : std_logic;
+  -- signal r_boot_clk  : std_logic;
+  -- signal r_boot_mosi : std_logic;
   
   signal r_bitcount_test : std_logic_vector(7 downto 0);
   signal r_bytecount_test : std_logic_vector(7 downto 0);
@@ -82,19 +89,11 @@ begin
   r_bitcount_test <= std_logic_vector(to_unsigned(r_BitCount, 8));
   r_bytecount_test <= std_logic_vector(to_unsigned(r_ByteCount, 8));
 
-  -- generate sufficiently slow clock
-  --process(i_clk) is
-  --begin
-  --  if rising_edge(i_clk) then
-  --    if spi_clk_counter < SPI_DIV-1 then
-  --      spi_clk_counter <= spi_clk_counter + 1;
-  --    else
-  --      spi_clk_counter <= 0;
-  --      spi_clk <= not spi_clk;
-  --    end if;
-  --  end if;
-  --end process;
+  -- o_hk_ce   <= i_hk_ce   when r_done = '1' else r_boot_ce;
+  -- o_hk_clk  <= i_hk_clk  when r_done = '1' else r_boot_clk;
+  -- o_hk_mosi <= i_hk_mosi when r_done = '1' else r_boot_mosi;
 
+  
   -- main process
   process(i_clk) is
   begin
@@ -118,7 +117,6 @@ begin
             end if;
           end if;
           
-
         when s_LowClk =>
           r_State <= s_HighClk;
           o_hk_clk <= '0';
@@ -132,7 +130,10 @@ begin
           end if;
           
         when s_Done =>
-          o_hk_ce   <= '1';
+          o_hk_ce   <= i_hk_ce;
+          o_hk_clk  <= i_hk_clk;
+          o_hk_mosi <= i_hk_mosi;
+          
           r_done <= '1';
           if r_BitCount = 7 then
             if i_rst = '1' then
@@ -142,7 +143,6 @@ begin
           else
             r_BitCount <= (r_BitCount + 1) mod 8;
           end if;
-          
           
       end case;
     end if;
