@@ -96,7 +96,6 @@ begin
     i_re    <= '1';
     wait for 10 ns;
     i_re    <= '0';
-    report "value at read port: " & integer'image(to_integer(unsigned(o_rdata)));
     assert o_rdata = std_logic_vector(to_unsigned(test_value, o_rdata'length)) report "Value loading problem" severity error;
 
     wait for 30 ns;
