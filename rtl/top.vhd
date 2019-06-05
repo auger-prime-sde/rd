@@ -50,9 +50,9 @@ architecture behaviour of top is
   signal w_ddr_clk   : std_logic;
 
   -- wires for internal spi connections
-  signal w_adc_clk   : std_logic;
-  signal w_adc_ce    : std_logic;
-  signal w_adc_mosi  : std_logic;
+  --signal w_adc_clk   : std_logic;
+  --signal w_adc_ce    : std_logic;
+  --signal w_adc_mosi  : std_logic;
   signal w_flash_clk : std_logic;
   signal w_flash_ce  : std_logic;
   -- miso and mosi are directly connected to pins
@@ -153,11 +153,23 @@ architecture behaviour of top is
   end component;
 
 
-  signal r_hk_clk  : std_logic;
-  signal r_hk_ce   : std_logic;
-  signal r_hk_mosi : std_logic;
-  attribute syn_keep: boolean;
-  attribute syn_keep of r_hk_mosi,r_hk_ce,r_hk_clk: signal is true;
+  -- start of magic MCLK block
+  -- (see ECP5 sysCONFIG manual section 6.1.2)
+  component USRMCLK
+    port(
+      USRMCLKI : in std_ulogic;
+      USRMCLKTS : in std_ulogic
+      );
+  end component;
+  attribute syn_noprune: boolean ;
+  attribute syn_noprune of USRMCLK: component is true;
+  -- end of magic block
+
+  --signal r_hk_clk  : std_logic;
+  --signal r_hk_ce   : std_logic;
+  --signal r_hk_mosi : std_logic;
+  --attribute syn_keep: boolean;
+  --attribute syn_keep of r_hk_mosi,r_hk_ce,r_hk_clk: signal is true;
 
   --signal w_10M_clk : std_logic;
   --constant c_TX_CLK_DIV : natural := 10;
@@ -169,9 +181,9 @@ begin
   o_bias_t <= '1';
   o_hk_adc_reset <= '0';
 
-  process (w_hk_clk) is
+  process (w_hk_fast_clk) is
   begin
-    if rising_edge(w_hk_clk) then
+    if rising_edge(w_hk_fast_clk) then
       r_adc_rst_count <= (r_adc_rst_count+1) mod c_ADC_RESET_CYCLES;
       if r_adc_rst_count = 0 then
         r_adc_rst <= '1';
@@ -185,26 +197,7 @@ begin
   -- connect ce line of flash chip to the correct housekeeping line
   o_hk_flash_ce <= w_flash_ce;
 
-  
-  process(i_xtal_clk) is
-  begin
-    r_hk_mosi <= i_hk_uub_mosi;
-    r_hk_ce   <= i_hk_uub_ce;
-    r_hk_clk  <= i_hk_uub_clk;
-  end process;
 
-  --process(w_10M_clk) is
-  --begin
-  --  if rising_edge(w_10M_clk) then
-  --    r_tx_clk_count <= (r_tx_clk_count + 1) mod c_TX_CLK_DIV;
-  --    if r_tx_clk_count = 0 then
-  --      w_tx_clk <= not w_tx_clk;
-  --    end if;
-  --  end if;
-  --end process;
-  
-  
-    
   tx_clock_synthesizer : tx_clock_pll
     port map (
       CLKI => i_xtal_clk,
@@ -227,18 +220,7 @@ begin
       datain     => i_data_in,
       q          => w_adc_data);
 
-  adc_boot_1 : adc_boot
-    port map (
-      i_hk_fast_clk  => w_hk_fast_clk,
-      i_hk_adc_clk   => w_adc_clk,
-      i_hk_adc_ce    => w_adc_ce,
-      i_hk_adc_mosi  => w_adc_mosi,
-      o_hk_adc_reset => o_hk_adc_reset,
-      o_hk_adc_clk   => o_hk_adc_clk,
-      o_hk_adc_ce    => o_hk_adc_ce,
-      o_hk_adc_mosi  => o_hk_adc_mosi
-      );
-  
+    
   u1: USRMCLK port map (
     USRMCLKI => w_flash_clk,
     USRMCLKTS => w_flash_ce);
@@ -252,19 +234,19 @@ begin
       -- lines are connected to an LVDS-cmos driver with floating input which
       -- could cause erratic input at these ports which would not be remedied
       -- by a pull-up:
-      i_hk_uub_clk        => '1',--i_hk_uub_clk,
-      i_hk_uub_mosi       => '1',--i_hk_uub_mosi,
+      i_hk_uub_clk        => i_hk_uub_clk,
+      i_hk_uub_mosi       => i_hk_uub_mosi,
       o_hk_uub_miso       => o_hk_uub_miso,
-      i_hk_uub_ce         => '1',--i_hk_uub_ce,
+      i_hk_uub_ce         => i_hk_uub_ce,
       o_gpio_data         => o_hk_gpio,
       o_flash_clk         => w_flash_clk,
       i_flash_miso        => i_hk_flash_miso,
       o_flash_mosi        => o_hk_flash_mosi,
       o_flash_ce          => w_flash_ce,
-      o_adc_clk           => w_adc_clk,
+      o_adc_clk           => o_hk_adc_clk,
       i_adc_miso          => i_hk_adc_miso,
-      o_adc_mosi          => w_adc_mosi,
-      o_adc_ce            => w_adc_ce      );
+      o_adc_mosi          => o_hk_adc_mosi,
+      o_adc_ce            => o_hk_adc_ce      );
   
   data_streamer_1 : data_streamer
     generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
