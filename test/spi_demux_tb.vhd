@@ -10,10 +10,10 @@ architecture behave of spi_demux_tb is
   constant hk_clk_period : time := 9 ns; -- more than twice as fast
 
   signal stop : std_logic := '0';
-  signal i_spi_clk  : std_logic;
+  signal i_spi_clk  : std_logic := '1';
   signal i_hk_fast_clk : std_logic;
   signal i_spi_mosi : std_logic;
-  signal o_spi_miso : std_logic;
+  signal o_spi_mosi : std_logic;
   signal i_spi_ce   : std_logic := '1';
 
   signal o_dev_select: std_logic_vector(7 downto 0);
@@ -34,8 +34,10 @@ architecture behave of spi_demux_tb is
       i_spi_clk     : in  std_logic;
       i_hk_fast_clk : in  std_logic;
       i_spi_mosi    : in  std_logic;
-      i_spi_ce     : in  std_logic;
-      o_dev_select : inout std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
+      i_spi_ce      : in  std_logic;
+      o_spi_clk     : out std_logic;
+      o_spi_mosi    : out std_logic;
+      o_dev_select  : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
       );
   end component;
 
@@ -46,8 +48,9 @@ begin
       i_spi_clk    => i_spi_clk,
       i_hk_fast_clk => i_hk_fast_clk,
       i_spi_mosi   => i_spi_mosi,
-      --o_spi_miso   => o_spi_miso,
       i_spi_ce     => i_spi_ce,
+      o_spi_clk    => open,
+      o_spi_mosi   => o_spi_mosi,
       o_dev_select => o_dev_select
       );
 
