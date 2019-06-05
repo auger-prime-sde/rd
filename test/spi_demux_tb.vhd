@@ -7,8 +7,11 @@ end spi_demux_tb;
 
 architecture behave of spi_demux_tb is
   constant clk_period : time := 20 ns;
+  constant hk_clk_period : time := 9 ns; -- more than twice as fast
 
+  signal stop : std_logic := '0';
   signal i_spi_clk  : std_logic;
+  signal i_hk_fast_clk : std_logic;
   signal i_spi_mosi : std_logic;
   signal o_spi_miso : std_logic;
   signal i_spi_ce   : std_logic := '1';
@@ -28,11 +31,11 @@ architecture behave of spi_demux_tb is
       g_DEV_SELECT_BITS : natural := 8
       );
     port (
-      i_spi_clk    : in  std_logic;
-      i_spi_mosi   : in  std_logic;
-      --o_spi_miso   : out std_logic;
+      i_spi_clk     : in  std_logic;
+      i_hk_fast_clk : in  std_logic;
+      i_spi_mosi    : in  std_logic;
       i_spi_ce     : in  std_logic;
-      o_dev_select : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
+      o_dev_select : inout std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
       );
   end component;
 
@@ -41,11 +44,23 @@ begin
   dut : spi_demux
     port map (
       i_spi_clk    => i_spi_clk,
+      i_hk_fast_clk => i_hk_fast_clk,
       i_spi_mosi   => i_spi_mosi,
       --o_spi_miso   => o_spi_miso,
       i_spi_ce     => i_spi_ce,
       o_dev_select => o_dev_select
       );
+
+  p_hk_clk : process is
+  begin
+    if stop = '1' then
+      wait;
+    end if;
+    wait for hk_clk_period / 2;
+    i_hk_fast_clk <= '0';
+    wait for hk_clk_period / 2;
+    i_hk_fast_clk <= '1';
+  end process;
   
   
   p_test : process is
@@ -100,7 +115,7 @@ begin
     
     wait for 10 * clk_period;
     
-    
+    stop <= '1';
     wait;
     
   end process;

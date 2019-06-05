@@ -59,7 +59,7 @@ begin
     if falling_edge(i_spi_clk) then
       if r_count = g_DEV_SELECT_BITS-1 then
         r_dev_out <= r_device;
-        r_dev_out(g_DEV_SELECT_BITS-r_count-2) <= i_spi_mosi;
+        r_dev_out(g_DEV_SELECT_BITS-1) <= i_spi_mosi;
       end if;
     end if;
     
