@@ -1,4 +1,4 @@
-rvl_alias "w_ddr_clk" "data_streamer_1/i_clk";
+RVL_ALIAS "w_ddr_clk" "data_streamer_1/i_clk"; 
 RVL_ALIAS "w_ddr_clk" "data_streamer_1/i_clk"; 
 RVL_ALIAS "i_xtal_clk" "i_xtal_clk"; 
 RVL_ALIAS "i_xtal_clk" "i_xtal_clk"; 
