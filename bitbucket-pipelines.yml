@@ -15,8 +15,8 @@ pipelines:
           - make -C test write_controller_tb
           - make -C test readout_controller_tb
           - make -C test data_writer_tb
-		  - make -C test spi_demux_tb
-		  - make -C test spi_decoder_tb
-		  - make -C test digitaloutput_tb
-		  - make -C test bootsequence_tb
+          - make -C test spi_demux_tb
+          - make -C test spi_decoder_tb
+          - make -C test digitaloutput_tb
+          - make -C test bootsequence_tb
 
