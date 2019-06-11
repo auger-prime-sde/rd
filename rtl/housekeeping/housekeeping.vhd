@@ -135,10 +135,16 @@ begin
   o_flash_clk    <= r_internal_clk when r_flash_ce = '0' else '1';
   o_flash_mosi   <= r_internal_mosi when r_flash_ce = '0' else '1';
   
-  -- wiring adc: 
+  -- wiring adc:
+  -- we force the clock to be silent when not inside a transaction
+  -- to reduce noise. and because the clock edge on which the ce line goes low
+  -- is seen as a negative edge by the adc and we want to make sure that this
+  -- neg edge is not accidentally picked up. Note that for the latter is it
+  -- important that we force the clock to '0'. This is in contrast to the
+  -- diagrams in the ADC datasheet but it should not matter what the value is.
   o_adc_ce       <= r_adc_ce;
-  o_adc_clk      <= r_internal_clk;
-  o_adc_mosi     <= r_internal_mosi;
+  o_adc_clk      <= not r_internal_clk when r_adc_ce = '0' else '0'; 
+  o_adc_mosi     <= r_internal_mosi when r_adc_ce = '0' else '0';
 
   -- mux the housekeeping output miso depending on the selected peripheral 
   o_hk_uub_miso <=
