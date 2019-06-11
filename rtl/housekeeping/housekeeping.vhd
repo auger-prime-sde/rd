@@ -156,7 +156,7 @@ begin
   boot_sequence_1 : boot_sequence
     port map (
       i_clk     => i_hk_fast_clk,
-      i_rst     => '1',
+      i_rst     => '0',
       i_hk_clk  => i_hk_uub_clk,
       i_hk_ce   => i_hk_uub_ce,
       i_hk_mosi => i_hk_uub_mosi,
