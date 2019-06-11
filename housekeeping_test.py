@@ -35,8 +35,11 @@ while True:
     elif l.startswith("c"):
         bytes_out = [0x02, 0x35]
         count_in = 4
-    elif l.startswith("a"):
-        bytes_out = [0x03, 0x80, 0x01]
+    elif l.startswith("ar"):
+        bytes_out = [0x03, 0x00, 0x01]
+        count_in = 0
+    elif l.startswith("a2"):
+        bytes_out = [0x03, 0x02]
         count_in = 1
     else: # the option to enter bytes manually
         try:
