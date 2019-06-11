@@ -79,16 +79,6 @@ architecture behaviour of top is
         q: out  std_logic_vector(47 downto 0));
   end component;
 
-  component boot_sequence is
-  port (
-    i_clk     : in std_logic;
-    i_rst     : in std_logic;
-    o_hk_clk  : out std_logic;
-    o_hk_ce   : out std_logic;
-    o_hk_mosi : out  std_logic
-    );
-  end component;
-
   
   component data_streamer
     generic (

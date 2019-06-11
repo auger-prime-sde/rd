@@ -85,7 +85,7 @@ architecture behaviour of housekeeping is
       o_recv_count : out std_logic_vector(g_INPUT_BITS-1 downto 0) );
   end component;
 
-  component boot_sequence is
+  component bootsequence is
   port (
     i_clk     : in  std_logic;
     i_rst     : in  std_logic;
@@ -153,7 +153,7 @@ begin
 
 
   -- instantiate one boot sequence injector:
-  boot_sequence_1 : boot_sequence
+  bootsequence_1 : bootsequence
     port map (
       i_clk     => i_hk_fast_clk,
       i_rst     => '0',

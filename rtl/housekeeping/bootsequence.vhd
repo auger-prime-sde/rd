@@ -20,7 +20,7 @@ use ieee.numeric_std.all;
 -- 0x03 0xDB 0x20
 
 
-entity boot_sequence is
+entity bootsequence is
   port (
     i_clk     : in std_logic;
     i_rst     : in std_logic;
@@ -31,9 +31,9 @@ entity boot_sequence is
     o_hk_ce   : out std_logic;
     o_hk_mosi : out std_logic
     );
-end boot_sequence;
+end bootsequence;
 
-architecture behave of boot_sequence is
+architecture behave of bootsequence is
 
   --signal spi_clk : std_logic;
   --constant SPI_DIV : natural := 20;
