@@ -132,8 +132,8 @@ begin
     
   -- wiring flash:
   o_flash_ce     <= r_flash_ce;
-  o_flash_clk    <= r_internal_clk;
-  o_flash_mosi   <= r_internal_mosi;
+  o_flash_clk    <= r_internal_clk when r_flash_ce = '0' else '1';
+  o_flash_mosi   <= r_internal_mosi when r_flash_ce = '0' else '1';
   
   -- wiring adc: 
   o_adc_ce       <= r_adc_ce;
