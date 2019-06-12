@@ -34,9 +34,12 @@ architecture behave of data_writer is
   signal r_Parity_2 : std_logic := '0';
 
   signal r_dataready : std_logic;
+  signal r_outputvalid : std_logic;
 begin
 
-  o_clk <= not i_clk;
+  o_clk <= not i_clk when r_outputvalid = '1' else '1';
+  o_valid <= r_outputvalid;
+  
 -- main program
   p_transmit : process (i_clk) is
   begin
@@ -72,7 +75,7 @@ begin
 		o_data_1 <= r_Parity_1;
 		o_data_2 <= r_Parity_2;
       end case;
-      o_valid <= r_dataready;
+      r_outputvalid <= r_dataready;
     end if; -- if rising_edge(i_clk)
   end process;
   
