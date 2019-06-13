@@ -200,8 +200,8 @@ for i in range(0, averages):
     (xf, ypow0_new) = fft_from_samples(ch0)
     (xf, ypow1_new) = fft_from_samples(ch1)
 
-    ypow0 += ypow_new
-    ypow1 += ypow_new
+    ypow0 += ypow0_new
+    ypow1 += ypow1_new
 
 ypow0 /= averages
 ypow1 /= averages
