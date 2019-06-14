@@ -101,18 +101,17 @@ architecture behaviour of housekeeping is
   component Digitaloutput is
     generic (
       g_CMD_BITS        : natural := 8;  
-      g_DATA_IN_BITS    : natural := 8;
-      g_DATA_OUT_BITS   : natural := 8;
+      g_DATA_BITS    : natural := 8;
       g_DEFAULT_OUTPUT  : std_logic_vector (7 downto 0) := "11111111" --we only use the last 8 bits for output so default all outputs are high
       );
     port(	--inputs
       i_clk : in std_logic;
       i_enable : in std_logic;
       i_cmd : in std_logic_vector(g_CMD_BITS-1 downto 0);
-      i_data : in std_logic_vector(g_DATA_IN_BITS-1 downto 0);
+      i_data : in std_logic_vector(g_DATA_BITS-1 downto 0);
       
       --outputs
-      o_data : out std_logic_vector (g_DATA_OUT_BITS-1 downto 0) := g_DEFAULT_OUTPUT; 
+      o_data : out std_logic_vector (g_DATA_BITS-1 downto 0) := g_DEFAULT_OUTPUT; 
       o_busy	  : out std_logic
       );
   end component;
@@ -201,8 +200,7 @@ begin
   digitalout_1 : Digitaloutput
     generic map (
       g_CMD_BITS => 8,
-      g_DATA_IN_BITS => 8,
-      g_DATA_OUT_BITS => 8
+      g_DATA_BITS => 8
       )
     port map (
       i_clk         => i_hk_fast_clk,
