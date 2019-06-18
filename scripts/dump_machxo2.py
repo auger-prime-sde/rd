@@ -14,10 +14,10 @@ averages = 1
 
 dev          = serial.Serial()
 dev.port     = '/dev/ttyUSB1'
-dev.baudrate = int(5.32e6)
+dev.baudrate = int(5.12e6)
 dev.timeout  = 1
 dev.open()
-dev.write("r".encode('utf-8'))
+dev.write("r".encode('utf-8')) # reset parity error counters in debug board
 
 ##
 # Detect if we're running in interactive mode to avoid problems with matplotlib
@@ -35,13 +35,8 @@ def in_ipython():
 ##
 def trigger():
     dev.write("t".encode('utf-8'))
-    time.sleep(0.1)
+    time.sleep(0.0002)
     dev.write("t".encode('utf-8'))
-
-def start_transfer():
-    dev.write("x".encode('utf-8'))
-    time.sleep(0.1)
-    dev.write("x".encode('utf-8'))
 
 def dump_to_uart():
     dev.write("d".encode('utf-8'))
@@ -186,17 +181,18 @@ ypow0 = np.zeros(1024, dtype='float')
 ypow1 = np.zeros(1024, dtype='float')
 
 for i in range(0, averages):
-    time.sleep(0.2)
     dev.reset_input_buffer()
     trigger()
-    time.sleep(0.1)
-    start_transfer()
-    time.sleep(0.1)
+
+    # after the trigger is received we have to wait for:
+    # * the second half of the buffer to fill (1024 samples at 250MHz)
+    # * the transfer to the machxo to complete (2048 samples, 13 bits each, channels parallel at 60MHz)
+    # this is under 0.5 ms so the overhead in driver + os + python is probably already much more.
+    # the transfer automatically starts after the buffer is filled.
+    time.sleep(2048*13/60e6+1024/250e6) 
 
     (ch0, ch1) = read_samples()
 
-    #pprint(ch1)
-    #pprint([(s) for s in ch1])
     (xf, ypow0_new) = fft_from_samples(ch0)
     (xf, ypow1_new) = fft_from_samples(ch1)
 
