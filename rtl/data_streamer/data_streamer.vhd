@@ -36,6 +36,7 @@ architecture behaviour of data_streamer is
   signal trigger_done : std_logic;
   signal arm : std_logic;
   signal tx_enable : std_logic;
+  signal r_trigger : std_logic;
 
 
 
@@ -53,6 +54,15 @@ architecture behaviour of data_streamer is
       o_read_data   : out std_logic_vector(2*g_ADC_BITS-1 downto 0)
     );
   end component;
+
+  component trigger_sync
+    port (
+      i_clk : in std_logic;
+      i_trigger : in std_logic;
+      o_trigger : out std_logic
+      );
+  end component;
+  
 
   component simple_counter
     generic ( g_SIZE : natural );
@@ -75,6 +85,7 @@ architecture behaviour of data_streamer is
     );
   end component;
 
+  
   component write_controller
     generic (g_ADDRESS_BITS : natural; g_START_OFFSET : natural);
     port (
@@ -189,11 +200,19 @@ data_writer_1 : data_writer
     o_valid        => o_tx_datavalid,
     o_clk          => o_tx_clk);
 
+
+trigger_sync_1 : trigger_sync
+  port map (
+    i_clk => i_clk,
+    i_trigger => i_trigger,
+    o_trigger => r_trigger
+    );
+
 write_controller_1 : write_controller
   generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 1024)
   port map (
     i_clk                                         => i_clk,
-    i_trigger                                     => i_trigger,
+    i_trigger                                     => r_trigger,
     i_curr_addr(g_BUFFER_INDEXSIZE-1 downto 1)    => write_address,
     i_curr_addr(0)                                => '0',
     i_arm                                         => arm,
