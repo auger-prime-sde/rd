@@ -38,6 +38,9 @@ entity top is
     o_hk_uub_miso       : out std_logic;
     -- signals for gpio from housekeeping
     o_hk_gpio           : out std_logic_vector(7 downto 0);
+    -- signal to/from housekeeping i2c adc:
+    io_hk_sda           : inout std_logic;
+    io_hk_scl           : inout std_logic;
     -- TODO: put this as one of the gpio lines, for now this is tied high
     o_bias_t            : out std_logic
     );
@@ -115,7 +118,9 @@ architecture behaviour of top is
       o_adc_clk      : out  std_logic;
       i_adc_miso     : in   std_logic;
       o_adc_mosi     : out  std_logic;
-      o_adc_ce       : out  std_logic
+      o_adc_ce       : out  std_logic;
+      io_hk_sda      : inout std_logic;
+      io_hk_scl      : inout std_logic
       );
   end component;
 
@@ -164,13 +169,54 @@ architecture behaviour of top is
   --signal w_10M_clk : std_logic;
   --constant c_TX_CLK_DIV : natural := 10;
   --signal r_tx_clk_count : natural range 0 to c_TX_CLK_DIV-1;
+
+
+  signal r_i2c_count : natural := 0;
+
+  --attribute syn_keep : boolean;
+  --signal r_void : std_logic;
+  --attribute syn_keep of r_void: signal is true;  
+
   
 begin
-
+  --io_hk_scl <= 'X';
   -- pull bias T high
   o_bias_t <= '1';
   o_hk_adc_reset <= '0';
 
+
+  
+  --process (w_hk_fast_clk) is
+--  begin
+--    if rising_edge(w_hk_fast_clk) then
+--      r_void <= io_hk_sda;
+--      r_i2c_count <= (r_i2c_count + 1) mod 10000000;
+--      if r_i2c_count < 1000000 then
+--        io_hk_sda <= 'Z';
+--      end if;
+--      
+--      if r_i2c_count >= 1000000 and r_i2c_count < 2000000 then
+--        io_hk_sda <= '1';
+--      end if;
+--
+--      if r_i2c_count >= 2000000 and r_i2c_count < 3000000 then
+--        io_hk_sda <= 'Z';
+--      end if;
+--
+--      if r_i2c_count >= 3000000 and r_i2c_count < 4000000 then
+--        io_hk_sda <= '1';
+--      end if;
+--
+--      if r_i2c_count >= 4000000 then 
+--        io_hk_sda <= '0';
+--      end if;
+--    end if;
+--  end process;
+--
+  --Io_hk_scl <= io_hk_sda;
+  
+
+  
   process (w_hk_fast_clk) is
   begin
     if rising_edge(w_hk_fast_clk) then
@@ -236,7 +282,10 @@ begin
       o_adc_clk           => o_hk_adc_clk,
       i_adc_miso          => i_hk_adc_miso,
       o_adc_mosi          => o_hk_adc_mosi,
-      o_adc_ce            => o_hk_adc_ce      );
+      o_adc_ce            => o_hk_adc_ce,
+      io_hk_sda           => io_hk_sda,
+      io_hk_scl           => io_hk_scl
+    );
   
   data_streamer_1 : data_streamer
     generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)

@@ -23,7 +23,10 @@ entity housekeeping is
     o_adc_clk           : out std_logic;
     i_adc_miso          : in std_logic;
     o_adc_mosi          : out std_logic;
-    o_adc_ce            : out std_logic
+    o_adc_ce            : out std_logic;
+    -- housekeeping adc
+    io_hk_sda           : inout std_logic;
+    io_hk_scl           : inout std_logic 
     );
 end housekeeping;
 
@@ -39,6 +42,15 @@ architecture behaviour of housekeeping is
   signal r_gpio_trigger : std_logic;
   signal r_gpio_ce      : std_logic;
   signal r_gpio_miso    : std_logic;
+
+  -- internal wires for i2c:
+  signal r_i2c_in       : std_logic_vector(23 downto 0);
+  signal r_i2c_out      : std_logic_vector(15 downto 0);
+  signal r_i2c_count    : std_logic_vector(23 downto 0);
+  signal r_i2c_trigger : std_logic;
+  signal r_i2c_ce      : std_logic;
+  signal r_i2c_miso    : std_logic;
+  
 
   -- internal lines between boot seq and spi selector
   signal r_boot_clk : std_logic;
@@ -85,6 +97,23 @@ architecture behaviour of housekeeping is
       o_recv_count : out std_logic_vector(g_INPUT_BITS-1 downto 0) );
   end component;
 
+
+  component I2C is
+    port(	--inputs
+      i_clk : in std_logic;
+      i_enable : in std_logic;
+      i_cmd : in std_logic_vector(3 downto 0);
+      i_addr : in std_logic_vector(7 downto 0);
+      i_data : in std_logic_vector(7 downto 0);
+      --outputs
+      o_DataOut : out std_logic_vector (15 downto 0); 
+      o_busy	  : out std_logic;
+      -- i2c port
+      sda	  : inout std_logic;
+      scl	  : inout std_logic
+      );
+  end component;
+
   component bootsequence is
   port (
     i_clk     : in  std_logic;
@@ -122,11 +151,15 @@ begin
   r_gpio_ce      <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(1, g_DEV_SELECT_BITS)) else '1';
   r_flash_ce     <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(2, g_DEV_SELECT_BITS)) else '1';
   r_adc_ce       <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(3, g_DEV_SELECT_BITS)) else '1';
+  r_i2c_ce       <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(4, g_DEV_SELECT_BITS)) else '1';
 
   
   -- wiring the gpio:
   r_gpio_trigger <= '1' when r_gpio_count = std_logic_vector(to_unsigned(15, 16)) else '0';
   o_gpio_data    <= r_gpio_out(7 downto 0);
+
+  -- wiring the i2c adc:
+  r_i2c_trigger <= '1' when r_i2c_count = std_logic_vector(to_unsigned(20, 24)) else '0';
   
     
   -- wiring flash:
@@ -148,7 +181,9 @@ begin
   -- mux the housekeeping output miso depending on the selected peripheral 
   o_hk_uub_miso <=
     i_flash_miso when r_flash_ce='0' else 
-    i_adc_miso   when r_adc_ce='0' else r_gpio_miso;
+    i_adc_miso   when r_adc_ce='0' else
+    r_gpio_miso  when r_gpio_ce='0' else
+    r_i2c_miso   when r_i2c_ce='0' else '0';
 
 
   -- instantiate one boot sequence injector:
@@ -177,6 +212,34 @@ begin
       o_dev_select  => r_subsystem_select
       );
 
+  spi_decoder_i2c : spi_decoder
+    generic map (
+      g_INPUT_BITS  => 24,
+      g_OUTPUT_BITS => 16
+      )
+    port map (
+      i_spi_clk    => r_internal_clk,
+      i_spi_mosi   => r_internal_mosi,
+      o_spi_miso   => r_i2c_miso,
+      i_spi_ce     => r_i2c_ce,
+      i_clk        => i_hk_fast_clk,
+      o_data       => r_i2c_in,
+      i_data       => r_i2c_out,
+      o_recv_count => r_i2c_count
+      );
+
+  i2c_1 : I2C
+    port map(
+      i_clk	    => i_hk_fast_clk,
+      i_enable	=> r_i2c_trigger,
+      i_cmd		=> r_i2c_in(23 downto 20),
+      i_addr    => r_i2c_in(19 downto 12),
+      i_data    => r_i2c_in(11 downto 4),
+      o_DataOut	=> r_i2c_out,
+      o_busy    => open,
+      sda       => io_hk_sda,
+      scl       => io_hk_scl
+      );
 
   -- instantiate one spi_decoder and one gpio subsystem
   spi_decoder_gpio : spi_decoder
