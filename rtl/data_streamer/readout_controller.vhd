@@ -27,7 +27,7 @@ end readout_controller;
 architecture behave of readout_controller is
   constant c_TRANSMIT_BITS :natural := g_WORDSIZE + 1; -- one parity bit
   -- state machine type:
-  type t_State is (s_Initial, s_Idle, s_Busy, s_Arm);
+  type t_State is (s_Initial, s_Idle, s_Busy, s_ExtraClk, s_Arm);
   -- variables:
   signal r_State : t_State := s_Initial;
   signal r_read_addr : std_logic_vector(g_ADDRESS_BITS-1 downto 0);
@@ -63,12 +63,19 @@ begin
 		  end if;
 		  if r_Count = c_TRANSMIT_BITS-1 then
             if r_read_addr = std_logic_vector(unsigned(i_start_addr)) then
-              o_tx_enable <= '0';
-              o_arm <= '1';
-              r_State <= s_Arm;
+              r_State <= s_ExtraClk;
+              o_tx_enable <= '1';
+              r_Count <= 0;
             else
               o_tx_enable <= '1';
             end if;
+          end if;
+        when s_ExtraClk =>
+          r_count <= (r_count + 1) mod c_TRANSMIT_BITS;
+          if r_count = c_TRANSMIT_BITS-3 then
+            o_tx_enable <= '0';
+            o_arm <= '1';
+            r_state <= s_Arm;
           end if;
         when s_Arm =>
           if r_trigger_done = '0' then

@@ -8,7 +8,7 @@ import sys, termios, tty, os
 # start controllre and open an spi port mode 3(cpha=1,cpol=1)
 ctrl = SpiController()
 ctrl.configure('ftdi://ftdi:232h:FTU7EF6B/1')
-spi = ctrl.get_port(cs=0, freq=19E6, mode=3)
+spi = ctrl.get_port(cs=0, freq=1E6, mode=3)
 
 # other commands:
 # [0x03, 0b10100000, 0x01] read=1  read adc id, should be 0x82
@@ -35,8 +35,11 @@ while True:
     elif l.startswith("c"): # read flash config ref
         bytes_out = [0x02, 0x35]
         count_in = 4
-    elif l.startswith("a"): # read adc id 
-        bytes_out = [0x03, 0x80, 0x01]
+    elif l.startswith("ar"):
+        bytes_out = [0x03, 0x00, 0x01]
+        count_in = 0
+    elif l.startswith("a2"):
+        bytes_out = [0x03, 0x02]
         count_in = 1
     else: # the option to enter bytes manually
         try:

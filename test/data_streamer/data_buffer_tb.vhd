@@ -1,5 +1,6 @@
 library ieee;
 use ieee.std_logic_1164.all;
+use IEEE.numeric_std.all;
 
 entity data_buffer_tb is
 end data_buffer_tb;
@@ -8,10 +9,15 @@ architecture behavior of data_buffer_tb is
   constant address_width : natural := 12;
   constant data_width : natural := 32;
   constant clk_period : time := 10 ns;
+  constant test_value : natural := 257;
+  constant test_addr  : natural := 5;
+                                
 
   signal i_wclk, i_we, i_rclk, i_re : std_logic := '0';
-  signal i_wdata, o_rdata : std_logic_vector(data_width-1 downto 0) := (others => '0');
-  signal i_waddr, i_raddr : std_logic_vector(address_width-1 downto 0) := (others => '0');
+  signal i_waddr : std_logic_vector(address_width-2 downto 0) := (others => '0');
+  signal i_wdata : std_logic_vector(2*data_width-1 downto 0) := (others => '0');
+  signal i_raddr : std_logic_vector(address_width-1 downto 0) := (others => '0');
+  signal o_rdata : std_logic_vector(data_width-1 downto 0) := (others => '0');
   signal stop : std_logic := '0';
 
   component data_buffer is
@@ -20,8 +26,8 @@ architecture behavior of data_buffer_tb is
       -- Write port
       i_write_clk   : in std_logic;
       i_write_enable : in std_logic;
-      i_write_addr   : in std_logic_vector(address_width-1 downto 0);
-      i_write_data   : in std_logic_vector(data_width-1 downto 0);
+      i_write_addr   : in std_logic_vector(address_width-2 downto 0);
+      i_write_data   : in std_logic_vector(2*data_width-1 downto 0);
       -- Read port
       i_read_clk     : in std_logic;
       i_read_enable  : in std_logic;
@@ -64,33 +70,33 @@ begin
     i_we    <= '1';
     wait for 10 ns;
     i_we    <= '0';
-    assert o_rdata = x"00000000" report "Value loading problem" severity error;
+    assert o_rdata = std_logic_vector(to_unsigned(0, o_rdata'length)) report "Value loading problem" severity error;
 
 
-    i_waddr <= x"001";
-    i_wdata <= x"00000101";
+    i_waddr <= std_logic_vector(to_unsigned(test_addr,  i_waddr'length));
+    i_wdata <= std_logic_vector(to_unsigned(test_value, i_wdata'length));
     wait for 10 ns;
 
     i_we    <= '1';
     wait for 10 ns;
     i_we    <= '0';
-    assert o_rdata = x"00000000" report "Value overwritten" severity error;
+    assert o_rdata = std_logic_vector(to_unsigned(0, o_rdata'length)) report "Value overwritten" severity error;
 
-    i_raddr <= x"000";
+    i_raddr <= std_logic_vector(to_unsigned(0, i_raddr'length));
     wait for 30 ns;
 
     i_re    <= '1';
     wait for 10 ns;
     i_re    <= '0';
 
-    i_raddr <= x"001";
+    i_raddr <= std_logic_vector(to_unsigned(test_addr*2+1, i_raddr'length));
     wait for 30 ns;
-    assert o_rdata = x"00000000" report "Value early loading problem" severity error;
+    assert o_rdata = std_logic_vector(to_unsigned(0, o_rdata'length)) report "Value early loading problem" severity error;
 
     i_re    <= '1';
     wait for 10 ns;
     i_re    <= '0';
-    assert o_rdata = x"00000101" report "Value loading problem" severity error;
+    assert o_rdata = std_logic_vector(to_unsigned(test_value, o_rdata'length)) report "Value loading problem" severity error;
 
     wait for 30 ns;
     stop <= '1';

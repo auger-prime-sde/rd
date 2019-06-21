@@ -21,23 +21,34 @@ entity write_controller is
 end write_controller;
 
 architecture behavior of write_controller is
-  -- Number of bytes to read, block size minus start offset
-  constant c_DELAY_COUNT : natural := 2**g_ADDRESS_BITS - g_START_OFFSET;
+  -- Number of bytes to read before trigger: block size minus start offset
+  constant c_DELAY_COUNT : natural := (2**g_ADDRESS_BITS - g_START_OFFSET);
   -- state machine type:
   type t_controller_state is (s_Idle, s_Armed, s_ArmReady, s_Triggered);
+  -- In idle: no data is written to the buffer. This waits for an arm event
+  -- that is sent by the readout controller when readout is finished and it is
+  -- safe again to start writing to the buffer.
+  -- In Armed: data is written to the buffer but the system is not yet
+  -- sensitive to triggers because the minimum pre-trigger length is not yet
+  -- written to the buffer.
+  -- In ArmReady: data is being written to the buffer and the system is ready
+  -- to receive a trigger.
+  -- In Triggered: the system is writing the post-trigger samples to the
+  -- buffer. When this is done the state will change back to Idle until the
+  -- data is read out.
   -- variables
   signal r_controller_state : t_controller_state := s_Idle;
   signal r_start_addr : natural range 0 to 2**g_ADDRESS_BITS-1 := 0;
   signal r_count : natural range 0 to c_DELAY_COUNT := 0;
   --signal test_count : std_logic_vector(11 downto 0) := (others => '0');
   signal r_arm : std_logic := '0';
-  signal r_trigger : std_logic := '0';
+  --signal r_trigger : std_logic := '0';
   
 begin
   p_main : process (i_clk) is
   begin
     if rising_edge(i_clk) then
-      r_trigger <= i_trigger;
+      --r_trigger <= i_trigger;
       r_arm <= i_arm;
       case r_controller_state is
         when s_Idle =>
@@ -53,7 +64,7 @@ begin
         when s_Armed =>
           -- wait for at least half the buffer to be filled
           r_start_addr <= r_start_addr;
-          r_count <= r_count + 1;
+          r_count <= (r_count + 2) mod (c_DELAY_COUNT + 1);
 
           if r_count < c_DELAY_COUNT - 1 then
             r_controller_state <= s_Armed;
@@ -66,8 +77,8 @@ begin
           --  and start counting remaining values read (in s_Triggered)
           r_count <= 0;
 
-          if r_trigger = '1' then
-            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET -2) mod 2**o_start_addr'length;
+          if i_trigger = '1' then
+            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET + 2) mod 2**o_start_addr'length;
             -- still don't fully understand the -2 here. 
             r_controller_state <= s_Triggered;
           else
@@ -80,7 +91,7 @@ begin
           --    send signal to the read controller,
           --    and go to idle
           r_start_addr <= r_start_addr;
-          r_count <= (r_count + 1) ;
+          r_count <= (r_count + 2) ;
 
           if r_count < c_DELAY_COUNT - 5 then
             -- -1 because c_DELAY_COUNT is the last address that we don't want

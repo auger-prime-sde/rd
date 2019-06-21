@@ -14,10 +14,10 @@ averages = 1
 
 dev          = serial.Serial()
 dev.port     = '/dev/ttyUSB1'
-dev.baudrate = int(5.12e6)
+dev.baudrate = int(5.32e6) #115200
 dev.timeout  = 1
 dev.open()
-dev.write("r".encode('utf-8')) # reset parity error counters in debug board
+dev.write("r".encode('utf-8'))
 
 ##
 # Detect if we're running in interactive mode to avoid problems with matplotlib
@@ -35,8 +35,13 @@ def in_ipython():
 ##
 def trigger():
     dev.write("t".encode('utf-8'))
-    time.sleep(0.0002)
+    #time.sleep(0.01)
     dev.write("t".encode('utf-8'))
+
+def start_transfer():
+    dev.write("x".encode('utf-8'))
+    #time.sleep(0.01)
+    dev.write("x".encode('utf-8'))
 
 def dump_to_uart():
     dev.write("d".encode('utf-8'))
@@ -112,7 +117,7 @@ def read_samples():
 ##
 # Compute the FFT of a sample sequence and plot it using matplotlib.
 ##
-def fft_from_samples(data):
+def fft_from_samples(data, plotraw=True):
     # Scale data to voltages
     y = np.asarray(data) / 2048. * 2.0/2.0;
 
@@ -121,14 +126,15 @@ def fft_from_samples(data):
     # sample spacing
     T = 1.0 / 250.0
     x = np.linspace(0.0, N*T, N)
-    xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
+    xf = np.linspace(0.0, 1.0/(2.0*T), int(N/2))
 
-    fix,ax = plt.subplots()
-    line = (ax.plot(x,y))[0]
-    line.set_marker("o")
-    line.set_markersize(3)
-    ax.set_xlabel("time (us)")
-    ax.set_ylabel("V")
+    if plotraw:
+        fix,ax = plt.subplots()
+        line = (ax.plot(x,y))[0]
+        line.set_marker("o")
+        line.set_markersize(3)
+        ax.set_xlabel("time (us)")
+        ax.set_ylabel("V")
 
     # Apply windowing function (7-term Blackman-Harris)
     # Compute FFT, default size = data size
@@ -157,59 +163,85 @@ def fft_from_samples(data):
     return (xf, ypow+CPGdB)
 
 
-def print_fft(xf, ypow0, ypow1):
+def make_fft_plot(xf):
+    global line1, line2, marker1, marker2, fig
     # Start plotting things
     fig, ax = plt.subplots()
-    ax.plot(xf, ypow0, label='ch0')
-    ax.plot(xf, ypow1, label='ch1')
+    line1, = ax.plot(xf, np.zeros(len(xf)), label='ch0')
+    line2, = ax.plot(xf, np.zeros(len(xf)), label='ch1')
     ax.set_ylabel("power (dBm)")
     ax.set_xlabel("frequency (MHz)")
+    ax.set_ylim(-110.0,10.0)
 
     # Locate peak values
-    peak = np.argmax(ypow0)
-    ax.plot(xf[peak], ypow0[peak], "ro")
-    peak = np.argmax(ypow1)
-    ax.plot(xf[peak], ypow1[peak], "ro")
+    marker1, = ax.plot(0, 0, "ro")
+    marker2, = ax.plot(0, 0, "ro")
 
     # add legend
     ax.legend()
 
+
+def update_fft_plot(ypow0, ypow1):
+    global line1, line2, marker1, marker2, fig
+    line1.set_ydata(ypow0)
+    line2.set_ydata(ypow1)
+
+    # Locate peak values
+    peak = np.argmax(ypow0)
+    marker1.set_xdata(xf[peak])
+    marker1.set_ydata(ypow0[peak])
+    peak = np.argmax(ypow1)
+    marker2.set_xdata(xf[peak])
+    marker2.set_ydata(ypow1[peak])
+    
+    fig.canvas.draw()
+    fig.canvas.flush_events()
+    
+
 ##
 # Example run code
 ##
-ypow0 = np.zeros(1024, dtype='float')
-ypow1 = np.zeros(1024, dtype='float')
 
-for i in range(0, averages):
-    dev.reset_input_buffer()
-    trigger()
-
-    # after the trigger is received we have to wait for:
-    # * the second half of the buffer to fill (1024 samples at 250MHz)
-    # * the transfer to the machxo to complete (2048 samples, 13 bits each, channels parallel at 60MHz)
-    # this is under 0.5 ms so the overhead in driver + os + python is probably already much more.
-    # the transfer automatically starts after the buffer is filled.
-    time.sleep(2048*13/60e6+1024/250e6) 
-
-    (ch0, ch1) = read_samples()
-
-    (xf, ypow0_new) = fft_from_samples(ch0)
-    (xf, ypow1_new) = fft_from_samples(ch1)
-
-    ypow0 += ypow0_new
-    ypow1 += ypow1_new
-
-ypow0 /= averages
-ypow1 /= averages
-
-print_fft(xf, ypow0, ypow1)
+## prepare empty plots
+N = 2048
+T = 1.0 / 250.0
+x = np.linspace(0.0, N*T, N)
+xf = np.linspace(0.0, 1.0/(2.0*T), int(N/2))
+make_fft_plot(xf)
 
 ##
 # Fix plotting in interactive mode...
-if in_ipython():
-    plt.ion()
+#if in_ipython():
+plt.ion()
 
 ##
 # Show results
 plt.show()
+
+while True:
+    ypow0 = np.zeros(1024, dtype='float')
+    ypow1 = np.zeros(1024, dtype='float')
+
+    for i in range(0, averages):
+        #time.sleep(0.02)
+        dev.reset_input_buffer()
+        trigger()
+        #time.sleep(0.01)
+        start_transfer()
+        #time.sleep(0.01)
+
+        (ch0, ch1) = read_samples()
+
+        #pprint(ch1)
+        #pprint([(s) for s in ch1])
+        (xf, ypow0_new) = fft_from_samples(ch0, False)
+        (xf, ypow1_new) = fft_from_samples(ch1, False)
+
+        ypow0 += ypow0_new
+        ypow1 += ypow1_new
+
+    ypow0 /= averages
+    ypow1 /= averages
+    
+    update_fft_plot(ypow0, ypow1)
 

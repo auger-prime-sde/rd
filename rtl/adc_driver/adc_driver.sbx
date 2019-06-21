@@ -42,11 +42,11 @@
             <spirit:ports/>
         </spirit:model>
         <spirit:vendorExtensions>
-            <lattice:device>LFE5U-12F-6BG381I</lattice:device>
+            <lattice:device>LFE5U-12F-8BG381I</lattice:device>
             <lattice:synthesis>lse</lattice:synthesis>
             <lattice:date>2018-07-11.11:42:52</lattice:date>
-            <lattice:modified>2018-10-31.12:12:24</lattice:modified>
-            <lattice:diamond>3.10.0.111.2</lattice:diamond>
+            <lattice:modified>2019-05-01.11:10:44 AM</lattice:modified>
+            <lattice:diamond>3.10.3.144.3</lattice:diamond>
             <lattice:language>VHDL</lattice:language>
             <lattice:attributes>
                 <lattice:attribute lattice:name="AddComponent">false</lattice:attribute>
@@ -82,7 +82,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>PartName</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">LFE5U-12F-6BG381I</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">LFE5U-12F-8BG381I</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>PartType</lattice:lpckey>
@@ -90,7 +90,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>SpeedGrade</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">6</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">8</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Status</lattice:lpckey>
@@ -115,7 +115,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Date</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">10/31/2018</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">05/01/2019</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>ModuleName</lattice:lpckey>
@@ -131,7 +131,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Time</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">12:12:21</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">11:10:42</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>VendorName</lattice:lpckey>
@@ -180,7 +180,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>EnECLK</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">0</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">1</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>EnInEdge</lattice:lpckey>
@@ -208,7 +208,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Interface</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">GDDRX1_RX.SCLK.Centered</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">GDDRX2_RX.ECLK.Centered</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>MIPIFilter</lattice:lpckey>
@@ -248,7 +248,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>bandwidth</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">4800</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">6000</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>enClkIBuf</lattice:lpckey>
@@ -256,15 +256,15 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>freq_in</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">200</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">250</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>freq_in2</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">200</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">250</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>gear</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">2:1</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">4:1</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>io_type</lattice:lpckey>
@@ -305,7 +305,7 @@
                 <lattice:lpcsection lattice:name="Command"/>
                 <lattice:lpcentry>
                     <lattice:lpckey>cmd_line</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">-w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 200 -gear 2 -del 128</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">-w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 250 -gear 4 -eclk_bridge -del 128</lattice:lpcvalue>
                 </lattice:lpcentry>
             </lattice:lpc>
             <lattice:groups/>
