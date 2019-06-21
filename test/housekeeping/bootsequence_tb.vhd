@@ -24,20 +24,20 @@ architecture behave of bootsequence_tb is
   
   signal stop : std_logic := '0';
 
-  constant c_NUMBYTES : natural := 22;
+  constant c_NUMBYTES : natural := 33;
   type t_BYTESEQ is array(0 to c_NUMBYTES-1) of bit_vector(7 downto 0);
   constant c_BOOTSEQUENCE : t_BYTESEQ := (
-    X"00", X"02",
-    X"29", X"00",
-    X"41", X"00",
-    X"03", X"03",
-    X"F2", X"00",
-    X"EF", X"00",
-    X"41", X"00",
-    X"02", X"40",
-    X"D5", X"18",
-    X"D7", X"0C",
-    X"DB", X"20" );
+    X"03", X"00", X"02",
+    X"03", X"29", X"00",
+    X"03", X"41", X"00",
+    X"03", X"03", X"03",
+    X"03", X"F2", X"00",
+    X"03", X"EF", X"00",
+    X"03", X"41", X"00",
+    X"03", X"02", X"40",
+    X"03", X"D5", X"18",
+    X"03", X"D7", X"0C",
+    X"03", X"DB", X"20" );
 
   
   component bootsequence is
@@ -103,14 +103,20 @@ begin
     for i in 0 to 10 loop
       wait until o_hk_ce = '0';
       for bit in 7 downto 0 loop
-        assert o_hk_mosi = to_stdulogic(c_BOOTSEQUENCE(2*i+0)(bit)) report "bad initialization code, expected " & std_logic'image(to_stdulogic(c_BOOTSEQUENCE(2*i+0)(bit))) & " but got " & std_logic'image(o_hk_mosi);
+        assert o_hk_mosi = to_stdulogic(c_BOOTSEQUENCE(3*i+0)(bit)) report "bad initialization code, expected " & std_logic'image(to_stdulogic(c_BOOTSEQUENCE(3*i+0)(bit))) & " but got " & std_logic'image(o_hk_mosi);
 
         assert o_hk_ce = '0' report "CE lines toggled mid-word";
         wait until o_hk_clk = '0';
         wait until o_hk_clk = '1';
       end loop;
       for bit in 7 downto 0 loop
-        assert o_hk_mosi = to_stdulogic(c_BOOTSEQUENCE(2*i+1)(bit)) report "bad initialization code, expected " & std_logic'image(to_stdulogic(c_BOOTSEQUENCE(2*i+1)(bit))) & " but got " & std_logic'image(o_hk_mosi);
+        assert o_hk_mosi = to_stdulogic(c_BOOTSEQUENCE(3*i+1)(bit)) report "bad initialization code, expected " & std_logic'image(to_stdulogic(c_BOOTSEQUENCE(3*i+1)(bit))) & " but got " & std_logic'image(o_hk_mosi);
+        assert o_hk_ce = '0' report "CE lines toggled mid-word";
+        wait until o_hk_clk = '0';
+        wait until o_hk_clk = '1';
+      end loop;
+      for bit in 7 downto 0 loop
+        assert o_hk_mosi = to_stdulogic(c_BOOTSEQUENCE(3*i+2)(bit)) report "bad initialization code, expected " & std_logic'image(to_stdulogic(c_BOOTSEQUENCE(3*i+2)(bit))) & " but got " & std_logic'image(o_hk_mosi);
         assert o_hk_ce = '0' report "CE lines toggled mid-word";
         wait until o_hk_clk = '0';
         wait until o_hk_clk = '1';
