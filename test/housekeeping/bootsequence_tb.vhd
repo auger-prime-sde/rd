@@ -83,7 +83,7 @@ begin
   p_bg : process is
   begin
     wait for 52 ns;
-    for x in 0 to 6 loop
+    for x in 0 to 250 loop
       for i in 0 to 100 loop
         i_hk_clk  <= random1(i);
         i_hk_ce   <= random2(i);
@@ -126,7 +126,7 @@ begin
     end loop;
 
     -- wait until the last buffer byte is sent
-    wait for 16*clk_period;
+    wait for 16*clk_period*20;
 
     -- test if data comes through transparent after boot:
     for i in 0 to 100 loop

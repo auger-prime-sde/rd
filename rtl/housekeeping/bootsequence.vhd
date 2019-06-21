@@ -21,6 +21,9 @@ use ieee.numeric_std.all;
 
 
 entity bootsequence is
+  generic (
+    g_DIV : natural := 20 -- 100 MHz down to 5 MHz
+    );
   port (
     i_clk     : in std_logic;
     i_rst     : in std_logic;
@@ -77,6 +80,7 @@ architecture behave of bootsequence is
   signal r_ByteCount : natural range 0 to c_NUMBYTES-1 := 0;
   signal r_BitCount  : natural range 0 to 7 := 0;
   signal r_done : std_logic := '0';
+  signal r_count : natural range 0 to g_DIV-1 := 0;
 
   -- signal r_boot_ce   : std_logic;
   -- signal r_boot_clk  : std_logic;
@@ -98,53 +102,58 @@ begin
   process(i_clk) is
   begin
     if rising_edge(i_clk) then
-
-      case r_State is
-        when s_Initial =>
-          r_State <= s_HighClk;
-          o_hk_ce  <= '1';
-          o_hk_clk <= '1';
-        when s_HighClk =>
-          r_State <= s_LowClk;
-          o_hk_clk <= '1';
-          o_hk_mosi <= to_stdulogic(c_BOOTSEQUENCE(r_ByteCount)(7-r_BitCount));
-          -- set the ce line
-          if r_BitCount = 0 then
-            if c_BOOTSEQUENCE(r_ByteCount)(8) = '1' then
-              o_hk_ce <= '1';
-            else
-              o_hk_ce <= '0';
+      r_count <= (r_count + 1) mod g_DIV;
+      if r_count = g_DIV-1 then
+        case r_State is
+          when s_Initial =>
+            r_State <= s_HighClk;
+            o_hk_ce  <= '1';
+            o_hk_clk <= '1';
+          when s_HighClk =>
+            r_State <= s_LowClk;
+            o_hk_clk <= '0';
+            o_hk_mosi <= to_stdulogic(c_BOOTSEQUENCE(r_ByteCount)(7-r_BitCount));
+            -- set the ce line
+            if r_BitCount = 0 then
+              if c_BOOTSEQUENCE(r_ByteCount)(8) = '1' then
+                o_hk_ce <= '1';
+              else
+                o_hk_ce <= '0';
+              end if;
             end if;
-          end if;
           
-        when s_LowClk =>
-          r_State <= s_HighClk;
-          o_hk_clk <= '0';
-          -- increment counters
-          r_BitCount <= (r_BitCount + 1) mod 8;
-          if r_BitCount = 7 then
-            r_ByteCount <= (r_ByteCount + 1) mod c_NUMBYTES;
-            if r_ByteCount = c_NUMBYTES - 1 then
-              r_State <= s_Done;
-            end if;
-          end if;
-          
-        when s_Done =>
-          o_hk_ce   <= i_hk_ce;
-          o_hk_clk  <= i_hk_clk;
-          o_hk_mosi <= i_hk_mosi;
-          
-          r_done <= '1';
-          if r_BitCount = 7 then
-            if i_rst = '1' then
-              r_State <= s_Initial;
-              r_done <= '0';
-            end if;
-          else
+          when s_LowClk =>
+            r_State <= s_HighClk;
+            o_hk_clk <= '1';
+            -- increment counters
             r_BitCount <= (r_BitCount + 1) mod 8;
-          end if;
+            if r_BitCount = 7 then
+              r_ByteCount <= (r_ByteCount + 1) mod c_NUMBYTES;
+              if r_ByteCount = c_NUMBYTES - 1 then
+                r_State <= s_Done;
+              end if;
+            end if;
+          when s_Done =>
+            -- case is handled at faster clock code below
+        end case;
+      end if;
+      
           
-      end case;
+      if r_state = s_Done then
+        o_hk_ce   <= i_hk_ce;
+        o_hk_clk  <= i_hk_clk;
+        o_hk_mosi <= i_hk_mosi;
+          
+        r_done <= '1';
+        if r_BitCount = 7 then
+          if i_rst = '1' then
+            r_State <= s_Initial;
+            r_done <= '0';
+          end if;
+        else
+          r_BitCount <= (r_BitCount + 1) mod 8;
+        end if;
+      end if;
     end if;
     
   end process;
