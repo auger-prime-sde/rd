@@ -39,7 +39,7 @@ architecture behave of bootsequence is
   --constant SPI_DIV : natural := 20;
   --signal spi_clk_counter : natural range 0 to SPI_DIV-1 := 0;
   
-  constant c_NUMBYTES : natural := 38;
+  constant c_NUMBYTES : natural := 49;
   type t_BYTESEQ is array(0 to c_NUMBYTES-1) of bit_vector(11 downto 0);
   signal c_BOOTSEQUENCE : t_BYTESEQ := (
     -- the first bit indicates if this is a transaction separatator
@@ -50,26 +50,26 @@ architecture behave of bootsequence is
     -- just a bit of waiting for the ADC to boot:
     X"100", X"100", X"100", X"100",
     -- software reset
-    X"100", X"000", X"002",
+    X"100", X"003", X"000", X"002",
     -- re-apply what should already be the default
-    X"100", X"029", X"000",
-    X"100", X"041", X"000",
+    X"100", X"003", X"029", X"000",
+    X"100", X"003", X"041", X"000",
     -- enable checker-board
     --X"100", X"042", X"008",
     --X"100", X"025", X"003",
     --X"100", X"02B", X"003",
     -- enable high performance mode:
-    X"100", X"003", X"003",
+    X"100", X"003", X"003", X"003",
     -- disable low speed mode, should already by off:
-    X"100", X"0F2", X"000",
-    X"100", X"0EF", X"000",
+    X"100", X"003", X"0F2", X"000",
+    X"100", X"003", X"0EF", X"000",
     -- cmos mode off, should already be off:
-    X"100", X"041", X"000",
+    X"100", X"003", X"041", X"000",
     -- high performance mode
-    X"100", X"002", X"040",
-    X"100", X"0D5", X"018",
-    X"100", X"0D7", X"00C",
-    X"100", X"0DB", X"020",
+    X"100", X"003", X"002", X"040",
+    X"100", X"003", X"0D5", X"018",
+    X"100", X"003", X"0D7", X"00C",
+    X"100", X"003", X"0DB", X"020",
     X"100" );
   
   type t_State is (s_Initial, s_LowClk, s_HighClk, s_Done);
