@@ -14,7 +14,7 @@ averages = 1
 
 dev          = serial.Serial()
 dev.port     = '/dev/ttyUSB1'
-dev.baudrate = int(5.32e6) #115200
+dev.baudrate = int(6.05e6) #115200
 dev.timeout  = 1
 dev.open()
 dev.write("r".encode('utf-8'))
@@ -164,7 +164,7 @@ def fft_from_samples(data, plotraw=True):
 
 
 def make_fft_plot(xf):
-    global line1, line2, marker1, marker2, fig
+    global line1, line2, marker1, marker2, fig, background, ax, text
     # Start plotting things
     fig, ax = plt.subplots()
     line1, = ax.plot(xf, np.zeros(len(xf)), label='ch0')
@@ -172,6 +172,7 @@ def make_fft_plot(xf):
     ax.set_ylabel("power (dBm)")
     ax.set_xlabel("frequency (MHz)")
     ax.set_ylim(-110.0,10.0)
+    text = ax.text(0, 0, "")
 
     # Locate peak values
     marker1, = ax.plot(0, 0, "ro")
@@ -180,9 +181,14 @@ def make_fft_plot(xf):
     # add legend
     ax.legend()
 
+    # cache background
+    fig.canvas.draw()
+    background = fig.canvas.copy_from_bbox(ax.bbox)
+    
 
+t_prev = 0
 def update_fft_plot(ypow0, ypow1):
-    global line1, line2, marker1, marker2, fig
+    global line1, line2, marker1, marker2, fig, text, t_prev
     line1.set_ydata(ypow0)
     line2.set_ydata(ypow1)
 
@@ -193,9 +199,26 @@ def update_fft_plot(ypow0, ypow1):
     peak = np.argmax(ypow1)
     marker2.set_xdata(xf[peak])
     marker2.set_ydata(ypow1[peak])
+
+    t_this = time.time()
+    tx = 'Mean Frame Rate:\n {fps:.3f}FPS'.format(fps= ((1) / (t_this - t_prev)))  
+    text.set_text(tx)
+    t_prev = t_this
+
+
+    fig.canvas.restore_region(background)
+    ax.draw_artist(line1)
+    ax.draw_artist(line2)
+    ax.draw_artist(marker1)
+    ax.draw_artist(marker2)
+    #ax.draw_artist(text)
     
-    fig.canvas.draw()
-    fig.canvas.flush_events()
+    fig.canvas.blit()
+
+    plt.pause(0.000001)
+    
+    #fig.canvas.draw()
+    #fig.canvas.flush_events()
     
 
 ##
@@ -217,20 +240,26 @@ plt.ion()
 ##
 # Show results
 plt.show()
+trigger()
 
 while True:
     ypow0 = np.zeros(1024, dtype='float')
     ypow1 = np.zeros(1024, dtype='float')
 
+    start = time.time()
+    ends = []
     for i in range(0, averages):
         #time.sleep(0.02)
         dev.reset_input_buffer()
-        trigger()
+        
         #time.sleep(0.01)
         start_transfer()
+        trigger()
         #time.sleep(0.01)
 
+        startread = time.time()
         (ch0, ch1) = read_samples()
+        print("read samples: {}".format(time.time()-startread))
 
         #pprint(ch1)
         #pprint([(s) for s in ch1])
@@ -239,6 +268,9 @@ while True:
 
         ypow0 += ypow0_new
         ypow1 += ypow1_new
+        ends.append(time.time())
+
+    print("whole update routine {}".format(ends[0]-start))
 
     ypow0 /= averages
     ypow1 /= averages
