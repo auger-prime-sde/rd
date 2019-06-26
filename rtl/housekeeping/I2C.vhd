@@ -2,12 +2,20 @@ library IEEE;
 use IEEE.std_logic_1164.all;
 use IEEE.numeric_std.all;
 
+-- TODOS:
+-- latch output data while sampling (to prevent sending half of the previous
+-- and half of the next sample)
+-- simplify code (e.g. check if all busy asserts are really needed)
+-- add a config register where you can set the update rate
+-- add temperature sensor code
+
+
 entity I2C is
 generic (
     g_CMD_BITS        : natural :=  4;  
     g_ADDR_BITS       : natural := 8;
     g_DATA_IN_BITS    : natural :=  8;
-    g_DATA_OUT_BITS   : natural := 16;
+    g_DATA_OUT_BITS   : natural := 64;
 	g_number_of_channels : natural := 4;
 	g_number_of_I2C_Chips : natural := 1
 	);
@@ -96,7 +104,7 @@ begin
 
   clk_divider : clock_divider
     generic map (
-      g_MAX_COUNT => 100--10000
+      g_MAX_COUNT => 10000
       )
     port map (
       i_clk => i_clk,
@@ -128,23 +136,27 @@ I2Ccom : i2c_master2
 	
 	s_adress(0) <= "1001000"; 			--I2C sensor adres
 	s_adress(1) <= "1001001"; 			--I2C sensor adres
-	
+
+
+  o_dataout(15 downto 0) <= s_data(0);
+  o_dataout(31 downto 16) <= s_data(1);
+  o_dataout(47 downto 32) <= s_data(2);
+  o_dataout(63 downto 48) <= s_data(3);
+  
+  
 process (i_Clk)
 	begin	
-	
 	if rising_edge(i_clk) then 
-	
 	s_triggercount <= s_triggercount + 1;
-		
-		Case s_state is
+    Case s_state is
 	---------------------------------------------------	
 		When c_Idle_state =>		--1
 			if (i_enable = '1' and i_cmd > "1000" and i_cmd < "1100") then  --read data from buffer
 				o_busy <= '1';
-				o_DataOut <= s_data(to_integer(signed(i_cmd)));
+				--o_DataOut <= s_data(to_integer(signed(i_cmd)));
             --  "10110010110100000101111000000000"
             --"0000000000000000011000000000000")
-			elsif ((i_enable = '1' and i_cmd > "0001") or (s_triggercount > "0000000000000110000000000000000"))then --force I2C read or read all sensors every 60 seconds @ 50.000.000hz !!controle op busy
+			elsif ((i_enable = '1' and i_cmd > "0001") or (s_triggercount > "0000001100000000000000000000000"))then --force I2C read or read all sensors every 60 seconds @ 50.000.000hz !!controle op busy
 				o_busy <= '1';
 				s_state <= c_Write_State;
 				s_triggercount <= (others=>'0');

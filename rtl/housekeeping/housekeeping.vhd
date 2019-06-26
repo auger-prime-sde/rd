@@ -45,7 +45,7 @@ architecture behaviour of housekeeping is
 
   -- internal wires for i2c:
   signal r_i2c_in       : std_logic_vector(23 downto 0);
-  signal r_i2c_out      : std_logic_vector(15 downto 0);
+  signal r_i2c_out      : std_logic_vector(63 downto 0);
   signal r_i2c_count    : std_logic_vector(23 downto 0);
   signal r_i2c_trigger : std_logic;
   signal r_i2c_ce      : std_logic;
@@ -106,7 +106,7 @@ architecture behaviour of housekeeping is
       i_addr : in std_logic_vector(7 downto 0);
       i_data : in std_logic_vector(7 downto 0);
       --outputs
-      o_DataOut : out std_logic_vector (15 downto 0); 
+      o_DataOut : out std_logic_vector (63 downto 0); 
       o_busy	  : out std_logic;
       -- i2c port
       sda	  : inout std_logic;
@@ -215,7 +215,7 @@ begin
   spi_decoder_i2c : spi_decoder
     generic map (
       g_INPUT_BITS  => 24,
-      g_OUTPUT_BITS => 16
+      g_OUTPUT_BITS => 64
       )
     port map (
       i_spi_clk    => r_internal_clk,
