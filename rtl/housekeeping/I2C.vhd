@@ -8,6 +8,9 @@ use IEEE.numeric_std.all;
 -- simplify code (e.g. check if all busy asserts are really needed)
 -- add a config register where you can set the update rate
 -- add temperature sensor code
+-- add comments to code
+-- add a serious testbench for both master2 and I2C
+
 
 -- DONE:
 -- make sda High-Z instead of high everywhere!
