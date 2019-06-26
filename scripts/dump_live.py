@@ -34,9 +34,10 @@ def in_ipython():
 # Trigger the digitizer using the DTR line on the UART.  The DTR line is active low so writing a 0 here gives a 1 on the physical line.
 ##
 def trigger():
-    dev.write("t".encode('utf-8'))
+    dev.write("T".encode('utf-8'))
+    dev.flush()
     #time.sleep(0.01)
-    dev.write("t".encode('utf-8'))
+    #dev.write("t".encode('utf-8'))
 
 def start_transfer():
     dev.write("x".encode('utf-8'))
@@ -45,6 +46,7 @@ def start_transfer():
 
 def dump_to_uart():
     dev.write("d".encode('utf-8'))
+    dev.flush()
 
 ##
 # Convert a single sample value (as 2 byte pair) into a signed integer representation
@@ -240,7 +242,6 @@ plt.ion()
 ##
 # Show results
 plt.show()
-trigger()
 
 while True:
     ypow0 = np.zeros(1024, dtype='float')
@@ -252,11 +253,9 @@ while True:
         #time.sleep(0.02)
         dev.reset_input_buffer()
         
-        #time.sleep(0.01)
-        start_transfer()
         trigger()
-        #time.sleep(0.01)
-
+        start_transfer()
+        
         startread = time.time()
         (ch0, ch1) = read_samples()
         print("read samples: {}".format(time.time()-startread))

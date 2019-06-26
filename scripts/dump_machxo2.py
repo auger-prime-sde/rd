@@ -14,7 +14,7 @@ averages = 1
 
 dev          = serial.Serial()
 dev.port     = '/dev/ttyUSB1'
-dev.baudrate = int(5.12e6)
+dev.baudrate = int(6.05e6)
 dev.timeout  = 1
 dev.open()
 dev.write("r".encode('utf-8')) # reset parity error counters in debug board
