@@ -12,8 +12,8 @@ entity i2c_master2 is
     i_data    : in std_logic_vector(7 downto 0);
     o_busy    : out std_logic;
     o_data    : out std_logic_vector(7 downto 0);
-    o_scl     : out std_logic;
-    io_sda    : inout std_logic
+    o_scl     : out std_logic := '1';
+    io_sda    : inout std_logic := '1'
 
     );
 end i2c_master2;
@@ -36,13 +36,21 @@ begin
             r_state <= s_Start;
             r_data <= i_data;
             r_rw <= i_rw;
-            o_scl <= '0';
+            --o_scl <= '0';
             io_sda <= '0';
             o_busy <= '1';
             r_count <= 0;
           end if;
         when s_Start =>
           r_count <= r_count + 1;
+          -- keep clock high for one cycle to make sure the falling sda is
+          -- 'during' clock high
+          if r_count = 0 then
+            o_scl <= '1';
+          else
+            o_scl <= '0';
+          end if;
+          
           if r_count = 3 then
             r_state <= s_Addr;
             r_count <= 0;

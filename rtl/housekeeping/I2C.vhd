@@ -144,7 +144,7 @@ process (i_Clk)
 				o_DataOut <= s_data(to_integer(signed(i_cmd)));
             --  "10110010110100000101111000000000"
             --"0000000000000000011000000000000")
-			elsif ((i_enable = '1' and i_cmd > "0001") or (s_triggercount > "0000000000000000000000010000000"))then --force I2C read or read all sensors every 60 seconds @ 50.000.000hz !!controle op busy
+			elsif ((i_enable = '1' and i_cmd > "0001") or (s_triggercount > "0000000000000110000000000000000"))then --force I2C read or read all sensors every 60 seconds @ 50.000.000hz !!controle op busy
 				o_busy <= '1';
 				s_state <= c_Write_State;
 				s_triggercount <= (others=>'0');
@@ -219,12 +219,14 @@ process (i_Clk)
 						s_index_adress <= 0;					
 						s_state <= c_Idle_state;
 						else
-						s_index_adress <= s_index_adress +1;
+                          s_index_adress <= s_index_adress +1;
+                          s_data_wr <= "00000001";
 						s_state <= c_write_state;
 						end if;
 					else
                       s_enable <= '1';
-					s_index_configuration <= s_index_configuration + 1;
+                      s_index_configuration <= s_index_configuration + 1;
+                      s_data_wr <= "00000001";
 					s_state <= c_write_state;
 					end if;
 			elsif (s_busy = '1') then
