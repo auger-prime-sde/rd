@@ -9,6 +9,9 @@ use IEEE.numeric_std.all;
 -- add a config register where you can set the update rate
 -- add temperature sensor code
 
+-- DONE:
+-- make sda High-Z instead of high everywhere!
+
 
 entity I2C is
 generic (

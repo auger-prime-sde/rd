@@ -57,7 +57,10 @@ begin
           end if;
         when s_Addr =>
           r_count <= r_count + 1;
-          io_sda <= i_address(6-r_count/4);
+          case i_address(6-r_count/4) is
+            when '0' => io_sda <= '0';
+            when others => io_sda <= 'Z';
+          end case;
           if r_count mod 4 = 1 then
             o_scl <= '1';
           else
@@ -69,7 +72,10 @@ begin
           end if;
         when s_Rw =>
           r_count <= r_count + 1;
-          io_sda <= r_rw;
+          case r_rw is
+            when '0' => io_sda <= '0';
+            when others => io_sda <= 'Z';
+          end case;
           if r_count mod 4 = 1 then
             o_scl <= '1';
           else
@@ -99,7 +105,10 @@ begin
           o_busy <= '1';
           r_count <= (r_count+1);
           if r_rw = '0' then
-            io_sda <= r_data(7-r_count/4);
+            case r_data(7-r_count/4) is
+              when '0' => io_sda <= '0';
+              when others => io_sda <= 'Z';
+            end case;
           end if;
           if r_count mod 4 = 2 then
             o_data(7-r_count/4) <= io_sda;
@@ -151,7 +160,7 @@ begin
           o_scl <= '1';
           r_count <= r_count + 1;
           if r_count mod 4 = 1 then
-            io_sda <= '1';
+            io_sda <= 'Z';
           end if;
           if r_count = 3 then
             r_State <= s_Idle;
