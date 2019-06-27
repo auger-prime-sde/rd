@@ -105,14 +105,16 @@ def read_samples():
 
     par0 = 2048 - par0
     par1 = 2048 - par1
-    print("parity check errors: {} {}".format(par0, par1))
+    
+    if (par0 > 0) or (par1 > 0): 
+	    print("parity check errors: {} {}".format(par0, par1))
     #pprint("raw data:")
     #for i in range(100):
     #    print("{0:b}".format(ch2_data[i]))
     #pprint(ch1_data[0:99])
     #pprint(ch2_data[0:99])
 
-    print("done")
+    #print("done")
     #dev.timeout = 1
     #junk = dev.read(10000)
     #print("%d bytes remained in buffer after read"%len(junk))
@@ -244,7 +246,7 @@ while True:
         
         startread = time.time()
         (ch0, ch1) = read_samples()
-        print("read samples: {}".format(time.time()-startread))
+        #print("read samples: {}".format(time.time()-startread))
 
         #pprint(ch1)
         #pprint([(s) for s in ch1])
@@ -255,7 +257,7 @@ while True:
         ypow1 += ypow1_new
         ends.append(time.time())
 
-    print("whole update routine {}".format(ends[0]-start))
+    #print("whole update routine {}".format(ends[0]-start))
 
     ypow0 /= averages
     ypow1 /= averages
