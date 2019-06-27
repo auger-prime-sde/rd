@@ -7,14 +7,17 @@ import matplotlib.pyplot as plt
 import scipy.signal as sig
 from pprint import pprint
 import sys
-
+import os
 
 ## Number of FFTs to average
 averages = 1
 
 dev          = serial.Serial()
-dev.port     = '/dev/ttyUSB1'
-dev.baudrate = int(6.05e6) #115200
+if os.name == 'nt' :
+    dev.port     = 'COM9'
+else:
+    dev.port  = '/dev/ttyUSB1'
+dev.baudrate = int(6.05e6)
 dev.timeout  = 1
 dev.open()
 dev.write("r".encode('utf-8'))
@@ -182,12 +185,7 @@ def make_fft_plot(xf):
 
     # add legend
     ax.legend()
-
-    # cache background
-    fig.canvas.draw()
-    background = fig.canvas.copy_from_bbox(ax.bbox)
     
-
 t_prev = 0
 def update_fft_plot(ypow0, ypow1):
     global line1, line2, marker1, marker2, fig, text, t_prev
@@ -206,21 +204,9 @@ def update_fft_plot(ypow0, ypow1):
     tx = 'Mean Frame Rate:\n {fps:.3f}FPS'.format(fps= ((1) / (t_this - t_prev)))  
     text.set_text(tx)
     t_prev = t_this
-
-
-    fig.canvas.restore_region(background)
-    ax.draw_artist(line1)
-    ax.draw_artist(line2)
-    ax.draw_artist(marker1)
-    ax.draw_artist(marker2)
-    #ax.draw_artist(text)
     
-    fig.canvas.blit()
-
-    plt.pause(0.000001)
-    
-    #fig.canvas.draw()
-    #fig.canvas.flush_events()
+    fig.canvas.draw()
+    fig.canvas.flush_events()
     
 
 ##
