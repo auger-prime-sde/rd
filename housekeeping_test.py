@@ -41,6 +41,18 @@ while True:
     elif l.startswith("a2"):
         bytes_out = [0x03, 0x02]
         count_in = 1
+    elif l.startswith("h1"):
+        bytes_out = [0x04, 0x80, 0x00, 0x00]
+        count_in  = 2
+    elif l.startswith("h2"):
+        bytes_out = [0x04, 0x90, 0x00, 0x00]
+        count_in  = 2
+    elif l.startswith("h3"):
+        bytes_out = [0x04, 0xA0, 0x00, 0x00]
+        count_in  = 2
+    elif l.startswith("h4"):
+        bytes_out = [0x04, 0xB0, 0x00, 0x00]
+        count_in  = 2
     else: # the option to enter bytes manually
         try:
             bytes_out = [int(w,0) for w in l.split()]

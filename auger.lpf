@@ -112,3 +112,7 @@ LOCATE COMP "i_hk_uub_mosi" SITE "L4" ;
 IOBUF PORT "i_hk_uub_ce" IO_TYPE=LVDS ;
 IOBUF PORT "i_hk_uub_clk" IO_TYPE=LVDS ;
 IOBUF PORT "i_hk_uub_mosi" IO_TYPE=LVDS ;
+LOCATE COMP "io_hk_scl" SITE "A4" ;
+IOBUF PORT "io_hk_scl" IO_TYPE=LVCMOS33 ;
+IOBUF PORT "io_hk_sda" IO_TYPE=LVCMOS33 PULLMODE=NONE ;
+LOCATE COMP "io_hk_sda" SITE "B5" ;
