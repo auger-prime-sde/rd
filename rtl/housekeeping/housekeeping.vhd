@@ -5,7 +5,7 @@ use ieee.numeric_std.all;
 entity housekeeping is
   generic ( g_DEV_SELECT_BITS : natural :=  8 );
   port (
-    i_hk_fast_clk        : in  std_logic; -- 50 MHz for internal operations
+    i_hk_fast_clk        : in  std_logic; -- 100 MHz for internal operations
     -- signals to/from UUB:
     i_hk_uub_clk  : in  std_logic;
     i_hk_uub_mosi : in  std_logic;
