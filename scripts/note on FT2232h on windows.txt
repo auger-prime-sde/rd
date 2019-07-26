@@ -1,0 +1,10 @@
+je moet de VCP (virtual com port) optie aanzetten in de Advanced tab onder de Properties van de USB Serial Converter B device aan zetten.
+Deze optie is alleen beschikbaar met de CDM driver package van de ftdi website:
+ (https://www.ftdichip.com/Drivers/D2XX.htm)
+
+Het kan zijn dat je eerst de native windows drivers moet verwijderen met de CDM Uninstaller utility
+https://www.ftdichip.com/Support/Utilities.htm#CDMUninstaller
+(dat heb ik gedaan maar in hindsight klinkt dit niet logisch)
+
+Nadat je VCP hebt aangevinkt moet je de device een keer un-pluggen en opnieuw in-pluggen.
+Daarna verschijnt de com poort onder de Ports sectie van Device Manager.
