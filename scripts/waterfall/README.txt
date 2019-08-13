@@ -3,6 +3,10 @@ fft's take a relatively large amount of time to compute. So I made those increme
 
 1) rsync -auv "pi@augerpi1:data/*.npy" data
 (Alternatively, if using ssh forwarding to tunnel into the pi: rsync -auve "ssh -p 2222" "pi@augerpi1:data/*.npy" data)
+Above stopped working with many files. Try instead:
+ssh pi@augerpi1 'find data -type f' >! npyfiles.txt
+rsync -auv --files-from npyfiles.txt pi@augerpi1: data
+
 
 2) run the fft script: python3 updateffts.py (running it again later should quickly skip the traces that were already processed)
 
