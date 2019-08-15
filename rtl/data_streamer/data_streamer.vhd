@@ -37,7 +37,7 @@ architecture behaviour of data_streamer is
   signal arm : std_logic;
   signal tx_enable : std_logic;
   signal r_trigger : std_logic;
-
+  signal clk_padding : std_logic;
 
 
   
@@ -75,13 +75,13 @@ architecture behaviour of data_streamer is
   component data_writer
     generic (g_WORDSIZE: natural);
     port (
-      i_data      : in std_logic_vector(2*g_WORDSIZE-1 downto 0);
-      i_dataready : in std_logic;
-      i_clk       : in std_logic;
-      o_data_1    : out std_logic;
-      o_data_2    : out std_logic;
-      o_valid     : out std_logic;
-      o_clk       : out std_logic
+      i_data        : in std_logic_vector(2*g_WORDSIZE-1 downto 0);
+      i_dataready   : in std_logic;
+      i_clk         : in std_logic;
+      i_clk_padding : in std_logic;
+      o_data_1      : out std_logic;
+      o_data_2      : out std_logic;
+      o_clk         : out std_logic
     );
   end component;
 
@@ -108,6 +108,7 @@ architecture behaviour of data_streamer is
       o_arm          : out std_logic := '0';
       o_read_enable  : out std_logic := '1';
       o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
+      o_clk_padding  : out std_logic := '0';
       o_tx_enable    : out std_logic := '0';
       i_tx_start     : in std_logic
     );
@@ -195,9 +196,9 @@ data_writer_1 : data_writer
     i_data         => data_output_bus,
     i_dataready    => tx_enable,
     i_clk          => i_tx_clk,
+    i_clk_padding  => clk_padding,
     o_data_1       => o_tx_data(0),
     o_data_2       => o_tx_data(1),
-    o_valid        => o_tx_datavalid,
     o_clk          => o_tx_clk);
 
 
@@ -229,6 +230,7 @@ readout_controller_1 : readout_controller
     o_arm          => arm,
     o_read_enable  => buffer_read_en,
     o_read_addr    => read_address,
+    o_clk_padding  => clk_padding,
     o_tx_enable    => tx_enable,
     i_tx_start     => i_start_transfer);
 

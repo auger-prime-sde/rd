@@ -16,6 +16,7 @@ entity readout_controller is
     -- interface to data buffer:
     o_read_enable  : out std_logic := '1';
     o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
+    o_clk_padding  : out std_logic := '0';
     -- interface to transmit
     o_tx_enable    : out std_logic := '0';
     -- interface to host
@@ -26,8 +27,10 @@ end readout_controller;
 
 architecture behave of readout_controller is
   constant c_TRANSMIT_BITS :natural := g_WORDSIZE + 1; -- one parity bit
+  constant c_EXTRA_CLK_BEFORE : natural := 4;
+  constant c_EXTRA_CLK_AFTER : natural := 11;
   -- state machine type:
-  type t_State is (s_Initial, s_Idle, s_Busy, s_ExtraClk, s_Arm);
+  type t_State is (s_Initial, s_Idle, s_PreClk, s_Busy, s_PostClk, s_Arm);
   -- variables:
   signal r_State : t_State := s_Initial;
   signal r_read_addr : std_logic_vector(g_ADDRESS_BITS-1 downto 0);
@@ -52,29 +55,43 @@ begin
           o_arm <= '0';
           r_read_addr <= i_start_addr;
           if r_trigger_done='1' and r_tx_start='1' then
-            r_State <= s_Busy;
+            r_State <= s_PreClk;
+            o_clk_padding <= '1';
             r_Count <= 0;
+            o_tx_enable <= '0';
+          end if;
+        when s_PreClk =>
+          r_count <= (r_count + 1) mod c_TRANSMIT_BITS;
+          if r_count = c_EXTRA_CLK_BEFORE-2 then
             o_tx_enable <= '1';
+          end if;
+          if r_count = c_EXTRA_CLK_BEFORE-1 then
+            r_state <= s_Busy;
+            o_clk_padding <= '0';
+            r_Count <= 0;
+            
           end if;
         when s_Busy =>
           r_Count <= (r_Count + 1) mod c_TRANSMIT_BITS;
-          if r_Count = c_TRANSMIT_BITS-2 then
+          if r_Count = c_TRANSMIT_BITS-3 then
             r_read_addr <= std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS);
 		  end if;
 		  if r_Count = c_TRANSMIT_BITS-1 then
             if r_read_addr = std_logic_vector(unsigned(i_start_addr)) then
-              r_State <= s_ExtraClk;
+              r_State <= s_PostClk;
+              o_clk_padding <= '1';
               o_tx_enable <= '1';
               r_Count <= 0;
             else
               o_tx_enable <= '1';
             end if;
           end if;
-        when s_ExtraClk =>
+        when s_PostClk =>
           r_count <= (r_count + 1) mod c_TRANSMIT_BITS;
-          if r_count = c_TRANSMIT_BITS-3 then
+          if r_count = c_EXTRA_CLK_AFTER-1 then
             o_tx_enable <= '0';
             o_arm <= '1';
+            o_clk_padding <= '0';
             r_state <= s_Arm;
           end if;
         when s_Arm =>

@@ -17,6 +17,7 @@ architecture behavior of readout_controller_tb is
   
   signal o_arm : std_logic := '0';
   signal o_read_addr : std_logic_vector(width-1 downto 0);
+  signal o_clk_padding : std_logic;
   signal o_read_enable : std_logic;
   signal o_tx_enable : std_logic;
 
@@ -29,6 +30,7 @@ architecture behavior of readout_controller_tb is
       o_arm          : out std_logic := '0';
       o_read_enable  : out std_logic := '1';
       o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
+      o_clk_padding  : out std_logic := '0';
       o_tx_enable    : out std_logic := '0';
       i_tx_start     : in std_logic
     );
@@ -45,6 +47,7 @@ begin
       o_arm => o_arm,
       o_read_enable => o_read_enable,
       o_read_addr => o_read_addr,
+      o_clk_padding  => o_clk_padding,
       o_tx_enable => o_tx_enable,
       i_tx_start => i_tx_start
     );
