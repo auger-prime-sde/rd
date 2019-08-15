@@ -37,3 +37,5 @@ rtl/adc_driver/*
 
 auger1.sty
 *.ghw
+scripts/waterfall/data
+scripts/waterfall/ffts

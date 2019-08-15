@@ -9,6 +9,7 @@ import time
 import matplotlib
 import matplotlib.pyplot as plt
 import concurrent.futures
+import scipy.ndimage.morphology
 
 # list all data files
 filenames = glob.glob('ffts/*.npy')
@@ -59,6 +60,9 @@ with concurrent.futures.ProcessPoolExecutor() as executor:
         print(i, t)
         C[i] = sums
 
+np.save('C.npy', C)
+
+E = scipy.ndimage.morphology.grey_erosion(C, (1, 11))
             
 fig = plt.figure(figsize=(16,9), dpi=120)
 ax  = plt.gca()
@@ -66,14 +70,14 @@ ax  = plt.gca()
 ax.set_ylabel("time")
 ax.set_xlabel("frequency (MHz)")
 #ax.pcolor(ydates, xf, np.transpose(C))
-ax.pcolor(xf[40:700], ydates, C[:,40:700])
+ax.pcolor(xf[40:700], ydates, E[:,40:700])
 #plt.gcf().autofmt_xdate()
 fmt = matplotlib.dates.DateFormatter('%Y-%m-%d %H:%M')
 ax.yaxis.set_major_formatter(fmt)
 
 fig.tight_layout()
 
-#plt.savefig("waterfall.svg")
+plt.savefig("waterfall.svg")
 plt.savefig("waterfall.png")
 
     
