@@ -4,20 +4,24 @@ import serial
 import time
 import numpy as np
 import matplotlib.pyplot as plt
-import scipy.signal as sig
-from pprint import pprint
-import sys
-import os
+#import scipy.signal as sig
+#from pprint import pprint
+#import sys
+import platform
 
 ## Number of FFTs to average
-averages = 1
+averages = 16
 
 dev          = serial.Serial()
-if os.name == 'nt' :
+
+if platform.system() == 'Windows' :
     dev.port     = 'COM9'
+elif platform.system() == 'Darwin' :
+    dev.port  = '/dev/tty.usbserial-14201'
 else:
-    dev.port  = '/dev/ttyUSB1'
-dev.baudrate = int(6.05e6)
+    dev.port = '/dev/ttyUSB1'
+    
+dev.baudrate = int(2.015e6)#115200#int(6.05e6)
 dev.timeout  = 1
 dev.open()
 dev.write("r".encode('utf-8'))
@@ -174,8 +178,8 @@ def make_fft_plot(xf):
     global line1, line2, marker1, marker2, fig, background, ax, text
     # Start plotting things
     fig, ax = plt.subplots()
-    line1, = ax.plot(xf, np.zeros(len(xf)), label='ch0')
     line2, = ax.plot(xf, np.zeros(len(xf)), label='ch1')
+    line1, = ax.plot(xf, np.zeros(len(xf)), label='ch0')
     ax.set_ylabel("power (dBm)")
     ax.set_xlabel("frequency (MHz)")
     ax.set_ylim(-110.0,10.0)
