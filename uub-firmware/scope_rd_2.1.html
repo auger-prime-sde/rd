@@ -1,0 +1,992 @@
+<!-- $Id$
+ *
+ * AUGER SCOPE
+ *
+ * Written by Roberto Assiro
+-->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>UUB Oscilloscope</title>
+ <!-- 	
+    <link href="assets/bootstrap-3.0.0/css/bootstrap.css" rel="stylesheet" type="text/css">
+-->
+  <link href="css/style.css?6" rel="stylesheet" type="text/css">
+
+  <script src="js/jquery.js"></script>
+  <script src="js/bootstrap.min.js"></script>
+  <script src="js/jquery.flot.min.js"></script>
+  <script language="javascript" type="text/javascript" src="js/jquery.flot.js"></script>
+  <script language="javascript" type="text/javascript" src="js/jquery.flot.navigate.js"></script>
+  <script type="text/javascript"src="js/Drinks.js"></script> 
+  
+  <script language="javascript" type="text/javascript" src="js/bootstrap-switch.min.js"></script>
+  
+<link href="css/bootstrap-switch.min.css" rel="stylesheet" type="text/css">
+  
+  <link href="css/bootstrap.css" rel="stylesheet">
+  
+ <!-- 
+  <link href="css/bootstrap-switch.css" rel="stylesheet">
+  -->
+	<script src="js/bootstrap-switch.js"></script>
+
+  
+ <script type="text/javascript">
+	
+	var plot;
+	var rd_scope = "ok";
+	var ch1 = true;
+	var ch2 = true;
+	var ch3 = true;
+	var ch4 = true;
+	var ch5 = true;
+	var ch6 = true;
+	var ch7 = true;
+	var ch8 = true;
+	var ch9 = true;
+	var ch10 = true;
+	var ch11 = true;
+	var ch12 = true;
+	var ch13 = false;
+	var ch14 = false;
+	
+	var data = [];	
+	var minX = 0;
+	var maxX = 2048;
+	var minY = -4095;
+	var maxY = 4095;
+	var invert = false;
+
+	var updateInterval = 200;  // read data frequency ms
+
+	function getADCData() {		
+		
+		$.getJSON("cgi-bin/getdata.cgi?action=rd_scope", function(response) {		//	$.getJSON("adc_data.json", function(response) {
+			console.log(response) 
+			data = [];
+			$.each(response, function(key, val) {
+				data.push(val);		
+			});	
+			rd_scope = "ok";
+			console.log("scope is ", rd_scope);
+		});
+
+
+
+		var res = [
+			{data: [], label:"Low ch1", lines:{show:true}},	
+			{data: [], label:"High ch2", lines:{show:true}},               
+			{data: [], label:"Low ch3", lines:{show:true}},	
+			{data: [], label:"High ch4", lines:{show:true}},               
+			{data: [], label:"Low ch5", lines:{show:true}},	
+			{data: [], label:"High ch6", lines:{show:true}},
+			{data: [], label:"Low ch7", lines:{show:true}},	
+			{data: [], label:"Low ch8", lines:{show:true}},
+			{data: [], label:"Low ch9", lines:{show:true}},	
+			{data: [], label:"High ch10", lines:{show:true}},
+			{data: [], label:"RD ch0", lines:{show:true}},	
+			{data: [], label:"RD ch1", lines:{show:true}},
+			{data: [], label:"check0", points:{show:true}},
+			{data: [], label:"check1", points:{show:true}},
+
+		];
+		if (!invert ){		
+			for (var i = 0; i < data.length; ++i) {
+				if (ch1)res[0]['data'].push([i, parseInt(data[i]['adc0'])]);
+				if (ch2)res[1]['data'].push([i, parseInt(data[i]['adc1'])]);
+				if (ch3)res[2]['data'].push([i, parseInt(data[i]['adc2'])]);
+				if (ch4)res[3]['data'].push([i, parseInt(data[i]['adc3'])]);
+				if (ch5)res[4]['data'].push([i, parseInt(data[i]['adc4'])]);
+				if (ch6)res[5]['data'].push([i, parseInt(data[i]['adc5'])]);
+				if (ch7)res[6]['data'].push([i, parseInt(data[i]['adc6'])]);
+				if (ch8)res[7]['data'].push([i, parseInt(data[i]['adc7'])]);
+				if (ch9)res[8]['data'].push([i, parseInt(data[i]['adc8'])]);
+				if (ch10)res[9]['data'].push([i, parseInt(data[i]['adc9'])]);
+				if (ch11)res[10]['data'].push([i, parseInt(data[i]['adc_rd0'])]);
+				if (ch12)res[11]['data'].push([i, parseInt(data[i]['adc_rd1'])]);
+				if (ch13)res[12]['data'].push([i, parseInt(data[i]['check0'])]);
+				if (ch14)res[13]['data'].push([i, parseInt(data[i]['check1'])]);
+
+			}	
+			
+		} else {
+			
+			for (var i = 0; i < data.length; ++i) {
+				if (ch1)res[0]['data'].push([i, 4095-parseInt(data[i]['adc0'])]);
+				if (ch2)res[1]['data'].push([i, 4095-parseInt(data[i]['adc1'])]);
+				if (ch3)res[2]['data'].push([i, 4095-parseInt(data[i]['adc2'])]);
+				if (ch4)res[3]['data'].push([i, 4095-parseInt(data[i]['adc3'])]);
+				if (ch5)res[4]['data'].push([i, 4095-parseInt(data[i]['adc4'])]);
+				if (ch6)res[5]['data'].push([i, 4095-parseInt(data[i]['adc5'])]);
+				if (ch7)res[6]['data'].push([i, 4095-parseInt(data[i]['adc6'])]);
+				if (ch8)res[7]['data'].push([i, 4095-parseInt(data[i]['adc7'])]);
+				if (ch9)res[8]['data'].push([i, 4095-parseInt(data[i]['adc8'])]);
+				if (ch10)res[9]['data'].push([i, 4095-parseInt(data[i]['adc9'])]);
+				if (ch11)res[10]['data'].push([i, parseInt(data[i]['adc_rd0'])]);
+				if (ch12)res[11]['data'].push([i, parseInt(data[i]['adc_rd1'])]);
+				if (ch13)res[12]['data'].push([i, parseInt(data[i]['check0'])]);
+				if (ch14)res[13]['data'].push([i, parseInt(data[i]['check1'])]);
+
+			}	
+		}			
+		
+		console.log("ciao");			
+		return res;			
+	}
+
+	function plotSetup() {
+	
+		plot = $.plot("#plot_holder", getADCData(), {
+			series: {
+				shadowSize: 0	// Drawing is faster without shadows
+			},
+
+  colors: [
+                              '#e6194b',
+                               '#f58231',
+                               '#ffe119',
+                               '#bfef45',
+                               '#3cb44b',
+                               '#42d4f4',
+                               '#4363d8',
+                               '#911eb4',
+                               '#f032e6',
+                               '#800000',
+                               '#9A6324',
+                               '#808000',
+                               '#469990',
+                               '#000075'
+                       ],
+			yaxis: {
+				title:'voltage',
+				zoomRange: [-4095, 4095],
+				panRange: [-4095, 4095],
+				show: true
+			},
+			xaxis: {
+				zoomRange: [0, 2048], 
+				panRange: [0, 2048],
+				show: true
+			},
+			zoom: {
+				interactive: true
+			},
+			pan: {
+				interactive: true
+			},
+			
+		});
+	}
+	
+	
+	var chAll = true;
+	function showHideChannel(channel) {
+
+ch13=false;
+ch14=false;
+
+
+if(channel.id=="parity"){
+            	ch13=true;
+            	ch14=true;
+            	ch1 = false;
+				ch2 = false;
+				ch3 = false;
+				ch4 = false;
+				ch5 = false;
+				ch6 = false;
+				ch7 = false;
+				ch8 = false;
+				ch9 = false;
+				ch10 = false;
+				ch11 = false;
+				ch12 = false;
+	            
+	             minY = -0.5;
+	             maxY = 1.5;
+	       			plotSetAxis();
+
+
+            }
+
+		if(channel.id!="invert" && channel.id!="parity"){
+			eval(channel.id + "=!" + channel.id);				
+			eval(channel.id) ? $(channel).addClass("btn-primary") : $(channel).removeClass("btn-primary");
+
+            
+
+		
+			if (channel.id == "chAll") {
+				ch1 = chAll;
+				ch2 = chAll;
+				ch3 = chAll;
+				ch4 = chAll;
+				ch5 = chAll;
+				ch6 = chAll;
+				ch7 = chAll;
+				ch8 = chAll;
+				ch9 = chAll;
+				ch10 = chAll;
+				ch11 = chAll;
+				ch12 = chAll;
+	           
+
+				chAll ? $("#ch1").addClass("btn-primary") : $("#ch1").removeClass("btn-primary");
+				chAll ? $("#ch2").addClass("btn-primary") : $("#ch2").removeClass("btn-primary");
+				chAll ? $("#ch3").addClass("btn-primary") : $("#ch3").removeClass("btn-primary");
+				chAll ? $("#ch4").addClass("btn-primary") : $("#ch4").removeClass("btn-primary");
+				chAll ? $("#ch5").addClass("btn-primary") : $("#ch5").removeClass("btn-primary");
+				chAll ? $("#ch6").addClass("btn-primary") : $("#ch6").removeClass("btn-primary");
+				chAll ? $("#ch7").addClass("btn-primary") : $("#ch7").removeClass("btn-primary");
+				chAll ? $("#ch8").addClass("btn-primary") : $("#ch8").removeClass("btn-primary");
+				chAll ? $("#ch9").addClass("btn-primary") : $("#ch9").removeClass("btn-primary");
+				chAll ? $("#ch10").addClass("btn-primary") : $("#ch10").removeClass("btn-primary");
+				chAll ? $("#ch11").addClass("btn-primary") : $("#ch11").removeClass("btn-primary");
+				chAll ? $("#ch12").addClass("btn-primary") : $("#ch12").removeClass("btn-primary");
+	           
+         
+
+			}
+		}else if (channel.id!="parity"){//modifica fatta da andrea il 14/09/2017
+		eval(channel.id + "=!" + channel.id);				
+		eval(channel.id) ? $(channel).addClass("btn-primary") : $(channel).removeClass("btn-primary");		
+		}
+	}
+	
+	function plotRefreshMinMax() {
+		minX = plot.getOptions().xaxes[0].min;
+		maxX = plot.getOptions().xaxes[0].max;
+		minY = plot.getOptions().yaxes[0].min;
+		maxY = plot.getOptions().yaxes[0].max;
+	}
+	
+	function plotSetAxis() {
+		plot.getOptions().xaxes[0].min = minX;
+		plot.getOptions().xaxes[0].max = maxX;
+		plot.getOptions().yaxes[0].min = minY;
+		plot.getOptions().yaxes[0].max = maxY;
+		plot.setupGrid();
+		plot.draw();
+	}		
+
+	function plotUpdate() {
+		if (rd_scope === "ok"){	// controllo che scope abbia dati
+			plot.setData(getADCData());	// se si lo riavvio
+		}else{
+			var geturl = "cgi-bin/putdata.cgi"	//chiamo la cgi per scivere file no_run 
+			$.get(geturl, function (data) {
+			});	
+		}
+		
+		plot.draw();
+		setTimeout(plotUpdate, updateInterval);
+		scope = "no data"; //azzero flag dati ok
+	}
+				
+	$(function() {
+		var geturl = "cgi-bin/putdata.cgi"	//kill scope by system at start
+		var params = {
+				action: "killall",
+				arg1: "rd_scope"
+		};
+		$.get(geturl, params, function (data) {
+			console.log	(params);
+		});	
+	
+		var geturl = "cgi-bin/putdata.cgi"	//trigger setting default
+		var params = {
+				action: "trigger",
+				arg1: "500",
+				arg2: "500",
+				arg3: "500",
+				arg4: "500",
+				arg5: "31",
+				arg6: "65536" //0x10000
+			};
+		$.get(geturl, params, function (data) {
+
+		});	
+			
+		var geturl = "cgi-bin/putdata.cgi"	//led dac at zero when start
+		var params = {
+				//action: "led_dac",	// UUB V1 solution
+				action: "ad5694",
+				arg1: "0",
+				arg2: "0",
+				arg3: "0",
+				arg4: "0"
+			};
+		$.get(geturl, params, function (data) {
+			//console.log	(data);
+		});
+		
+		// Set up the control widget
+		$("#updateInterval").val(updateInterval).change(function () {
+			var v = $(this).val();
+			if (v && !isNaN(+v)) {
+				updateInterval = +v;
+				if (updateInterval < 100) {
+					updateInterval = 100;
+				} else if (updateInterval > 5000) {
+					updateInterval = 5000;
+				}
+				$(this).val("" + updateInterval);
+			}
+		});
+		
+		$("#led1_counts").on('change', function(e) {
+			e.preventDefault();			
+//			console.log("se led1!");
+			var geturl = "cgi-bin/putdata.cgi"
+			var params = {
+				//action: "led_dac",	
+				action: "ad5694",
+				arg1: $("#led1_counts").val(),
+				arg2: $("#led1_counts").val(),				
+				arg3: $("#led2_counts").val(),
+				arg4: $("#led2_counts").val()									
+			}
+			$.get(geturl, params, function (data) {
+			});
+		});	
+			
+		
+		$("#led2_counts").on('change', function(e) {
+			e.preventDefault();			
+//			console.log("se led2!");
+			var geturl = "cgi-bin/putdata.cgi"
+			var params = {
+				//action: "led_dac",
+				action: "ad5694",
+				arg1: $("#led1_counts").val(),
+				arg2: $("#led1_counts").val(),				
+				arg3: $("#led2_counts").val(),
+				arg4: $("#led2_counts").val()									
+			}
+			$.get(geturl, params, function (data) {
+			});
+				
+		});	
+		
+		
+		$("#reset").on('click', function(e) {
+	//	console.log("reset!");
+			minX = 0;
+			maxX = 2049;
+			minY = -4095;
+			maxY = 4095
+			plotSetAxis();
+		});
+
+				$("#normal").on('click', function(e) {
+	//	console.log("reset!");
+
+			minX = 0;
+			maxX = 2049;
+			minY = -4095;
+			maxY = 4095
+			plotSetAxis();
+			ch13=false;
+			ch14=false;
+			ch1 = true;
+				ch2 = true;
+				ch3 = true;
+				ch4 = true;
+				ch5 = true;
+				ch6 = true;
+				ch7 = true;
+				ch8 = true;
+				ch9 = true;
+				ch10 = true;
+				ch11 = true;
+				ch12 = true;
+				showHideChannel(chAll);
+		});
+		/**/	
+		$("#offset").on('click', function(e) {
+			e.preventDefault();				
+			var geturl = "cgi-bin/putdata.cgi"
+			var params = {
+				action: "offset",				
+				arg1: $("-a").val(),
+				arg2: $("205").val()				
+			}
+			
+			$.get(geturl, params, function (data) {
+			//	console.log(data);
+			});	
+		});	
+		
+/*		
+		
+		$("#btn_exit").on('click', function(e) {
+			e.preventDefault();				
+			var geturl = "cgi-bin/putdata.cgi"
+			var params = {
+				action: "killall",				
+				arg1: $("scope").val(),				
+			}		
+			$.get(geturl, params, function (data) {
+				console.log(data);
+			});	
+		});	
+*/		
+		
+		/*$("#invert").on('click', function(e) { // commentato da Andrea il 14/09/2017
+			invert = !invert;
+			
+		});*/		
+		// trigger setup 
+		$("#trig_source").on('change', function(e) {
+			e.preventDefault();				
+			var geturl = "cgi-bin/putdata.cgi"
+			var params = {
+				action: "trigger",				
+				arg1: $("#trig_level").val(),
+				arg2: $("#trig_level").val(),				
+				arg3: $("#trig_level").val(),
+				arg4: $("#trig_level").val(),
+				arg5: $("#trig_source").val(),
+				arg6: $("#trig_mode").val()												
+			}
+			$.get(geturl, params, function (data) {
+			//	console.log(data);
+			});
+		});	
+		
+		$("#trig_mode").on('change', function(e) {
+			e.preventDefault();				
+			var geturl = "cgi-bin/putdata.cgi"
+			var params = {
+				action: "trigger",				
+				arg1: $("#trig_level").val(),
+				arg2: $("#trig_level").val(),				
+				arg3: $("#trig_level").val(),
+				arg4: $("#trig_level").val(),
+				arg5: $("#trig_source").val(),
+				arg6: $("#trig_mode").val()										
+			}
+			$.get(geturl, params, function (data) {
+		//		console.log(data);
+			});
+			// modifica inserita in giugno 2018 per sbloccare scope in attesa dati
+			var geturl = "cgi-bin/putdata.cgi"	//kill scope a cambio impostazione trigger
+			var params = {
+					action: "killall",
+					arg1: "rd_scope"
+			};
+			$.get(geturl, params, function (data) {
+			//	console.log	(params);
+			});
+			rd_scope = "ok";			
+		});	
+		
+		$("#trig_level").on('change', function(e) {
+			e.preventDefault();				
+			var geturl = "cgi-bin/putdata.cgi"
+			var params = {
+				action: "trigger",				
+				arg1: $("#trig_level").val(),
+				arg2: $("#trig_level").val(),				
+				arg3: $("#trig_level").val(),
+				arg4: $("#trig_level").val(),
+				arg5: $("#trig_source").val(),
+				arg6: $("#trig_mode").val()	
+			} 
+			$.get(geturl, params, function (data) {
+				//console.log(data);
+				});
+			
+		});	
+				
+			$("#eventbut").on('click', function(e) {
+			e.preventDefault();				
+			var geturl = "cgi-bin/getdata.cgi"
+			var takebtn=document.getElementById("eventbut");
+			var params ={	
+
+				action: "RD_scope_usb",				
+				arg1: $("#nameoffile").val(),
+				arg2: $("#numevent").val(),				
+									
+			}
+			takebtn.className="btn btn-primary";
+			takebtn.innerHTML="Wait<br>a moment";
+			$.get(geturl, params, function (data) {
+				plotUpdate();
+				takebtn.className="btn btn-success";
+				 takebtn.innerHTML="Take<br>Events";
+			});
+			
+		});	
+
+		var i=0;
+              $("#dark_button").on('click', function(e) {
+		//var a = document.getElementById("textaxis");
+ 		var c = document.getElementById("canvasis");
+		var b = document.getElementById("dark_button");
+
+	if (!i){
+	c.style= "direction: ltr; position: absolute; left: 0px; top: 0px; width: 670px; height: 460px; background-color: black";
+	b.className="btn btn-primary btn-lg";
+	i=1;
+	}
+	
+
+	else {
+	c.style= "direction: ltr; position: absolute; left: 0px; top: 0px; width: 670px; height: 460px; background-color: #f5f5f5";
+	b.className="btn btn-default btn-lg";
+	i=0;
+	}
+
+});
+
+
+		var zoomRation = 0.20;
+		
+		// X AXIS
+		$("#range_x_minus").on('click', function(e) {
+			e.preventDefault();
+			plotRefreshMinMax();
+			minX = minX - zoomRation * (maxX-minX);
+			plotSetAxis();
+		});
+		
+		$("#range_x_plus").on('click', function(e) {
+			e.preventDefault();
+			plotRefreshMinMax();
+			minX = minX + zoomRation * (maxX-minX);
+			plotSetAxis();
+		});
+		
+		$("#offset_x_minus").on('click', function(e) {
+			e.preventDefault();
+			plotRefreshMinMax();
+			maxX = maxX - zoomRation * (maxX-minX);
+			plotSetAxis();
+		});
+		
+		$("#offset_x_plus").on('click', function(e) {
+			e.preventDefault();
+			plotRefreshMinMax();
+			maxX = maxX + zoomRation * (maxX-minX);
+			plotSetAxis();
+		});
+		
+		// Y AXIS
+		$("#range_y_minus").on('click', function(e) {
+			e.preventDefault();
+			plotRefreshMinMax();
+			minY = minY - zoomRation * (maxY-minY);
+			plotSetAxis();
+		});
+		
+		$("#range_y_plus").on('click', function(e) {
+			e.preventDefault();
+			plotRefreshMinMax();
+			minY = minY + zoomRation * (maxY-minY);
+			plotSetAxis();
+		});
+	
+		$("#offset_y_minus").on('click', function(e) {
+			e.preventDefault();
+			plotRefreshMinMax();
+			maxY = maxY - zoomRation * (maxY-minY);
+			plotSetAxis();
+		});
+		
+		$("#offset_y_plus").on('click', function(e) {
+			e.preventDefault();
+			plotRefreshMinMax();
+			maxY = maxY + zoomRation * (maxY-minY);
+			plotSetAxis();
+		});
+		
+		plotSetup();
+		plotSetAxis();
+		plotUpdate();
+
+	});
+	
+  </script>
+
+</head>
+<body id="body" class="dark-mode"id="body" class="dark-mode">
+   <div class="header">
+    <div class="container">
+      <a id="btn_exit" class="pull-left" href="/index.html" > <img  src="images/back.png" width="40" height="40" ></a>   
+      <h2 class="page-title" align="center">UUB RADIO Oscilloscope</h2>
+    </div>
+	
+  </div>
+  
+  <div class="container">
+    <div class="row">
+      <div id="btn_toolbar" class="col-xs-12">
+		
+        <button id="ch1" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 1<br>Low</button>
+        <button id="ch2" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 2<br>High</button>
+        <button id="ch3" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 3<br>Low</button>
+        <button id="ch4" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 4<br>High</button>
+		<button id="ch5" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 5<br>Low</button>
+        <button id="ch6" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 6<br>High</button>
+        <button id="ch7" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 7<br>Low</button>
+        <button id="ch8" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 8<br>Low</button>  
+		<button id="ch9" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 9<br>Low</button>
+        <button id="ch10" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">CH 10<br>High</button> 
+        <button id="ch11" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">RD <br>CH 0</button>
+        <button id="ch12" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">RD <br>CH 1</button> 
+      
+        <button id="chAll" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">Toggle<br>All ch</button>
+		<button id="reset" class="btn btn-default btn-lg">Reset<br>Zoom</button>
+
+		<button id="invert" class="btn btn-lg" onclick="showHideChannel(this)">Invert<br>Channels</button>	
+
+		<button id="dark_button" class="btn btn-default btn-lg">Dark<br>Side</button>
+	<br>
+
+	 <button id="parity" class="btn btn-primary btn-lg" onclick="showHideChannel(this)">Check <br>Parity</button>
+	 <button id="normal" class="btn btn-info btn-lg">Normal<br>scope</button>
+	<br>
+		<br>
+
+      </div>
+    </div>
+	
+	
+    <div class="row">
+      <div class="col-xs-12 col-sm-12 col-md-8">
+        <div class="graph-holder well well-small">
+          <div id="ytitle">Voltage</div>
+      
+		  
+
+     <div id="plot_holder" style="padding: 0px; position: relative;">
+	<canvas class="flot-base" id="canvasis" width="670" height="460" style="direction: ltr; position: absolute; left: 0px; top: 0px; width: 670px; height: 460px; ">
+		</canvas>
+
+
+
+
+
+
+		</div>
+		
+          <div id="xtitle">counts x 8ns</div>	
+
+
+		 <font size="1"> UUB RADIO scope ver. 2.1
+		
+		 <br>
+		 Written by Fabio Convenga - I.N.F.N. Lecce
+		 
+		 </font>
+        </div>
+
+      </div>
+
+
+	 
+      <div class="panel-group col-xs-12 col-sm-12 col-md-4" id="accordion">  
+           <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title">
+              <a data-toggle="collapse" href="#trigger">
+                Trigger
+              </a>
+            </h4>
+          </div>
+          <div id="trigger" class="panel-collapse collapse in">
+            <div class="panel-body">
+              <form class="form-horizontal" role="form" onsubmit="return false;">
+                <div class="form-group">
+                  <label for="trig_mode" class="col-xs-4 control-label">Mode:</label>
+                  <div class="col-xs-8">
+                    <select id="trig_mode" class="form-control">
+					  <option value="65536">AUTO Internal + LED</option>
+                      <option value="131072">FPGA Trigger</option>          
+                      <option value="16">EXT UUB SMA connector</option>
+					  <option value="131088">OR > FPGA + EXT SMA</option> <!---->
+                    </select>
+                  </div>
+                </div>
+				
+			<div class="form-group">
+                  <label for="trig_source" class="col-xs-4 control-label">Source:</label>
+                  <div class="col-xs-8">
+                    <select id="trig_source" class="form-control">
+					  <option value="31">All channels (OR)</option>
+                      <option value="17">PMT0 channel</option>           
+                      <option value="18">PMT1 channel</option>
+					  <option value="20">PMT2 channel</option>          
+                      <option value="24">SSD channel</option>
+                    </select>
+                  </div>
+            </div>	
+				
+	<!-- 			
+                <div class="form-group">
+                  <label for="trig_mode" class="col-xs-4 control-label">Mode:</label>
+                  <div class="col-xs-8">
+                    <select id="trig_mode" class="form-control">
+                      <option value="0">Auto</option>
+                      <option value="1">Normal</option>
+                      <option value="2">Single</option>
+                    </select>
+                  </div>
+                </div>
+				
+                <div class="form-group">
+                  <label for="trig_edge" class="col-xs-4 control-label">Edge:</label>
+                  <div class="col-xs-8">
+                    <select id="trig_edge" class="form-control">
+                      <option value="0">Rising</option>
+                      <option value="1">Falling</option>
+                    </select>
+                  </div>
+                </div>
+				-->
+                <div class="form-group">
+                  <label for="trig_level" class="col-xs-4 control-label">Level:</label>
+                  <div class="col-xs-5">
+                    <input type="text" id="trig_level" value="1000" class="form-control" autocomplete="off">
+                    <span id="apply_trig_level" class="input-group-btn" style="display: none;">
+                      <button class="btn btn-primary btn-lg" type="button"><span class="glyphicon glyphicon-ok-circle"></span></button>
+                    </span>
+                  </div>
+                  <div id="trig_lev_units" class="col-xs-3" style="padding: 7px 0 0;">Counts</div>
+                </div>
+		<!--	
+					Source :
+					<input type="checkbox" name="PMT1" value="PMT0" checked="checked"/>PMT0
+					<input type="checkbox" name="PMT2" value="PMT1" checked="checked"/>PMT1
+					<input type="checkbox" name="PMT3" value="PMT2" checked="checked"/>PMT2
+					<input type="checkbox" name="SSD" value="SSD" checked="checked"/>SSD
+			-->	
+              </form>
+			  
+         <!--     <div class="row">
+                <div class="col-xs-4"> </div>
+				 
+                <div class="col-xs-5">
+                  <button id="btn_single" class="btn btn-primary" onclick="singleUpdate()" disabled>
+                    <span class="glyphicon glyphicon-step-forward"></span> Single
+                  </button>
+                </div>
+				
+              </div>-->
+            </div>
+          </div>
+        </div>
+		
+		
+       <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title">
+              <a data-toggle="collapse" href="#range">
+                Axys range
+              </a>
+            </h4>
+          </div>
+          <div id="range" class="panel-collapse collapse">
+            <div class="panel-body">
+              <form class="form-horizontal" role="form" onsubmit="return false;">
+                <div class="form-group">
+                  <label class="col-xs-4 col-sm-3 control-label" style="padding-top: 35px;">Min:</label>
+                  <div class="col-xs-8 col-sm-9">
+                    <div class="row">
+                      <div class="col-xs-6 text-center">
+                        <div class="group-label" style="padding-bottom: 10px;">X axis</div>
+                        <div class="btn-group" style="margin-bottom: -3px;">
+                          <button id="range_x_minus" type="button" class="btn btn-primary btn-lg range-btn-left">
+                            <span class="glyphicon glyphicon-minus"></span>
+                          </button>
+                          <button id="range_x_plus" type="button" class="btn btn-primary btn-lg range-btn-right">
+                            <span class="glyphicon glyphicon-plus"></span>
+                          </button>
+                        </div>                    
+                      </div>
+                      <div class="col-xs-6 text-center">
+                        <div class="group-label" style="padding-bottom: 10px;">Y axis</div>
+						
+                        <div class="btn-group" style="margin-bottom: -3px;">
+                          <button id="range_y_minus" type="button" class="btn btn-primary btn-lg range-btn-left">
+                            <span class="glyphicon glyphicon-minus"></span>
+                          </button>
+                          <button id="range_y_plus" type="button" class="btn btn-primary btn-lg range-btn-right">
+                            <span class="glyphicon glyphicon-plus"></span>
+                          </button>
+                        </div>                     
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div class="form-group">
+                  <label class="col-xs-4 col-sm-3 control-label">Max:</label>
+                  <div class="col-xs-8 col-sm-9">
+                   <div class="row">
+                      <div class="col-xs-6 text-center">
+                        <div class="btn-group" style="margin-bottom: -3px;">
+                          <button id="offset_x_minus" type="button" class="btn btn-primary btn-lg range-btn-left">
+                            <span class="glyphicon glyphicon-minus"></span>
+                          </button>
+                          <button id="offset_x_plus" type="button" class="btn btn-primary btn-lg range-btn-right">
+                            <span class="glyphicon glyphicon-plus"></span>
+                          </button>
+                        </div>
+                      </div>
+                      <div class="col-xs-6 text-center">
+                        <div class="btn-group" style="margin-bottom: -3px;">
+                          <button id="offset_y_minus" type="button" class="btn btn-primary btn-lg range-btn-left">
+                            <span class="glyphicon glyphicon-minus"></span>
+                          </button>
+                          <button id="offset_y_plus" type="button" class="btn btn-primary btn-lg range-btn-right">
+                            <span class="glyphicon glyphicon-plus"></span>
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+				<button id="offset" class="btn btn-default btn-lg">Adjust digital offset (test)</button>
+              </form>
+            </div>			
+          </div>
+        </div>
+
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title">
+              <a data-toggle="collapse" href="#peakpanel">
+              	EVENT PANEL
+              </a>
+            </h4>
+          </div>
+		  
+          <div id="peakpanel" class="panel-collapse collapse">
+            <div class="panel-body">
+
+
+			<table>			
+			<tr>			
+			<td id="numeve">Number of event</td>
+			<td><input type="text" id="numevent" value="NaN" class="form-control" autocomplete="off"</td>
+			</tr><tr>			
+			<td id="namefi">Name of file</td>
+			<td><input type="text" id="nameoffile" value="put name" class="form-control" autocomplete="off"></td>
+			</tr><tr>
+			<td id="eventbu">Acquire</td>
+			<td><button id="eventbut" class="btn btn-success">Take<br>Events</button></td>
+			</tr>	
+
+
+
+
+			</table>
+
+
+            	</div>
+            	</div>
+            	</div>
+
+		
+		              
+        <div class="panel panel-default">
+          <div class="panel-heading">
+            <h4 class="panel-title">
+              <a data-toggle="collapse" href="#generator">
+                Twins LED Pulser
+              </a>
+            </h4>
+          </div>
+		  
+          <div id="generator" class="panel-collapse collapse">
+            <div class="panel-body">
+			<!--
+              <form class="form-horizontal" role="form" onsubmit="return false;">
+                <div class="checkbox" style="padding-bottom: 12px;">
+                  <label class="group-label">
+                    <input type="checkbox" id="gen_enable_ch1"> LED OUT
+                  </label>
+                </div>
+              </form>
+            
+			  -->
+				  
+			   <form class="form-horizontal" role="form" onsubmit="return false;">
+                <div class="form-group">
+                  <label for="led1_counts" class="col-xs-4 control-label">Amplitude 1:</label>
+                  <div class="col-xs-4 col-sm-4">
+                    <input type="text" autocomplete="off" class="form-control" value="0" id="led1_counts">
+                    <span style="display: none;" class="input-group-btn" id="apply_gen_ch1_ampl">
+                      <button type="button" class="btn btn-primary btn-lg"><span class="glyphicon glyphicon-ok-circle"></span></button>
+                    </span>
+                  </div>
+				  
+				  <div style="padding: 7px 0 0;" class="col-xs-2" id="gen_ch1_ampl_units">Dac Counts<br>(0-4095)</div>
+				  
+				  
+				  <div class="form-group">
+				  <label for="led2_counts" class="col-xs-4 control-label">Amplitude 2:</label>
+                  <div class="col-xs-4 col-sm-4">
+                    <input type="text" autocomplete="off" class="form-control" value="0" id="led2_counts">
+                    <span style="display: none;" class="input-group-btn" id="apply_gen_ch1_ampl">
+                      <button type="button" class="btn btn-primary btn-lg"><span class="glyphicon glyphicon-ok-circle"></span></button>
+                    </span>
+                  </div>
+				</div>  				
+
+
+
+
+
+              </form>
+			  
+			  
+			 
+			  
+			  
+			  
+				  
+<!-- 			  
+              <form class="form-horizontal" role="form" onsubmit="return false;">
+                <div class="form-group">
+                  <label for="led_pulse" class="col-xs-4 control-label">Pulse width:</label>
+                  <div class="col-xs-4 col-sm-5">
+                    <input type="text" autocomplete="off" class="form-control" value="10" id="led_pulse">
+                    <span style="display: none;" class="input-group-btn" id="apply_gen_ch1_freq">
+                      <button type="button" class="btn btn-primary btn-lg"><span class="glyphicon glyphicon-ok-circle"></span></button>
+                    </span>
+                  </div>
+                  <div style="padding: 7px 0 0;" class="col-xs-2" id="gen_ch1_freq_units">x 100ns</div>
+                </div>
+              </form>
+           
+              <form class="form-horizontal" role="form" onsubmit="return false;">
+                <div class="form-group">
+                  <label for="gen_ch1_trigmode" class="col-xs-4 control-label" style="white-space: nowrap;">Trigger mode:</label>
+                  <div class="col-xs-4 col-sm-7">
+                    <select class="form-control" id="gen_ch1_trigmode">
+                      <option value="0">Continuous</option>
+                      <option value="1">PPS</option>
+                    
+                    </select>
+                  </div>
+                </div>				
+              </form>
+-->              	
+			</div					
+        </div>		
+    </div>		  		
+    </div>
+    </div>
+    <div class="footer clearfix">
+      <p class="pull-right" style="margin: 4px 0 0">Auger Prime - 2018 </p>
+    </div>
+	
+  </div>  
+</body>
+</html>
