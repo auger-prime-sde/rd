@@ -11,7 +11,7 @@ architecture behavior of I2C_tb is
   constant  g_CMD_BITS        : natural := 4;
   constant  g_ADDR_BITS       : natural := 8;
   constant  g_DATA_IN_BITS    : natural := 8;
-  constant  g_DATA_OUT_BITS   : natural := 16;
+  constant  g_DATA_OUT_BITS   : natural := 64;
  
   signal clk, stop : std_logic := '0';
   signal enable : std_logic := '0';
@@ -23,8 +23,16 @@ architecture behavior of I2C_tb is
   signal sda : std_logic;
   signal scl : std_logic;
   
-	component I2C is
-  port(	--inputs
+  component I2C is
+    generic (
+      g_CMD_BITS : natural := 4;
+      g_ADDR_BITS : natural := 8;
+      g_DATA_IN_BITS : natural := 8;
+      g_DATA_OUT_BITS : natural := 64;
+      g_number_of_channels : natural := 4;
+      g_number_of_I2C_Chips : natural := 1
+      );
+    port(	--inputs
 		i_clk : in std_logic;
 		i_enable : in std_logic;
 		i_cmd : in std_logic_vector(g_CMD_BITS-1 downto 0);
@@ -42,8 +50,14 @@ end component;
 
 begin
 	--DUT instantiation
-	dut : I2C
-		Port map(
+  dut : I2C
+    generic map (
+      g_CMD_BITS => g_CMD_BITS,
+      g_ADDR_BITS => g_ADDR_BITS,
+      g_DATA_IN_BITS => g_DATA_IN_BITS,
+      g_DATA_OUT_BITS => g_DATA_OUT_BITS
+      )
+    port map(
 			i_clk		=> clk,
 			i_enable	=> enable,
 			i_cmd		=> cmd,
