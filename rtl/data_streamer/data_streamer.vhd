@@ -13,8 +13,8 @@ entity data_streamer is
     -- Number of data bits from the ADC channels
     g_ADC_BITS : natural := 12;
     -- Number of bits in index counters (11 gives 2048 samples stored)
-    g_BUFFER_INDEXSIZE : natural := 11 );
-
+    g_BUFFER_INDEXSIZE : natural := 11
+    );
   port (
     i_adc_data       : in std_logic_vector(4*g_ADC_BITS-1 downto 0);
     i_clk            : in std_logic;
@@ -23,7 +23,8 @@ entity data_streamer is
     i_start_transfer : in std_logic;
     o_tx_data        : out std_logic_vector(1 downto 0);
     o_tx_clk         : out std_logic;
-    o_tx_datavalid   : out std_logic);
+    o_trigger_done   : out std_logic
+    );
   end data_streamer;
 
 architecture behaviour of data_streamer is
@@ -115,6 +116,8 @@ architecture behaviour of data_streamer is
   end component;
 
 begin
+
+  o_trigger_done <= trigger_done;
 
 write_index_counter : simple_counter
   generic map (g_SIZE => g_BUFFER_INDEXSIZE-1)
