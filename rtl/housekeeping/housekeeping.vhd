@@ -178,13 +178,14 @@ begin
   o_adc_clk      <= not r_internal_clk when r_adc_ce = '0' else '0'; 
   o_adc_mosi     <= r_internal_mosi when r_adc_ce = '0' else '0';
 
-  -- mux the housekeeping output miso depending on the selected peripheral 
-  o_hk_uub_miso <=
-    i_flash_miso when r_flash_ce='0' else 
-    i_adc_miso   when r_adc_ce='0' else
-    r_gpio_miso  when r_gpio_ce='0' else
-    r_i2c_miso   when r_i2c_ce='0' else '0';
-
+  -- select the housekeeping output miso depending on the selected peripheral 
+    o_hk_uub_miso <=
+      (i_flash_miso and r_flash_ce) or
+      (i_adc_miso   and r_adc_ce  ) or
+      (r_gpio_miso  and r_gpio_ce ) or
+      (r_i2c_miso   and r_i2c_ce);
+    
+  
 
   -- instantiate one boot sequence injector:
   bootsequence_1 : bootsequence
