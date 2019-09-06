@@ -12,8 +12,11 @@ entity read_sequence is
     i_clk      : in std_logic;
     i_trig     : in std_logic;
     i_next     : in std_logic;
-    o_data     : out t_i2c_word;
-    o_valid    : out std_logic
+    o_data     : out std_logic_vector(7 downto 0);
+    o_rw       : out std_logic;
+    o_restart  : out std_logic;
+    o_valid    : out std_logic;
+    o_addr     : out std_logic_vector(2 downto 0)
     );
 end read_sequence;
 
@@ -39,8 +42,12 @@ begin
         when s_Load =>
           r_state <= s_Data;
           o_valid <= '1';
-          o_data  <= g_SEQ_DATA(r_count);
+          o_data  <= g_SEQ_DATA(r_count).data;
+          o_rw <= g_SEQ_DATA(r_count).rw;
+          o_restart <= g_SEQ_DATA(r_count).restart;
+          --o_addr <= g_SEQ_DATA(r_count).addr;
         when s_Data =>
+          o_addr <= g_SEQ_DATA(r_count).addr;
           if i_next = '1' then
             r_count <= r_count + 1;
             o_valid <= '0';

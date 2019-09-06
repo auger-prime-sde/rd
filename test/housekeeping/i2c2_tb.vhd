@@ -11,7 +11,9 @@ architecture behavior of i2c2_tb is
   constant clk_period : time := 20 ns;
   signal clk, stop : std_logic := '0';
 
-  signal i_data : t_i2c_word;
+  signal i_data : std_logic_vector(7 downto 0);
+  signal i_rw   : std_logic;
+  signal i_restart : std_logic;
   signal i_valid : std_logic;
   signal o_data : std_logic_vector(7 downto 0);
   signal o_next : std_logic;
@@ -25,7 +27,9 @@ architecture behavior of i2c2_tb is
       );
     port(	--inputs
       i_clk      : in std_logic;
-      i_data     : in t_i2c_word;
+      i_data     : in std_logic_vector(7 downto 0);
+      i_rw       : in std_logic;
+      i_restart  : in std_logic;
       i_valid    : in std_logic;
     
       --outputs
@@ -47,6 +51,8 @@ begin
     port map(
       i_clk		    => clk,
       i_data        => i_data,
+      i_rw          => i_rw,
+      i_restart     => i_restart,
       i_valid	    => i_valid,
       o_data        => o_data,
       o_next        => o_next,
@@ -72,9 +78,9 @@ begin
 
     -- single byte write
     wait for 142 ns;
-    i_data.data <= "01011010";
-    i_data.restart <= '1';
-    i_data.rw <= '0';
+    i_data <= "01011010";
+    i_restart <= '1';
+    i_rw <= '0';
     i_valid <= '1';
     wait for 10 * clk_period;
     i_valid <= '0';
@@ -82,9 +88,9 @@ begin
     wait for 50 * clk_period;
 
     -- single byte read
-    i_data.data <= (others => 'X');
-    i_data.restart <= '1';
-    i_data.rw <= '1';
+    i_data <= (others => 'X');
+    i_restart <= '1';
+    i_rw <= '1';
     i_valid <= '1';
     wait for 10 * clk_period;
     i_valid <= '0';
@@ -92,13 +98,13 @@ begin
     wait for 50 * clk_period;
 
     -- multi byte write
-    i_data.data <= "01011010";
-    i_data.restart <= '0';
-    i_data.rw <= '0';
+    i_data <= "01011010";
+    i_restart <= '0';
+    i_rw <= '0';
     i_valid <= '1';
     wait for 10 * clk_period;
-    i_data.data <= "10100101";
-    i_data.restart <= '0';
+    i_data <= "10100101";
+    i_restart <= '0';
     wait for 30 * clk_period;
     i_valid <= '0';
     wait until o_next = '1';
@@ -106,9 +112,9 @@ begin
 
 
     -- multi byte read
-    i_data.data <= (others => 'X');
-    i_data.restart <= '0';
-    i_data.rw <= '1';
+    i_data <= (others => 'X');
+    i_restart <= '0';
+    i_rw <= '1';
     i_valid <= '1';
     wait for 40 * clk_period;
     i_valid <= '0';
@@ -117,15 +123,15 @@ begin
 
 
     -- repeated start between transactions
-    i_data.data <= "11110000";
-    i_data.restart <= '0';
-    i_data.rw <= '0';
+    i_data <= "11110000";
+    i_restart <= '0';
+    i_rw <= '0';
     i_valid <= '1';
     wait for 10 * clk_period;
     -- prep next transaction: read
-    i_data.data <= (others => 'X');
-    i_data.rw <= '1';
-    i_data.restart <= '1';
+    i_data <= (others => 'X');
+    i_rw <= '1';
+    i_restart <= '1';
     wait for 30 * clk_period;
     i_valid <= '0';
     wait until o_next = '1';

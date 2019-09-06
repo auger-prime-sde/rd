@@ -7,13 +7,16 @@ GHDL_RUN_OPTS = --assert-level=warning --ieee-asserts=disable
 all: data_streamer housekeeping
 
 data_streamer: data_buffer_tb simple_counter_tb write_controller_tb readout_controller_tb data_writer_tb
-housekeeping: spi_demux_tb spi_decoder_tb digitaloutput_tb bootsequence_tb i2c2_tb read_sequence_tb
+housekeeping: spi_demux_tb spi_decoder_tb digitaloutput_tb bootsequence_tb i2c2_tb read_sequence_tb ads1015_tb
+ads1015: spi_decoder_tb read_sequence_tb i2c2_tb
+
 
 # the common housekeeping definitions are used in a few places
 hk_common: ../rtl/housekeeping/common.vhd
 	ghdl -a $(GHDL_OPTS) $^
 read_sequence_tb : | hk_common
 i2c2_tb : | hk_common
+ads1015_tb : | hk_common
 
 
 # define some order constraints

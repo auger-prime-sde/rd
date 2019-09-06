@@ -53,11 +53,8 @@ architecture behaviour of housekeeping is
   signal r_i2c_ce       : std_logic;
   signal r_i2c_miso     : std_logic;
   
-  signal r_i2c_clk      : std_logic;
-  signal r_ads1015_data : t_i2c_word;
-  signal r_ads1015_valid: std_logic;
-  signal r_ads1015_next : std_logic;
-
+  signal r_i2c_clk              : std_logic;
+  
   -- internal lines between boot seq and spi selector
   signal r_boot_clk : std_logic;
   signal r_boot_ce  : std_logic;
@@ -104,37 +101,7 @@ architecture behaviour of housekeeping is
   end component;
 
 
-  component i2c2 is
-    generic (
-      g_ADDR          : std_logic_vector(6 downto 0)
-      );
-    port(	--inputs
-      i_clk      : in std_logic;
-      i_data     : in t_i2c_word;
-      i_valid    : in std_logic;
-      --outputs
-      o_data     : out std_logic_vector (7 downto 0);
-      o_next     : out std_logic;
-      -- i2c interface
-      sda	     : inout std_logic := 'Z';
-      scl	     : inout std_logic := 'Z'
-      );
-  end component;
-
-  component read_sequence is
-    generic (
-      g_SEQ_DATA : t_i2c_data
-      );
-    port (
-      i_clk      : in std_logic;
-      i_trig     : in std_logic;
-      i_next     : in std_logic;
-      o_data     : out t_i2c_word;
-      o_valid    : out std_logic
-      );
-  end component;
-
-
+  
   
   component bootsequence is
   port (
@@ -175,9 +142,33 @@ architecture behaviour of housekeeping is
       o_clk: out std_logic);
   end component;
   
+  
+  component ads1015 is
+    generic (
+      g_SUBSYSTEM_ADDR : std_logic_vector
+    );
+    port (
+      -- clock
+      i_hk_fast_clk : in std_logic;
+      --   trigger
+      i_trigger     : in std_logic;
+      -- spi interface
+      i_spi_clk     : in std_logic;
+      i_spi_mosi    : in std_logic;
+      o_spi_miso    : out std_logic;
+      i_dev_select  : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+      
+      -- i2c interface
+      io_hk_sda     : inout std_logic;
+      io_hk_scl     : inout std_logic
+      );
+  end component;
+  
+
+  
 begin
 
-
+  
   -- make sub-system select lines
   r_gpio_ce      <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(1, g_DEV_SELECT_BITS)) else '1';
   r_flash_ce     <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(2, g_DEV_SELECT_BITS)) else '1';
@@ -190,7 +181,7 @@ begin
   o_gpio_data    <= r_gpio_out(7 downto 0);
 
   -- wiring the i2c adc:
-  r_i2c_trigger <= '1' when r_i2c_count = std_logic_vector(to_unsigned(20, 24)) else '0';
+  --r_i2c_trigger <= '1' when r_i2c_count = std_logic_vector(to_unsigned(20, 24)) else '0';
     
   -- wiring flash:
   o_flash_ce     <= r_flash_ce;
@@ -210,10 +201,10 @@ begin
 
   -- select the housekeeping output miso depending on the selected peripheral 
   o_hk_uub_miso <=
-    (i_flash_miso and r_flash_ce) or
-    (i_adc_miso   and r_adc_ce  ) or
-    (r_gpio_miso  and r_gpio_ce ) or
-    (r_i2c_miso   and r_i2c_ce);
+    (i_flash_miso and not r_flash_ce) or
+    (i_adc_miso   and not r_adc_ce  ) or
+    (r_gpio_miso  and not r_gpio_ce ) or
+    (r_i2c_miso   and not r_i2c_ce);
     
   
 
@@ -243,61 +234,31 @@ begin
       o_dev_select  => r_subsystem_select
       );
 
-  spi_decoder_i2c : spi_decoder
+  
+  clock_divider_reveal : clock_divider
     generic map (
-      g_INPUT_BITS  => 24,
-      g_OUTPUT_BITS => 64
-      )
-    port map (
-      i_spi_clk    => r_internal_clk,
-      i_spi_mosi   => r_internal_mosi,
-      o_spi_miso   => r_i2c_miso,
-      i_spi_ce     => r_i2c_ce,
-      i_clk        => i_hk_fast_clk,
-      o_data       => r_i2c_in,
-      i_data       => r_i2c_out,
-      o_recv_count => r_i2c_count
-      );
-
-  clock_divider_i2c : clock_divider
-    generic map (
-      g_MAX_COUNT => 250 -- from 100 MHz to 400 kHz
+      g_MAX_COUNT => 25 -- from 100 MHz to 4 MHz
       )
     port map (
       i_clk => i_hk_fast_clk,
-      o_clk => r_i2c_clk
+      o_clk => open
       );
 
-  read_sequence_ads1015 : read_sequence
-    generic map (
-      g_SEQ_DATA => ((data => "00000001", restart => '0', rw => '0'),-- select config register
-                     (data => "10000101", restart => '0', rw => '0'),-- trigger conversion
-                     (data => "10000000", restart => '0', rw => '0'),-- keep rest at default
-                     (data => "00000000", restart => '1', rw => '0'),-- select conversion register
-                     (data => "XXXXXXXX", restart => '1', rw => '1'),
-                     (data => "XXXXXXXX", restart => '0', rw => '1'))
-      )
-    port map (
-      i_clk      => r_i2c_clk,
-      i_trig     => i_trigger,
-      i_next     => r_ads1015_next,
-      o_data     => r_ads1015_data,
-      o_valid    => r_ads1015_valid
-      );
   
-  i2c2_ads1015 : i2c2
+  ads1015_1 : ads1015
     generic map (
-      g_ADDR     => "1001000"
+      g_SUBSYSTEM_ADDR => "00000100"
       )
     port map (
-      i_clk      => r_i2c_clk,
-      i_data     => r_ads1015_data,
-      i_valid    => r_ads1015_valid,
-      o_data     => open,
-      o_next     => r_ads1015_next,
-      sda	     => io_hk_sda,
-      scl	     => io_hk_scl
-      );
+      i_hk_fast_clk => i_hk_fast_clk,
+      i_trigger     => i_trigger,
+      i_spi_clk     => r_internal_clk,
+      i_spi_mosi    => r_internal_mosi,
+      o_spi_miso    => r_i2c_miso,
+      i_dev_select  => r_subsystem_select,
+      io_hk_sda     => io_hk_sda,
+      io_hk_scl     => io_hk_scl
+);
   
 
   -- instantiate one spi_decoder and one gpio subsystem

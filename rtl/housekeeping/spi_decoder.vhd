@@ -50,7 +50,7 @@ entity spi_decoder is
     i_spi_ce     : in  std_logic;
     -- parallel interface to subsystem:
     i_clk        : in std_logic;
-    o_data       : out std_logic_vector(g_INPUT_BITS-1 downto 0) := (others => 'Z');
+    o_data       : out std_logic_vector(g_INPUT_BITS-1 downto 0) := (others => '0');
     i_data       : in std_logic_vector(g_OUTPUT_BITS-1 downto 0);
     o_recv_count : out std_logic_vector(g_INPUT_BITS-1 downto 0) := (others => '0')
     );

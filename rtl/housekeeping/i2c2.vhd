@@ -9,13 +9,16 @@ entity i2c2 is
     );
   port(	--inputs
     i_clk      : in std_logic;
-    i_data     : in t_i2c_word;
+    i_data     : in std_logic_vector(7 downto 0);
+    i_rw       : in std_logic;
+    i_restart  : in std_logic;
     i_valid    : in std_logic;
     --i_numbytes : in std_logic_vector(c_I2C_MAXBYTES_BITS-1 downto 0);
     
     --outputs
-    o_data  : out std_logic_vector (7 downto 0); 
-    o_next  : out std_logic := '0';
+    o_data      : out std_logic_vector (7 downto 0);
+    o_datavalid : out std_logic := '0';
+    o_next      : out std_logic := '0';
     
     -- i2c interface
     sda	  : inout std_logic := 'Z';
@@ -24,12 +27,13 @@ entity i2c2 is
 end  i2c2;
 
 architecture behave of i2c2 is
-  type t_State is (s_Idle, s_Start, s_Addr, s_Rw, s_AddrAck, s_Data, s_DataAck, s_Stop);
+  type t_State is (s_Idle, s_Addr, s_Rw, s_AddrAck, s_Data, s_DataAck, s_Stop);
   -- variables:
   signal r_State : t_State := s_Idle;
   signal r_count : natural range 0 to 8 := 0;
 
-  signal r_data : t_i2c_word;
+  signal r_data : std_logic_vector(7 downto 0);
+  signal r_rw   : std_logic;
 
   signal test_count : std_logic_vector(num_bits(8) downto 0);
     
@@ -43,13 +47,13 @@ begin
           o_next <= '0';
           if i_valid = '1' then
             r_data <= i_data;
+            r_rw <= i_rw;
             r_count <= 0;
             sda <= '0';
             r_state <= s_Addr;
+          else
+            sda <= 'Z';
           end if;
-        when s_Start =>
-          r_state <= s_Addr;
-          scl <= '0';
         when s_Addr =>
           if scl = '0' then
             scl <= 'Z';
@@ -71,7 +75,7 @@ begin
             r_state <= s_AddrAck;
           else
             scl <= '0';
-            if r_data.rw = '0' then
+            if r_rw = '0' then
               sda <= '0';
             else
               sda <= 'Z';
@@ -101,51 +105,67 @@ begin
               o_next <= '0';
             end if;
             -- read in data bit
-            if r_data.rw = '1' then
+            if r_rw = '1' then
               o_data(7-r_count) <= sda;
+              if r_count = 7 then
+                o_datavalid <= '1';
+              end if;
             end if;
           else
             scl <= '0';
             --report "r_count: " & integer'image(r_count);
             --report "index: " & integer'image(to_integer(unsigned(i_numbytes)) * 8 - r_count - 1);
-            if r_data.rw = '1' or r_data.data(7 - r_count) = '1' then
+            if r_rw = '1' or r_data(7 - r_count) = '1' then
               sda <= 'Z';
             else
               sda <= '0';
             end if;
           end if;
         when s_DataAck =>
+          o_datavalid <= '0';
           if scl = '0' then
             scl <= 'Z';
-            if i_valid = '1' then
-              if i_data.restart = '1' then
-                r_state <= s_Idle;
-              else
-                r_state <= s_Data;
-                r_data <= i_data;
-                r_count <= 0;
-              end if;
+            if i_valid = '1' and  i_restart = '0' then
+              -- continue with next byte
+              r_state <= s_Data;
+              r_data <= i_data;
+              r_rw <= i_rw;
+              r_count <= 0;
             else
               r_state <= s_Stop;
-              sda <= '0'; -- drive low now so that releasing
-                          -- it later creates a stop condition
+              -- there may be data after the restart in which case we need to
+              -- release sda now. otherwise we pull low to make sure the stop
+              -- is after the last clock rise.
+              if i_valid = '1' then
+                sda <= 'Z';
+              else
+                sda <= '0';
+              end if;
             end if;
+            -- check that there is ack
             if sda /= '0' then
               -- TODO: raise error
             end if;
           else
             scl <= '0';
-            if r_data.rw = '1' then
+            if r_rw = '1' then
               sda <= '0'; -- transmit ack
             else
               sda <= 'Z'; -- accept ack bit
             end if;
           end if;
         when s_Stop =>
-          sda <= 'Z';
-          r_state <= s_Idle;
-          r_count <= 0;
-          --o_next <= '1';
+          if scl /= '0' then
+            scl <= '0';
+          else
+            scl <= 'Z';
+            if i_valid = '1' then
+              sda <= 'Z';
+            else
+              sda <= '0';
+            end if;
+            r_state <= s_Idle;
+          end if;
       end case;
     end if;
   end process;
