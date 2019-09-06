@@ -116,4 +116,4 @@ LOCATE COMP "io_hk_scl" SITE "A4" ;
 IOBUF PORT "io_hk_scl" IO_TYPE=LVCMOS33 ;
 IOBUF PORT "io_hk_sda" IO_TYPE=LVCMOS33 PULLMODE=NONE ;
 LOCATE COMP "io_hk_sda" SITE "B5" ;
-FREQUENCY NET "housekeeping_1/r_i2c_clk" 0.800000 MHz ;
+FREQUENCY NET "housekeeping_1/ads1015_1/r_i2c_clk" 0.800000 MHz ;

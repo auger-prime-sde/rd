@@ -113,15 +113,59 @@ begin
     end loop;
     wait until io_hk_scl /= '0';
     wait until io_hk_scl = '0';
+    io_hk_sda <= 'Z'; -- receive ack
+    for i in 15 downto 8 loop
+      wait until io_hk_scl /= '0';
+      wait until io_hk_scl = '0';
+      if r_test(i) = '0' then
+        io_hk_sda <= '0';
+      else
+        io_hk_sda <= 'Z';
+      end if;
+    end loop;
+    wait until io_hk_scl /= '0';
+    wait until io_hk_scl = '0';
+    io_hk_sda <= 'Z'; -- receive ack
     
-    io_hk_sda <= 'Z';
+
+    for i in 1 to 66 loop
+      wait until io_hk_scl /= '0';
+      wait until io_hk_scl = '0';
+    end loop;
+    io_hk_sda <= '0'; --ack
+    for i in 7 downto 0 loop
+      wait until io_hk_scl /= '0';
+      wait until io_hk_scl = '0';
+      if r_test(i) = '0' then
+        io_hk_sda <= '0';
+      else
+        io_hk_sda <= 'Z';
+      end if;
+    end loop;
+    wait until io_hk_scl /= '0';
+    wait until io_hk_scl = '0';
+    io_hk_sda <= 'Z'; -- receive ack
+    for i in 15 downto 8 loop
+      wait until io_hk_scl /= '0';
+      wait until io_hk_scl = '0';
+      if r_test(i) = '0' then
+        io_hk_sda <= '0';
+      else
+        io_hk_sda <= 'Z';
+      end if;
+    end loop;
+    wait until io_hk_scl /= '0';
+    wait until io_hk_scl = '0';
+    io_hk_sda <= 'Z'; -- receive ack
+    
+    
     
 
     
     wait for 600 us;
 
     i_dev_select <= "00000100";
-    r_count <= "00000010";
+    r_count <= "00000011";
     wait for spi_period / 2;
 
     -- send spi message

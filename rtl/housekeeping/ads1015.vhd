@@ -162,7 +162,7 @@ begin
                      (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
                      (data => "XXXXXXXX", restart => '1', rw => '1', addr => "000"),
                      (data => "XXXXXXXX", restart => '0', rw => '1', addr => "001"),
-                     (data => "00000001", restart => '0', rw => '0', addr => "XXX"),-- select config register
+                     (data => "00000001", restart => '1', rw => '0', addr => "XXX"),-- select config register
                      (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger conversion
                      (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
                      (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register

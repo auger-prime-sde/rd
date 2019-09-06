@@ -24,9 +24,11 @@ entity housekeeping_buffer is
 end housekeeping_buffer;
 
 architecture behavioral of housekeeping_buffer is
-  type ram_type is array (2**(g_ADDRESS_WIDTH-1)-1 downto 0) of std_logic_vector (g_DATA_WIDTH-1 downto 0);
-  signal ram : ram_type := (others => (others => '0'));
+  type ram_type is array (2**(g_ADDRESS_WIDTH)-1 downto 0) of std_logic_vector (g_DATA_WIDTH-1 downto 0);
+  signal ram : ram_type;-- := (others => (others => '0'));
   signal data_out_reg : std_logic_vector(g_DATA_WIDTH-1 downto 0) := (others => '0');
+  attribute syn_ramstyle : string;
+  attribute syn_ramstyle of ram : signal is "block_ram";
 
 begin
   process (i_write_clk)

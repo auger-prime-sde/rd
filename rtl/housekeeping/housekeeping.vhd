@@ -258,7 +258,7 @@ begin
       i_dev_select  => r_subsystem_select,
       io_hk_sda     => io_hk_sda,
       io_hk_scl     => io_hk_scl
-);
+      );
   
 
   -- instantiate one spi_decoder and one gpio subsystem
