@@ -65,11 +65,13 @@ architecture behaviour of housekeeping is
   signal r_internal_mosi: std_logic;
 
   -- wires for flash
-  signal r_flash_ce : std_logic;
+  signal r_flash_ce   : std_logic;
+  signal r_flash_miso : std_logic;
   
   -- wires for adc:
-  signal r_adc_ce         : std_logic;
-
+  signal r_adc_clk    : std_logic;
+  signal r_adc_ce     : std_logic;
+  signal r_adc_miso   : std_logic;
 
   component spi_demux is
     generic ( g_DEV_SELECT_BITS : natural := g_DEV_SELECT_BITS );
@@ -83,54 +85,35 @@ architecture behaviour of housekeeping is
       o_dev_select : out std_logic_vector(g_DEV_SELECT_BITS-1 downto 0) := (others => '0')
       );
   end component;
-
-  component spi_decoder is
-    generic (
-      g_INPUT_BITS  : natural := 32;
-      g_OUTPUT_BITS : natural := 32 );
-    port (
-      i_spi_clk    : in  std_logic;
-      i_spi_mosi   : in  std_logic;
-      o_spi_miso   : out std_logic;
-      i_spi_ce     : in  std_logic;
-      i_clk        : in  std_logic;
-      o_data       : out std_logic_vector(g_INPUT_BITS-1 downto 0) := (others => '0');
-      i_data       : in  std_logic_vector(g_OUTPUT_BITS-1 downto 0);
-      o_recv_count : out std_logic_vector(g_INPUT_BITS-1 downto 0) );
-  end component;
-
-
-  
   
   component bootsequence is
-  port (
-    i_clk     : in  std_logic;
-    i_rst     : in  std_logic;
-    i_hk_clk  : in  std_logic;
-    i_hk_ce   : in  std_logic;
-    i_hk_mosi : in  std_logic;
-    o_hk_clk  : out std_logic;
-    o_hk_ce   : out std_logic;
-    o_hk_mosi : out std_logic
-    );
+    port (
+      i_clk     : in  std_logic;
+      i_rst     : in  std_logic;
+      i_hk_clk  : in  std_logic;
+      i_hk_ce   : in  std_logic;
+      i_hk_mosi : in  std_logic;
+      o_hk_clk  : out std_logic;
+      o_hk_ce   : out std_logic;
+      o_hk_mosi : out std_logic
+      );
   end component;
 
   component Digitaloutput is
     generic (
-      g_CMD_BITS        : natural := 8;  
-      g_DATA_BITS    : natural := 8;
-      g_DEFAULT_OUTPUT  : std_logic_vector (7 downto 0) := "11111111" --we only use the last 8 bits for output so default all outputs are high
+      g_SUBSYSTEM_ADDR : std_logic_vector;
+      g_DEFAULT_OUTPUT : std_logic_vector (7 downto 0) := "11111111" 
       );
     port(	--inputs
       i_clk : in std_logic;
-      i_enable : in std_logic;
-      i_cmd : in std_logic_vector(g_CMD_BITS-1 downto 0);
-      i_data : in std_logic_vector(g_DATA_BITS-1 downto 0);
-      
+      i_spi_clk : in std_logic;
+      i_spi_mosi : in std_logic;
+      o_spi_miso : out std_logic;
+      i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+    
       --outputs
-      o_data : out std_logic_vector (g_DATA_BITS-1 downto 0) := g_DEFAULT_OUTPUT; 
-      o_busy	  : out std_logic
-      );
+      o_data : out std_logic_vector (g_DEFAULT_OUTPUT'length-1 downto 0) := g_DEFAULT_OUTPUT
+      );  
   end component;
 
   component clock_divider is
@@ -140,7 +123,6 @@ architecture behaviour of housekeeping is
       i_clk: in std_logic;
       o_clk: out std_logic);
   end component;
-  
   
   component i2c_wrapper is
     generic (
@@ -164,50 +146,71 @@ architecture behaviour of housekeeping is
       io_hk_scl     : inout std_logic
       );
   end component;
-  
 
+  component  spi_wrapper is
+    generic (
+      g_SUBSYSTEM_ADDR : std_logic_vector
+      );
+    port (
+      -- interface in the direction of the uub
+      i_clk        : in std_logic;
+      i_mosi       : in std_logic;
+      o_miso       : out std_logic;
+      i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+      -- interface in the direction of the spi device
+      o_clk        : out std_logic;
+      o_mosi       : out std_logic;
+      i_miso: in std_logic;
+      o_ce         : out std_logic
+      );
+  end component;
   
 begin
 
-  
-  -- make sub-system select lines
-  r_gpio_ce      <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(1, g_DEV_SELECT_BITS)) else '1';
-  r_flash_ce     <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(2, g_DEV_SELECT_BITS)) else '1';
-  r_adc_ce       <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(3, g_DEV_SELECT_BITS)) else '1';
-  --r_i2c_ce       <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(4, g_DEV_SELECT_BITS)) else '1';
+  -- adc has inverted clock polarity
+  r_adc_clk <= not r_internal_clk;
 
-  
-  -- wiring the gpio:
-  r_gpio_trigger <= '1' when r_gpio_count = std_logic_vector(to_unsigned(15, 16)) else '0';
-  o_gpio_data    <= r_gpio_out(7 downto 0);
-
-  -- wiring the i2c adc:
-  --r_i2c_trigger <= '1' when r_i2c_count = std_logic_vector(to_unsigned(20, 24)) else '0';
+  -- select the housekeeping output miso depending on the selected peripheral 
+  o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso;
     
-  -- wiring flash:
-  o_flash_ce     <= r_flash_ce;
-  o_flash_clk    <= r_internal_clk when r_flash_ce = '0' else '1';
-  o_flash_mosi   <= r_internal_mosi when r_flash_ce = '0' else '1';
-  
-  -- wiring adc:
+
+  spi_wrapper_flash : spi_wrapper
+    generic map (
+      g_SUBSYSTEM_ADDR => "00000010"
+      )
+    port map (
+      i_clk            => r_internal_clk,
+      i_mosi           => r_internal_mosi,
+      o_miso           => r_flash_miso,
+      i_dev_select     => r_subsystem_select,
+      o_clk            => o_flash_clk,
+      o_mosi           => o_flash_mosi,
+      i_miso           => i_flash_miso,
+      o_ce             => o_flash_ce
+      );
+
+  -- Note on wiring adc:
   -- we force the clock to be silent when not inside a transaction
   -- to reduce noise. and because the clock edge on which the ce line goes low
   -- is seen as a negative edge by the adc and we want to make sure that this
   -- neg edge is not accidentally picked up. Note that for the latter is it
   -- important that we force the clock to '0'. This is in contrast to the
   -- diagrams in the ADC datasheet but it should not matter what the value is.
-  o_adc_ce       <= r_adc_ce;
-  o_adc_clk      <= not r_internal_clk when r_adc_ce = '0' else '0'; 
-  o_adc_mosi     <= r_internal_mosi when r_adc_ce = '0' else '0';
+  spi_wrapper_adc : spi_wrapper
+    generic map (
+      g_SUBSYSTEM_ADDR => "00000011"
+      )
+    port map (
+      i_clk            => r_adc_clk,
+      i_mosi           => r_internal_mosi,
+      o_miso           => r_adc_miso,
+      i_dev_select     => r_subsystem_select,
+      o_clk            => o_adc_clk,
+      o_mosi           => o_adc_mosi,
+      i_miso           => i_adc_miso,
+      o_ce             => o_adc_ce
+      );
 
-  -- select the housekeeping output miso depending on the selected peripheral 
-  o_hk_uub_miso <=
-    (i_flash_miso and not r_flash_ce) or
-    (i_adc_miso   and not r_adc_ce  ) or
-    (r_gpio_miso  and not r_gpio_ce ) or
-    r_ads1015_miso  or
-    r_si7060_miso;
-    
   
 
   -- instantiate one boot sequence injector:
@@ -307,39 +310,20 @@ begin
       );
 
   
-  -- instantiate one spi_decoder and one gpio subsystem
-  spi_decoder_gpio : spi_decoder
+  -- instantiate gpio subsystem
+  digitalout_1 : digitaloutput
     generic map (
-      g_INPUT_BITS => 16,
-      g_OUTPUT_BITS => 8
+      g_SUBSYSTEM_ADDR => "00000001"
       )
     port map (
-      i_spi_clk    => r_internal_clk,
-      i_spi_mosi   => r_internal_mosi,
-      o_spi_miso   => r_gpio_miso,
-      i_spi_ce     => r_gpio_ce,
-      i_clk        => i_hk_fast_clk,
-      o_data       => r_gpio_in,
-      i_data       => r_gpio_out,
-      o_recv_count => r_gpio_count
-      );
+      i_clk => i_hk_fast_clk,
+      i_spi_clk => r_internal_clk,
+      i_spi_mosi => r_internal_mosi,
+      o_spi_miso => r_gpio_miso,
+      i_dev_select => r_subsystem_select,
+      o_data => o_gpio_data
+      );  
 
-
-  
-  digitalout_1 : Digitaloutput
-    generic map (
-      g_CMD_BITS => 8,
-      g_DATA_BITS => 8
-      )
-    port map (
-      i_clk         => i_hk_fast_clk,
-      i_enable      => r_gpio_trigger,
-      i_cmd         => r_gpio_in(15 downto 8),
-      i_data        => r_gpio_in(7 downto 0),
-      o_data        => r_gpio_out
-      );
-      
-  
   
   
 end behaviour;
