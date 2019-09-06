@@ -50,16 +50,31 @@
         <Source name="rtl/data_streamer/trigger_sync.vhd" type="VHDL" type_short="VHDL">
             <Options/>
         </Source>
-        <Source name="rtl/housekeeping/I2C.vhd" type="VHDL" type_short="VHDL">
+        <Source name="rtl/housekeeping/I2C.vhd" type="VHDL" type_short="VHDL" excluded="TRUE">
             <Options/>
         </Source>
-        <Source name="rtl/housekeeping/i2c_master.vhd" type="VHDL" type_short="VHDL">
+        <Source name="rtl/housekeeping/i2c_master.vhd" type="VHDL" type_short="VHDL" excluded="TRUE">
             <Options/>
         </Source>
-        <Source name="rtl/housekeeping/i2c_master2.vhd" type="VHDL" type_short="VHDL">
+        <Source name="rtl/housekeeping/i2c_master2.vhd" type="VHDL" type_short="VHDL" excluded="TRUE">
             <Options/>
         </Source>
         <Source name="rtl/housekeeping/clock_divider.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/i2c2.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/common.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/read_sequence.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/housekeeping_buffer.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/ads1015.vhd" type="VHDL" type_short="VHDL">
             <Options/>
         </Source>
         <Source name="auger.lpf" type="Logic Preference" type_short="LPF">
