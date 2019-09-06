@@ -59,7 +59,6 @@ IOBUF PORT "i_trigger" IO_TYPE=LVDS DIFFRESISTOR=100 ;
 IOBUF PORT "o_tx_clk" IO_TYPE=LVDS ;
 IOBUF PORT "o_tx_data[0]" IO_TYPE=LVDS ;
 IOBUF PORT "o_tx_data[1]" IO_TYPE=LVDS ;
-IOBUF PORT "o_tx_datavalid" IO_TYPE=LVDS ;
 IOBUF PORT "o_hk_adc_ce" IO_TYPE=LVCMOS18 ;
 IOBUF PORT "o_hk_adc_clk" IO_TYPE=LVCMOS18 ;
 LOCATE COMP "o_hk_adc_ce" SITE "D13" ;

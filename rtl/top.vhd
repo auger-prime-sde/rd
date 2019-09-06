@@ -20,7 +20,6 @@ entity top is
     i_trigger           : in std_logic;
     o_tx_data           : out std_logic_vector(1 downto 0);
     o_tx_clk            : out std_logic;
-    o_tx_datavalid      : out std_logic;
     -- signals for eeprom
     i_hk_flash_miso     : in std_logic;
     o_hk_flash_mosi     : out std_logic;
