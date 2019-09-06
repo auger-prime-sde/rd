@@ -74,7 +74,7 @@
         <Source name="rtl/housekeeping/housekeeping_buffer.vhd" type="VHDL" type_short="VHDL">
             <Options/>
         </Source>
-        <Source name="rtl/housekeeping/ads1015.vhd" type="VHDL" type_short="VHDL">
+        <Source name="rtl/housekeeping/i2c_wrapper.vhd" type="VHDL" type_short="VHDL">
             <Options/>
         </Source>
         <Source name="auger.lpf" type="Logic Preference" type_short="LPF">

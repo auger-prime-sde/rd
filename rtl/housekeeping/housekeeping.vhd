@@ -27,8 +27,11 @@ entity housekeeping is
     o_adc_mosi          : out std_logic;
     o_adc_ce            : out std_logic;
     -- housekeeping adc
-    io_hk_sda           : inout std_logic;
-    io_hk_scl           : inout std_logic 
+    io_ads1015_sda      : inout std_logic;
+    io_ads1015_scl      : inout std_logic;
+    -- housekeeping temp sens
+    io_si7060_sda       : inout std_logic;
+    io_si7060_scl       : inout std_logic 
     );
 end housekeeping;
 
@@ -46,14 +49,10 @@ architecture behaviour of housekeeping is
   signal r_gpio_miso    : std_logic;
 
   -- internal wires for i2c:
-  signal r_i2c_in       : std_logic_vector(23 downto 0);
-  signal r_i2c_out      : std_logic_vector(63 downto 0);
-  signal r_i2c_count    : std_logic_vector(23 downto 0);
-  signal r_i2c_trigger  : std_logic;
-  signal r_i2c_ce       : std_logic;
-  signal r_i2c_miso     : std_logic;
+  signal r_ads1015_miso : std_logic;
+  signal r_si7060_miso  : std_logic;
   
-  signal r_i2c_clk              : std_logic;
+  signal r_i2c_clk      : std_logic;
   
   -- internal lines between boot seq and spi selector
   signal r_boot_clk : std_logic;
@@ -143,9 +142,11 @@ architecture behaviour of housekeeping is
   end component;
   
   
-  component ads1015 is
+  component i2c_wrapper is
     generic (
-      g_SUBSYSTEM_ADDR : std_logic_vector
+      g_SUBSYSTEM_ADDR : std_logic_vector;
+      g_I2C_ADDR : std_logic_vector(6 downto 0);
+      g_SEQ_DATA : t_i2c_data
     );
     port (
       -- clock
@@ -173,7 +174,7 @@ begin
   r_gpio_ce      <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(1, g_DEV_SELECT_BITS)) else '1';
   r_flash_ce     <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(2, g_DEV_SELECT_BITS)) else '1';
   r_adc_ce       <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(3, g_DEV_SELECT_BITS)) else '1';
-  r_i2c_ce       <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(4, g_DEV_SELECT_BITS)) else '1';
+  --r_i2c_ce       <= '0' when r_subsystem_select = std_logic_vector(to_unsigned(4, g_DEV_SELECT_BITS)) else '1';
 
   
   -- wiring the gpio:
@@ -204,7 +205,8 @@ begin
     (i_flash_miso and not r_flash_ce) or
     (i_adc_miso   and not r_adc_ce  ) or
     (r_gpio_miso  and not r_gpio_ce ) or
-    (r_i2c_miso   and not r_i2c_ce);
+    r_ads1015_miso  or
+    r_si7060_miso;
     
   
 
@@ -245,22 +247,66 @@ begin
       );
 
   
-  ads1015_1 : ads1015
+  ads1015_1 : i2c_wrapper
     generic map (
-      g_SUBSYSTEM_ADDR => "00000100"
+      g_SUBSYSTEM_ADDR => "00000100",
+      g_I2C_ADDR => "1001000",
+      g_SEQ_DATA => ((data => "00000001", restart => '0', rw => '0', addr => "XXX"),-- select config register
+                     (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger   conversion
+                     (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
+                     (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
+                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "000"),
+                     (data => "XXXXXXXX", restart => '0', rw => '1', addr => "001"),
+                     (data => "00000001", restart => '1', rw => '0', addr => "XXX"),-- select config register
+                     (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger conversion
+                     (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
+                     (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
+                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),
+                     (data => "XXXXXXXX", restart => '0', rw => '1', addr => "011"))
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
       i_trigger     => i_trigger,
       i_spi_clk     => r_internal_clk,
       i_spi_mosi    => r_internal_mosi,
-      o_spi_miso    => r_i2c_miso,
+      o_spi_miso    => r_ads1015_miso,
       i_dev_select  => r_subsystem_select,
-      io_hk_sda     => io_hk_sda,
-      io_hk_scl     => io_hk_scl
+      io_hk_sda     => io_ads1015_sda,
+      io_hk_scl     => io_ads1015_scl
       );
-  
 
+
+  si7050_1 : i2c_wrapper
+    generic map (
+      g_SUBSYSTEM_ADDR => "00000101",
+      g_I2C_ADDR => "0110001", -- 0x31
+      g_SEQ_DATA => ((data => "11000000", restart => '0', rw => '0', addr => "XXX"),-- chip id and revid
+                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "001"),-- read reg contents
+                     (data => "11000001", restart => '0', rw => '0', addr => "XXX"),-- conversion high word
+                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),-- read reg contents
+                     (data => "11000010", restart => '0', rw => '0', addr => "XXX"),-- conversion low word
+                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "011"),-- read reg contents
+                     (data => "11000100", restart => '0', rw => '0', addr => "XXX"),-- config reg
+                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "100"),-- read reg contents
+                     (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- auautoinc reg
+                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "101"),-- read reg contents
+                     (data => "11000110", restart => '0', rw => '0', addr => "XXX"),-- sw reg
+                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "110"),-- read reg contents
+                     (data => "11000111", restart => '0', rw => '0', addr => "XXX"),-- sw reg
+                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "111")) -- read reg contents
+      )
+    port map (
+      i_hk_fast_clk => i_hk_fast_clk,
+      i_trigger     => i_trigger,
+      i_spi_clk     => r_internal_clk,
+      i_spi_mosi    => r_internal_mosi,
+      o_spi_miso    => r_si7060_miso,
+      i_dev_select  => r_subsystem_select,
+      io_hk_sda     => io_si7060_sda,
+      io_hk_scl     => io_si7060_scl
+      );
+
+  
   -- instantiate one spi_decoder and one gpio subsystem
   spi_decoder_gpio : spi_decoder
     generic map (

@@ -3,9 +3,22 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.common.all;
 
-entity ads1015 is
+entity i2c_wrapper is
   generic (
-    g_SUBSYSTEM_ADDR : std_logic_vector
+    g_SUBSYSTEM_ADDR : std_logic_vector;
+    g_I2C_ADDR : std_logic_vector(6 downto 0);
+    g_SEQ_DATA : t_i2c_data := ((data => "00000001", restart => '0', rw => '0', addr => "XXX"),-- select config register
+                                (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger   conversion
+                                (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
+                                (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
+                                (data => "XXXXXXXX", restart => '1', rw => '1', addr => "000"),
+                                (data => "XXXXXXXX", restart => '0', rw => '1', addr => "001"),
+                                (data => "00000001", restart => '1', rw => '0', addr => "XXX"),-- select config register
+                                (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger conversion
+                                (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
+                                (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
+                                (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),
+                                (data => "XXXXXXXX", restart => '0', rw => '1', addr => "011"))
     );
   port (
     -- clock
@@ -22,10 +35,10 @@ entity ads1015 is
     io_hk_sda     : inout std_logic;
     io_hk_scl     : inout std_logic
     );
-end ads1015;
+end i2c_wrapper;
 
 
-architecture behaviour of ads1015 is
+architecture behaviour of i2c_wrapper is
   signal r_read_data    : std_logic_vector(7 downto 0);
   signal r_write_data   : std_logic_vector(7 downto 0);
   signal r_seq_data     : std_logic_vector(7 downto 0);
@@ -154,20 +167,9 @@ begin
       o_clk => r_i2c_clk
       );
 
-  read_sequence_ads1015 : read_sequence
+  read_sequence_1 : read_sequence
     generic map (
-      g_SEQ_DATA => ((data => "00000001", restart => '0', rw => '0', addr => "XXX"),-- select config register
-                     (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger conversion
-                     (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
-                     (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "000"),
-                     (data => "XXXXXXXX", restart => '0', rw => '1', addr => "001"),
-                     (data => "00000001", restart => '1', rw => '0', addr => "XXX"),-- select config register
-                     (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger conversion
-                     (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
-                     (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),
-                     (data => "XXXXXXXX", restart => '0', rw => '1', addr => "011"))
+      g_SEQ_DATA => g_SEQ_DATA
       )
     port map (
       i_clk      => r_i2c_clk,
@@ -180,9 +182,9 @@ begin
       o_addr     => r_write_addr
       );
   
-  i2c2_ads1015 : i2c2
+  i2c2_1 : i2c2
     generic map (
-      g_ADDR     => "1001000"
+      g_ADDR     => g_I2C_ADDR
       )
     port map (
       i_clk       => r_i2c_clk,
@@ -197,7 +199,7 @@ begin
       scl	      => io_hk_scl
       );
 
-  data_buffer_ads1015 : housekeeping_buffer
+  data_buffer_1 : housekeeping_buffer
     generic map (g_DATA_WIDTH => 8, g_ADDRESS_WIDTH => 3)
     port map (
       i_write_clk    => r_i2c_clk,

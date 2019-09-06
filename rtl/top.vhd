@@ -39,8 +39,11 @@ entity top is
     -- signals for gpio from housekeeping
     o_hk_gpio           : out std_logic_vector(7 downto 0);
     -- signal to/from housekeeping i2c adc:
-    io_hk_sda           : inout std_logic;
-    io_hk_scl           : inout std_logic;
+    io_ads1015_sda      : inout std_logic;
+    io_ads1015_scl      : inout std_logic;
+    -- signal to/from housekeeping i2c temp sensor:
+    io_si7060_sda       : inout std_logic;
+    io_si7060_scl       : inout std_logic;
     -- TODO: put this as one of the gpio lines, for now this is tied high
     o_bias_t            : out std_logic
     );
@@ -123,8 +126,10 @@ architecture behaviour of top is
       i_adc_miso     : in   std_logic;
       o_adc_mosi     : out  std_logic;
       o_adc_ce       : out  std_logic;
-      io_hk_sda      : inout std_logic;
-      io_hk_scl      : inout std_logic
+      io_ads1015_sda : inout std_logic;
+      io_ads1015_scl : inout std_logic;
+      io_si7060_sda  : inout std_logic;
+      io_si7060_scl  : inout std_logic
       );
   end component;
 
@@ -167,42 +172,8 @@ architecture behaviour of top is
 
   
 begin
-  --io_hk_scl <= 'X';
-  -- pull bias T high
   o_bias_t <= '1';
   o_hk_adc_reset <= '0';
-
-
-  
-  --process (w_hk_fast_clk) is
---  begin
---    if rising_edge(w_hk_fast_clk) then
---      r_void <= io_hk_sda;
---      r_i2c_count <= (r_i2c_count + 1) mod 10000000;
---      if r_i2c_count < 1000000 then
---        io_hk_sda <= 'Z';
---      end if;
---      
---      if r_i2c_count >= 1000000 and r_i2c_count < 2000000 then
---        io_hk_sda <= '1';
---      end if;
---
---      if r_i2c_count >= 2000000 and r_i2c_count < 3000000 then
---        io_hk_sda <= 'Z';
---      end if;
---
---      if r_i2c_count >= 3000000 and r_i2c_count < 4000000 then
---        io_hk_sda <= '1';
---      end if;
---
---      if r_i2c_count >= 4000000 then 
---        io_hk_sda <= '0';
---      end if;
---    end if;
---  end process;
---
-  --Io_hk_scl <= io_hk_sda;
-  
 
   
   process (w_hk_fast_clk) is
@@ -227,8 +198,6 @@ begin
       CLKI => i_xtal_clk,
       CLKOP => w_hk_fast_clk,
       CLKOS => w_tx_clk
-      --CLKOP => w_hk_fast_clk,
-      --CLKOS => w_10M_clk
       );
 
 
@@ -272,8 +241,10 @@ begin
       i_adc_miso          => i_hk_adc_miso,
       o_adc_mosi          => o_hk_adc_mosi,
       o_adc_ce            => o_hk_adc_ce,
-      io_hk_sda           => io_hk_sda,
-      io_hk_scl           => io_hk_scl
+      io_ads1015_sda      => io_ads1015_sda,
+      io_ads1015_scl      => io_ads1015_scl,
+      io_si7060_sda       => io_si7060_sda,
+      io_si7060_scl       => io_si7060_scl
     );
   
   data_streamer_1 : data_streamer
