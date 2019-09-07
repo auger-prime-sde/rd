@@ -3,13 +3,13 @@ use ieee.std_logic_1164.all;
 use IEEE.numeric_std.all;
 use work.common.all;
 
-entity ads1015_tb is
-end ads1015_tb;
+entity i2c_wrapper_tb is
+end i2c_wrapper_tb;
 
 -- TODO: is the trigger pulse always long enough
 -- TODO: check all clock domain crossings
 
-architecture behave of ads1015_tb is
+architecture behave of i2c_wrapper_tb is
   constant clk_period : time := 10 ns;
   constant spi_period : time := 371 ns;
 
@@ -30,9 +30,11 @@ architecture behave of ads1015_tb is
 
   
   
-  component ads1015 is
+  component i2c_wrapper is
     generic (
-      g_SUBSYSTEM_ADDR : std_logic_vector
+       g_SUBSYSTEM_ADDR : std_logic_vector;
+       g_I2C_ADDR : std_logic_vector(6 downto 0);
+       g_SEQ_DATA : t_i2c_data
       );
     port (
       -- clock
@@ -51,9 +53,22 @@ architecture behave of ads1015_tb is
   end component;
 
 begin
-  dut : ads1015
+  dut : i2c_wrapper
     generic map (
-      g_SUBSYSTEM_ADDR => "00000100"
+      g_SUBSYSTEM_ADDR => "00000100",
+      g_I2C_ADDR => "1001000",
+      g_SEQ_DATA => ((data => "00000001", restart => '0', rw => '0', addr => "XXX"),-- select config register
+                                (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger   conversion
+                                (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
+                                (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
+                                (data => "XXXXXXXX", restart => '1', rw => '1', addr => "000"),
+                                (data => "XXXXXXXX", restart => '0', rw => '1', addr => "001"),
+                                (data => "00000001", restart => '1', rw => '0', addr => "XXX"),-- select config register
+                                (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger conversion
+                                (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
+                                (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
+                                (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),
+                                (data => "XXXXXXXX", restart => '0', rw => '1', addr => "011"))
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
