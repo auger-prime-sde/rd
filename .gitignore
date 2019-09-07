@@ -39,3 +39,4 @@ auger1.sty
 *.ghw
 scripts/waterfall/data
 scripts/waterfall/ffts
+test/.depinfo/*.d

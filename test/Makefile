@@ -1,61 +1,54 @@
 .PHONY: clean
 
+
+print-% : ; $(info $* is a $(flavor $*) variable set to [$($*)]) @true
+
+
 #GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93
 GHDL_OPTS = --workdir=output
-GHDL_RUN_OPTS = --assert-level=warning --ieee-asserts=disable
+#GHDL_RUN_OPTS = --assert-level=warning --ieee-asserts=disable
 
-all: data_streamer housekeeping
+# Rules for analysys:
+# analysis results in object  files in the work dir
+# for this to work it is paramount that no modules share the same name
+output/%.o: ../rtl/housekeeping/%.vhd
+	ghdl -a $(GHDL_OPTS) $(firstword $^)
+output/%.o: ../rtl/data_streamer/%.vhd
+	ghdl -a $(GHDL_OPTS) $(firstword $^)
+output/%.o: data_streamer/%.vhd
+	ghdl -a $(GHDL_OPTS) $(firstword $^)
+output/%.o: housekeeping/%.vhd
+	ghdl -a $(GHDL_OPTS) $(firstword $^)
 
-data_streamer: data_buffer_tb simple_counter_tb write_controller_tb readout_controller_tb data_writer_tb
-housekeeping: spi_demux_tb spi_decoder_tb digitaloutput_tb bootsequence_tb i2c2_tb read_sequence_tb ads1015_tb
-ads1015: spi_decoder_tb read_sequence_tb i2c2_tb
-
-
-# the common housekeeping definitions are used in a few places
-hk_common: ../rtl/housekeeping/common.vhd
-	ghdl -a $(GHDL_OPTS) $^
-read_sequence_tb : | hk_common
-i2c2_tb : | hk_common
-ads1015_tb : | hk_common
-
-
-# define some order constraints
-write_controller_tb : | simple_counter_tb data_buffer_tb
-i2c_inttest : | i2c2_tb read_sequence_tb
-
-%_tb: ../rtl/%.vhd %_tb.vhd
-	ghdl -a $(GHDL_OPTS) $^
+# Rules for elaboration:
+%: output/%.o
 	ghdl -e $(GHDL_OPTS) $@
-	ghdl -r $(GHDL_OPTS) $@ $(GHDL_RUN_OPTS)
 
-%_tb: ../rtl/housekeeping/%.vhd housekeeping/%_tb.vhd
-	ghdl -a $(GHDL_OPTS) $^
-	ghdl -e $(GHDL_OPTS) $@
-	ghdl -r $(GHDL_OPTS) $@ $(GHDL_RUN_OPTS)
-
-%_tb: ../rtl/data_streamer/%.vhd data_streamer/%_tb.vhd
-	ghdl -a $(GHDL_OPTS)  $^
-	ghdl -e $(GHDL_OPTS)  $@
-	ghdl -r $(GHDL_OPTS)  $@ $(GHDL_RUN_OPTS) 
-
-%_inttest: housekeeping/%_inttest.vhd
-	ghdl -a $(GHDL_OPTS) $^
-	ghdl -e $(GHDL_OPTS) $@
-	ghdl -r $(GHDL_OPTS) $@ $(GHDL_RUN_OPTS)
-
-
-%.vcd: %_tb
-	ghdl -r $(GHDL_OPTS) $^ --vcd=$@
+# Rules for running:
 %.ghw: %_tb
 	ghdl -r $(GHDL_OPTS) $^ --wave=$@
 
-%.ghw: %_inttest
-	ghdl -r $(GHDL_OPTS) $^ --wave=$@
+# rules for generating depfiles
+sourcefiles := $(wildcard housekeeping/*.vhd) $(wildcard data_streamer/*.vhd) $(wildcard ../rtl/housekeeping/*.vhd) $(wildcard ../rtl/data_streamer/*.vhd)
+depfiles := $(addprefix .depinfo/,$(addsuffix .d,$(basename $(notdir $(sourcefiles)))))
+
+.depinfo/%.d: ../rtl/housekeeping/%.vhd
+	./makedepends.py $^ $@
+.depinfo/%.d: ../rtl/data_streamer/%.vhd
+	./makedepends.py $^ $@
+.depinfo/%.d: data_streamer/%.vhd
+	./makedepends.py $^ $@
+.depinfo/%.d: housekeeping/%.vhd
+	./makedepends.py $^ $@
+
+include $(depfiles) 
+
 
 
 clean:
 	ghdl --clean
 	rm -f output/*
 	rm -f *-obj93.cf *.vcd *.o *.ghw *_tb
+
 
 
