@@ -37,13 +37,13 @@ sourcefiles := $(wildcard housekeeping/*.vhd) $(wildcard data_streamer/*.vhd) $(
 depfiles := $(addprefix .depinfo/,$(addsuffix .d,$(basename $(notdir $(sourcefiles)))))
 
 .depinfo/%.d: ../rtl/housekeeping/%.vhd
-	./makedepends.py $^ $@
+	python3 makedepends.py $^ $@
 .depinfo/%.d: ../rtl/data_streamer/%.vhd
-	./makedepends.py $^ $@
+	python3 makedepends.py $^ $@
 .depinfo/%.d: data_streamer/%.vhd
-	./makedepends.py $^ $@
+	python3 makedepends.py $^ $@
 .depinfo/%.d: housekeeping/%.vhd
-	./makedepends.py $^ $@
+	python3 makedepends.py $^ $@
 
 include $(depfiles) 
 
