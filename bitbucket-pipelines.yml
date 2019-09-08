@@ -10,13 +10,6 @@ pipelines:
     - step:
         script:
           - apt-get install make
-          - make -C test simple_counter_tb
-          - make -C test data_buffer_tb
-          - make -C test write_controller_tb
-          - make -C test readout_controller_tb
-          - make -C test data_writer_tb
-          - make -C test spi_demux_tb
-          - make -C test spi_decoder_tb
-          - make -C test digitaloutput_tb
-          - make -C test bootsequence_tb
+          - make -C test all
+
 
