@@ -45,6 +45,8 @@ depfiles := $(addprefix .depinfo/,$(addsuffix .d,$(basename $(notdir $(sourcefil
 .depinfo/%.d: housekeeping/%.vhd
 	python3 makedepends.py $^ $@
 
+$(depfiles):
+
 include $(depfiles) 
 
 clean:
