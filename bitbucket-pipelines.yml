@@ -9,7 +9,7 @@ pipelines:
   default:
     - step:
         script:
-		  - apt-get update
+          - apt-get update
           - apt-get install make python3
           - make -C test all
 
