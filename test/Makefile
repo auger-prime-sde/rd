@@ -1,7 +1,11 @@
-.PHONY: clean
+.PHONY: clean all
 
 
 print-% : ; $(info $* is a $(flavor $*) variable set to [$($*)]) @true
+
+
+testfiles := $(wildcard housekeeping/*.vhd) $(wildcard data_streamer/*.vhd)
+all: $(basename $(notdir $(testfiles)))
 
 
 #GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93
@@ -43,11 +47,10 @@ depfiles := $(addprefix .depinfo/,$(addsuffix .d,$(basename $(notdir $(sourcefil
 
 include $(depfiles) 
 
-
-
 clean:
 	ghdl --clean
 	rm -f output/*
+	rm -f .depinfo/*
 	rm -f *-obj93.cf *.vcd *.o *.ghw *_tb
 
 

@@ -5,53 +5,54 @@ use IEEE.numeric_std.all;
 entity digitaloutput_tb is
 end  digitaloutput_tb;
 
-architecture Behavior of digitaloutput_tb is
+architecture behavior of digitaloutput_tb is
 
-  constant  clk_period 	: time    := 20 ns;
-  constant  g_CMD_BITS  : natural := 4;
-  constant  g_DATA_BITS : natural := 8 ;
-   
-   
-  signal clk, stop : std_logic := '0';
-  signal enable : std_logic := '0';
-  signal cmd : std_logic_vector(g_CMD_BITS-1 downto 0);
-  signal datain : std_logic_vector( g_DATA_BITS-1 downto 0);
-  signal dataout : std_logic_vector( g_DATA_BITS-1 downto 0);
-  signal busy : std_logic := '0';
+  constant clk_period : time := 20 ns;
+  constant spi_period : time := 151 ns;
+
+  constant c_DEFAULT : std_logic_vector(7 downto 0) := "11001001";
   
-component digitaloutput is  --begin
-  generic (
-    g_CMD_BITS       : natural := 4;
-    g_DATA_BITS      : natural := 8;
-    g_DEFAULT_OUTPUT : std_logic_vector(7 downto 0) := "11111111"
-    );
-  port(	--inputs
-    i_clk        : in std_logic;
-    i_enable     : in std_logic;
-    i_cmd        : in std_logic_vector(g_CMD_BITS-1 downto 0);
-    i_data       : in std_logic_vector(g_DATA_BITS-1 downto 0);
-    --outputs
-    o_data       : out std_logic_vector (g_DATA_BITS-1 downto 0);  
-    o_busy	     : out std_logic
-    );
+  signal clk, stop : std_logic := '0';
+  signal i_spi_clk : std_logic := '1';
+  signal i_spi_mosi : std_logic;
+  signal o_spi_miso : std_logic;
+  signal i_dev_select : std_logic_vector(7 downto 0);
+  signal o_data : std_logic_vector(c_DEFAULT'length-1 downto 0);
 
-end component;
+
+  signal test_cmd  : std_logic_vector(7 downto 0);
+  signal test_data : std_logic_vector(7 downto 0);
+  signal prev_data : std_logic_vector(7 downto 0);
+  
+  component digitaloutput is  --begin
+    generic (
+      g_SUBSYSTEM_ADDR : std_logic_vector;
+      g_DEFAULT_OUTPUT : std_logic_vector (7 downto 0) := "11111111" 
+      );
+    port (
+      i_clk        : in std_logic;
+      i_spi_clk    : in std_logic;
+      i_spi_mosi   : in std_logic;
+      o_spi_miso   : out std_logic;
+      i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+      o_data       : out std_logic_vector (g_DEFAULT_OUTPUT'length-1 downto 0) := g_DEFAULT_OUTPUT
+      );  
+  end component;
  
 begin
   -- DUT instantiation
   dut : digitaloutput
     generic map (
-      g_CMD_BITS       => g_CMD_BITS,
-      g_DATA_BITS      => g_DATA_BITS,
-      g_DEFAULT_OUTPUT => "11111111"
+      g_SUBSYSTEM_ADDR => "00000011",
+      g_DEFAULT_OUTPUT => c_DEFAULT
       )
     port map(
-      i_clk   		=>  clk,       
-      i_enable		=>	enable,
-      i_cmd			=>	cmd,
-      i_data		=>	datain,
-      o_data    	=>	dataout,
-      o_busy		=>	busy
+      i_clk   		=> clk,
+      i_spi_clk     => i_spi_clk,
+      i_spi_mosi    => i_spi_mosi,
+      o_spi_miso    => o_spi_miso,
+      i_dev_select  => i_dev_select,
+      o_data        => o_data
       );
 
   p_clk : process is
@@ -70,46 +71,106 @@ begin
   p_test : process is
   begin
     wait for 20 ns;
-    assert dataout = "11111111" report "o_DataOut is not initialized all systems on" severity warning;
+    assert o_data = c_DEFAULT report "data not initialized to default value";
     wait for 40 ns;
+
+    -- test a write
+    i_dev_select <= "00000011";
+    test_cmd <= "00000001";
+    test_data <= "10101010";
+    wait for spi_period;
+    for i in 0 to 7 loop
+      i_spi_clk <= '0';
+      i_spi_mosi <= test_cmd(7 - i);
+      wait for spi_period / 2;
+      i_spi_clk <= '1';
+      wait for spi_period / 2;
+    end loop;
+    for i in 0 to 7 loop
+      i_spi_clk <= '0';
+      i_spi_mosi <= test_data(7 - i);
+      wait for spi_period / 2;
+      i_spi_clk <= '1';
+      wait for spi_period / 2;
+    end loop;
+    assert o_data = test_data report "write failed";
+    i_dev_select <= "00000000";
     
-    wait until clk ='0';	
-    cmd <= "0001"; 			--write vector command
-    datain <= "01010101";	
-    enable <= '1';
-    wait for clk_period;
-    enable <= '0';
-    assert dataout = "01010101" report "o_DataOut is not written right" severity warning;
-    
-    wait for 50 ns;	
-    
-    wait until clk ='0';	
-    cmd <=  "0100"; 		-- set to default
-    datain <= "UUUUUUUU";	
-    enable <= '1';
-    wait for clk_period;
-    enable <= '0';
-    assert dataout = "11111111" report "o_DataOut is not set to default" severity warning;
-    wait for 50 ns;
-    
-    wait until clk ='0';	
-    cmd <=  "0011"; 		-- reset bit
-    datain <= "01010101";	
-    enable <= '1';
-    wait for clk_period;
-    enable <= '0';
-    assert dataout = "10101010" report "o_DataOut is not set to default" severity warning;
-    wait for 50 ns;
-    
-    wait until clk ='0';	
-    cmd <=  "0010"; 		-- set bit
-    datain <= "00010100";	
-    enable <= '1';
-    wait for clk_period;
-    enable <= '0';
-    assert dataout = "10111110" report "o_DataOut is not set to default" severity warning;
-    wait for 50 ns;
-    
+    wait for 0.5 us;
+
+    i_dev_select <= "00000011";
+    test_cmd <= "00000100";
+    test_data <= "XXXXXXXX";
+    wait for spi_period;
+    for i in 0 to 7 loop
+      i_spi_clk <= '0';
+      i_spi_mosi <= test_cmd(7 - i);
+      wait for spi_period / 2;
+      i_spi_clk <= '1';
+      wait for spi_period / 2;
+    end loop;
+    for i in 0 to 7 loop
+      i_spi_clk <= '0';
+      i_spi_mosi <= test_data(7 - i);
+      wait for spi_period / 2;
+      i_spi_clk <= '1';
+      wait for spi_period / 2;
+    end loop;
+    assert o_data = c_DEFAULT report "reset to default failed";
+    i_dev_select <= "00000000";
+
+    wait for 0.5 us;
+
+    -- selective bit clear
+    i_dev_select <= "00000011";
+    test_cmd <= "00000011";
+    test_data <= "00001111";
+    prev_data <= o_data;
+    wait for spi_period;
+    for i in 0 to 7 loop
+      i_spi_clk <= '0';
+      i_spi_mosi <= test_cmd(7 - i);
+      wait for spi_period / 2;
+      i_spi_clk <= '1';
+      wait for spi_period / 2;
+    end loop;
+    for i in 0 to 7 loop
+      i_spi_clk <= '0';
+      i_spi_mosi <= test_data(7 - i);
+      wait for spi_period / 2;
+      i_spi_clk <= '1';
+      wait for spi_period / 2;
+    end loop;
+    assert o_data = (prev_data and (not test_data)) report "selective bit clear failed";
+    i_dev_select <= "00000000";
+
+    wait for 0.5 us;
+
+    -- selective bit set
+    i_dev_select <= "00000011";
+    test_cmd <= "00000010";
+    test_data <= "01010000";
+    prev_data <= o_data;
+    wait for spi_period;
+    for i in 0 to 7 loop
+      i_spi_clk <= '0';
+      i_spi_mosi <= test_cmd(7 - i);
+      wait for spi_period / 2;
+      i_spi_clk <= '1';
+      wait for spi_period / 2;
+    end loop;
+    for i in 0 to 7 loop
+      i_spi_clk <= '0';
+      i_spi_mosi <= test_data(7 - i);
+      wait for spi_period / 2;
+      i_spi_clk <= '1';
+      wait for spi_period / 2;
+    end loop;
+    assert o_data = (prev_data or test_data) report "selective bit set failed";
+    i_dev_select <= "00000000";
+
+    wait for 0.5 us;
+
     stop <= '1';
     wait;
   end process;

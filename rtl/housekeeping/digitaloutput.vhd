@@ -8,12 +8,12 @@ entity digitaloutput is
 	g_DEFAULT_OUTPUT : std_logic_vector (7 downto 0) := "11111111" 
     );
   port (
-    i_clk : in std_logic;
-    i_spi_clk : in std_logic;
-    i_spi_mosi : in std_logic;
-    o_spi_miso : out std_logic;
-    i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
-    o_data : out std_logic_vector (g_DEFAULT_OUTPUT'length-1 downto 0) := g_DEFAULT_OUTPUT
+    i_clk        : In std_logic;
+    i_spi_clk    : In std_logic;
+    i_spi_mosi   : In std_logic;
+    o_spi_miso   : Out std_logic;
+    i_dev_select : In std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+    o_data       : Out std_logic_vector (g_DEFAULT_OUTPUT'length-1 downto 0) := g_DEFAULT_OUTPUT
     );  
 end  digitaloutput;
 
@@ -47,7 +47,7 @@ begin
 
   r_ce <= '0' when i_dev_select = g_SUBSYSTEM_ADDR else '1';
   o_spi_miso <= r_spi_miso when r_ce = '0' else '0';
-  r_valid <= '1' when r_recv_count = std_logic_vector(to_unsigned(15, r_recv_count'length)) else '0';
+  r_valid <= '1' when r_recv_count = std_logic_vector(to_unsigned(0, r_recv_count'length)) else '0';
   o_data <= r_data;
 
   

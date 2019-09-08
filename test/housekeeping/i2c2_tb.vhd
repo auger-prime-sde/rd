@@ -11,12 +11,13 @@ architecture behavior of i2c2_tb is
   constant clk_period : time := 20 ns;
   signal clk, stop : std_logic := '0';
 
-  signal i_data : std_logic_vector(7 downto 0);
-  signal i_rw   : std_logic;
-  signal i_restart : std_logic;
-  signal i_valid : std_logic;
-  signal o_data : std_logic_vector(7 downto 0);
-  signal o_next : std_logic;
+  signal i_data      : std_logic_vector(7 downto 0);
+  signal i_rw        : std_logic;
+  signal i_restart   : std_logic;
+  signal i_valid     : std_logic;
+  signal o_data      : std_logic_vector(7 downto 0);
+  signal o_datavalid : std_logic;
+  signal o_next      : std_logic;
   
   signal sda : std_logic;
   signal scl : std_logic;
@@ -33,8 +34,9 @@ architecture behavior of i2c2_tb is
       i_valid    : in std_logic;
     
       --outputs
-      o_data  : out std_logic_vector (7 downto 0); 
-      o_next  : out std_logic;
+      o_data      : out std_logic_vector (7 downto 0);
+      o_datavalid : out std_logic := '0';
+      o_next      : out std_logic := '0';
     
       -- i2c interface
       sda	  : inout std_logic := 'Z';
@@ -55,6 +57,7 @@ begin
       i_restart     => i_restart,
       i_valid	    => i_valid,
       o_data        => o_data,
+      o_datavalid   => o_datavalid,
       o_next        => o_next,
       sda			=> sda,
       scl			=> scl
