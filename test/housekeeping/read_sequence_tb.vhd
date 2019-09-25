@@ -26,7 +26,8 @@ architecture behavior of read_sequence_tb is
       i_trig     : in std_logic;
       i_next     : in std_logic;
       o_data     : out std_logic_vector(7 downto 0);
-      o_rw       : out std_logic;
+      o_dir      : out std_logic;
+      o_ack      : out std_logic;
       o_restart  : out std_logic;
       o_valid    : out std_logic;
       o_addr     : out std_logic_vector(2 downto 0)
@@ -37,25 +38,26 @@ begin
 
   dut : read_sequence
     generic map (
-      g_SEQ_DATA => ((data => "00000001", restart => '0', rw => '0', addr=> "XXX"),-- select config register
-                     (data => "10000101", restart => '0', rw => '0', addr=> "XXX"),-- trigger conversion
-                     (data => "10000000", restart => '0', rw => '0', addr=> "XXX"),-- keep rest at default
-                     (data => "00000000", restart => '1', rw => '0', addr=> "XXX"),-- select conversion register
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr=> "000"),
-                     (data => "XXXXXXXX", restart => '0', rw => '1', addr=> "001"),
-                     (data => "00000001", restart => '0', rw => '0', addr=> "XXX"),-- select config register
-                     (data => "10000101", restart => '0', rw => '0', addr=> "XXX"),-- trigger conversion
-                     (data => "10000000", restart => '0', rw => '0', addr=> "XXX"),-- keep rest at default
-                     (data => "00000000", restart => '1', rw => '0', addr=> "XXX"),-- select conversion register
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr=> "010"),
-                     (data => "XXXXXXXX", restart => '0', rw => '1', addr=> "011"))
+      g_SEQ_DATA => ((data => "00000001", restart => '0', dir => '0', ack=>'0', addr=> "XXX"),-- select config register
+                     (data => "10000101", restart => '0', dir => '0', ack=>'0', addr=> "XXX"),-- trigger conversion
+                     (data => "10000000", restart => '0', dir => '0', ack=>'0', addr=> "XXX"),-- keep rest at default
+                     (data => "00000000", restart => '1', dir => '0', ack=>'0', addr=> "XXX"),-- select conversion register
+                     (data => "XXXXXXXX", restart => '1', dir => '1', ack=>'0', addr=> "000"),
+                     (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr=> "001"),
+                     (data => "00000001", restart => '0', dir => '0', ack=>'0', addr=> "XXX"),-- select config register
+                     (data => "10000101", restart => '0', dir => '0', ack=>'0', addr=> "XXX"),-- trigger conversion
+                     (data => "10000000", restart => '0', dir => '0', ack=>'0', addr=> "XXX"),-- keep rest at default
+                     (data => "00000000", restart => '1', dir => '0', ack=>'0', addr=> "XXX"),-- select conversion register
+                     (data => "XXXXXXXX", restart => '1', dir => '1', ack=>'0', addr=> "010"),
+                     (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr=> "011"))
       )
     port map (
       i_clk     => clk,
       i_trig    => i_trig,
       i_next    => i_next,
       o_data    => open,
-      o_rw      => open,
+      o_dir     => open,
+      o_ack     => open,
       o_restart => open,
       o_valid   => open
       );
