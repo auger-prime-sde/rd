@@ -129,6 +129,7 @@ architecture behaviour of housekeeping is
     generic (
       g_SUBSYSTEM_ADDR : std_logic_vector;
       g_I2C_ADDR : std_logic_vector(6 downto 0);
+      g_CLK_DIV : natural := 125; -- 400 kHz
       g_SEQ_DATA : t_i2c_data
     );
     port (
@@ -313,6 +314,7 @@ begin
                      (data => "XXXXXXXX", restart => '1', rw => '1', addr => "110"),-- read reg contents
                      (data => "11000111", restart => '0', rw => '0', addr => "XXX"),-- sw reg
                      (data => "XXXXXXXX", restart => '1', rw => '1', addr => "111")) -- read reg contents
+      g_CLK_DIV => 500,
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,

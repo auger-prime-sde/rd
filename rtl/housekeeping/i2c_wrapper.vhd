@@ -19,6 +19,7 @@ entity i2c_wrapper is
                                 (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
                                 (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),
                                 (data => "XXXXXXXX", restart => '0', rw => '1', addr => "011"))
+    g_CLK_DIV : natural := 125; -- I.e. 100MHz/400khz/2
     );
   port (
     -- clock
@@ -159,7 +160,7 @@ begin
 
   clock_divider_i2c : clock_divider
     generic map (
-      g_MAX_COUNT => 160 -- from 100 MHz to 312.5 kHz (i2c clock is half as
+      g_MAX_COUNT => g_CLK_DIV -- from 100 MHz to 312.5 kHz (i2c clock is half as
                          -- fast as input clk)
       )
     port map (
