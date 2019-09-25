@@ -7,19 +7,10 @@ entity i2c_wrapper is
   generic (
     g_SUBSYSTEM_ADDR : std_logic_vector;
     g_I2C_ADDR : std_logic_vector(6 downto 0);
-    g_SEQ_DATA : t_i2c_data := ((data => "00000001", restart => '0', rw => '0', addr => "XXX"),-- select config register
-                                (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger   conversion
-                                (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
-                                (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
-                                (data => "XXXXXXXX", restart => '1', rw => '1', addr => "000"),
-                                (data => "XXXXXXXX", restart => '0', rw => '1', addr => "001"),
-                                (data => "00000001", restart => '1', rw => '0', addr => "XXX"),-- select config register
-                                (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger conversion
-                                (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
-                                (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
-                                (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),
-                                (data => "XXXXXXXX", restart => '0', rw => '1', addr => "011"))
     g_CLK_DIV : natural := 125; -- I.e. 100MHz/400khz/2
+    -- divided by 2 because the i2c clock is half as fast as the internal clock
+    -- used to produce it.
+    g_SEQ_DATA : t_i2c_data
     );
   port (
     -- clock
