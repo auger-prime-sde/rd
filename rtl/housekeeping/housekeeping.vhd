@@ -296,7 +296,7 @@ begin
       );
 
 
-  si7050_1 : i2c_wrapper
+  si7060_1 : i2c_wrapper
     generic map (
       g_SUBSYSTEM_ADDR => "00000101",
       g_I2C_ADDR => "0110001", -- 0x31
