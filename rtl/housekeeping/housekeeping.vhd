@@ -14,6 +14,7 @@ entity housekeeping is
     i_hk_uub_ce   : in  std_logic;
     -- trigger a housekeeping data refresh
     i_trigger     : in std_logic;
+    o_trigger     : out std_logic;
     -- digitalout:
     o_gpio_data         : out std_logic_vector(7 downto 0);
     -- flash:
@@ -164,6 +165,21 @@ architecture behaviour of housekeeping is
       o_ce         : out std_logic
       );
   end component;
+
+  component fake_trigger is
+    generic (
+    g_SUBSYSTEM_ADDR : std_logic_vector
+    );
+  port (
+    i_hk_fast_clk : in std_logic;
+    i_spi_clk     : in std_logic;
+    i_spi_mosi    : in std_logic;
+    o_spi_miso    : out std_logic;
+    i_dev_select  : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+    o_trigger     : out std_logic
+    );
+  end component;
+  
   
 begin
 
@@ -309,6 +325,20 @@ begin
       io_hk_scl     => io_si7060_scl
       );
 
+
+  -- fake trigger unit
+  fake_trigger_1 : fake_trigger
+    generic map (
+      g_SUBSYSTEM_ADDR => "00000110"
+      )
+    port map (
+      i_hk_fast_clk    => i_hk_fast_clk,
+      i_spi_clk        => r_internal_clk,
+      i_spi_mosi       => r_internal_mosi,
+      o_spi_miso       => open,
+      i_dev_select     => r_subsystem_select,
+      o_trigger        => o_trigger
+      );
   
   -- instantiate gpio subsystem
   digitalout_1 : digitaloutput

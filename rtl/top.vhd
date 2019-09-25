@@ -76,6 +76,9 @@ architecture behaviour of top is
 
   -- trigger from readout for housekeeping
   signal r_trigger_done : std_logic;
+  
+  signal r_hk_trig_out : std_logic;
+  signal r_trigger : std_logic;
      
   component adc_driver
     port (alignwd: in  std_logic; clkin: in  std_logic; 
@@ -116,6 +119,7 @@ architecture behaviour of top is
       o_hk_uub_miso  : out  std_logic;
       i_hk_uub_ce    : in   std_logic;
       i_trigger      : in   std_logic;
+      o_trigger      : out  std_logic;
       o_gpio_data    : out  std_logic_vector(7 downto 0);
       o_flash_clk    : out  std_logic;
       i_flash_miso   : in   std_logic;
@@ -174,6 +178,7 @@ begin
   o_bias_t <= '1';
   o_hk_adc_reset <= '0';
 
+  r_trigger <= r_hk_trig_out or i_trigger;
   
   process (w_hk_fast_clk) is
   begin
@@ -231,6 +236,7 @@ begin
       o_hk_uub_miso       => o_hk_uub_miso,
       i_hk_uub_ce         => i_hk_uub_ce,
       i_trigger           => r_trigger_done,
+      o_trigger           => r_hk_trig_out,
       o_gpio_data         => o_hk_gpio,
       o_flash_clk         => w_flash_clk,
       i_flash_miso        => i_hk_flash_miso,
@@ -252,7 +258,7 @@ begin
       i_adc_data       => w_adc_data,
       i_clk            => w_ddr_clk,
       i_tx_clk         => w_tx_clk,
-      i_trigger        => i_trigger,
+      i_trigger        => r_trigger,
       i_start_transfer => '1',
       o_tx_data        => o_tx_data,
       o_tx_clk         => o_tx_clk,
