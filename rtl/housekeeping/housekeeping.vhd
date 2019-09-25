@@ -271,18 +271,25 @@ begin
     generic map (
       g_SUBSYSTEM_ADDR => "00000100",
       g_I2C_ADDR => "1001000",
-      g_SEQ_DATA => ((data => "00000001", restart => '0', rw => '0', addr => "XXX"),-- select config register
-                     (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger   conversion
-                     (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
-                     (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "000"),
-                     (data => "XXXXXXXX", restart => '0', rw => '1', addr => "001"),
-                     (data => "00000001", restart => '1', rw => '0', addr => "XXX"),-- select config register
-                     (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger conversion
-                     (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
-                     (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),
-                     (data => "XXXXXXXX", restart => '0', rw => '1', addr => "011"))
+      g_SEQ_DATA => (
+        -- write address:
+        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- select config register
+        (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- write config register (trigger conversion, keep rest to default):
+        (data => "11000101", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        (data => "10000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        --
+        -- write address:
+        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- select conversion register
+        (data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        --
+        -- write address (with read bit):
+        (data => "10010001", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- read 2 bytes and save in 000 and 001
+        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "000"),
+        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "001")  )
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
@@ -300,21 +307,52 @@ begin
     generic map (
       g_SUBSYSTEM_ADDR => "00000101",
       g_I2C_ADDR => "0110001", -- 0x31
-      g_SEQ_DATA => ((data => "11000000", restart => '0', rw => '0', addr => "XXX"),-- chip id and revid
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "001"),-- read reg contents
-                     (data => "11000001", restart => '0', rw => '0', addr => "XXX"),-- conversion high word
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),-- read reg contents
-                     (data => "11000010", restart => '0', rw => '0', addr => "XXX"),-- conversion low word
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "011"),-- read reg contents
-                     (data => "11000100", restart => '0', rw => '0', addr => "XXX"),-- config reg
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "100"),-- read reg contents
-                     (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- auautoinc reg
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "101"),-- read reg contents
-                     (data => "11000110", restart => '0', rw => '0', addr => "XXX"),-- sw reg
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "110"),-- read reg contents
-                     (data => "11000111", restart => '0', rw => '0', addr => "XXX"),-- sw reg
-                     (data => "XXXXXXXX", restart => '1', rw => '1', addr => "111")) -- read reg contents
       g_CLK_DIV => 500,
+      g_SEQ_DATA => (
+        -- write address:
+        (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- write register (0xC0, i.e. chip id and rev):
+        (data => "11000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- restart and write address again:
+        (data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- read value of that reg, transmit NACK and save data at 000:
+        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "000"),
+        --
+        -- write address:
+        (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- write register (0xC1, i.e. high word of temp):
+        (data => "11000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- restart and write address again:
+        (data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- read value of that reg, transmit NACK and save data at 001:
+        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "001"),
+        --
+        -- write address:
+        (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- write register (0xC4, i.e. config register):
+        (data => "11000100", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- restart and write address again:
+        (data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- read value of that reg, transmit NACK and save data at 011:
+        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "011"),
+        --
+        -- write address:
+        (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- write register (0xC5, i.e. auto inc enable):
+        (data => "11000101", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- restart and write address again:
+        (data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- read value of that reg, transmit NACK and save data at 100:
+        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "100"),
+        --
+        -- write address:
+        (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- write register (0xC9, i.e. sleep timer):
+        (data => "11001001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- restart and write address again:
+        (data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        -- read value of that reg, transmit NACK and save data at 101:
+        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "101")   )
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,

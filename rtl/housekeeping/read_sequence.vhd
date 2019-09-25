@@ -13,7 +13,8 @@ entity read_sequence is
     i_trig     : in std_logic;
     i_next     : in std_logic;
     o_data     : out std_logic_vector(7 downto 0);
-    o_rw       : out std_logic;
+    o_dir      : out std_logic;
+    o_ack      : out std_logic;
     o_restart  : out std_logic;
     o_valid    : out std_logic;
     o_addr     : out std_logic_vector(2 downto 0)
@@ -43,7 +44,8 @@ begin
           r_state <= s_Data;
           o_valid <= '1';
           o_data  <= g_SEQ_DATA(r_count).data;
-          o_rw <= g_SEQ_DATA(r_count).rw;
+          o_dir <= g_SEQ_DATA(r_count).dir;
+          o_ack <= g_SEQ_DATA(r_count).ack;
           o_restart <= g_SEQ_DATA(r_count).restart;
           --o_addr <= g_SEQ_DATA(r_count).addr;
         when s_Data =>

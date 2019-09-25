@@ -6,7 +6,6 @@ use work.common.all;
 entity i2c_wrapper is
   generic (
     g_SUBSYSTEM_ADDR : std_logic_vector;
-    g_I2C_ADDR : std_logic_vector(6 downto 0);
     g_CLK_DIV : natural := 125; -- I.e. 100MHz/400khz/2
     -- divided by 2 because the i2c clock is half as fast as the internal clock
     -- used to produce it.
@@ -39,7 +38,8 @@ architecture behaviour of i2c_wrapper is
   signal r_seq_datavalid: std_logic;
   signal r_write_enable : std_logic;
   signal r_read_enable  : std_logic;
-  signal r_rw           : std_logic;
+  signal r_dir          : std_logic;
+  signal r_ack          : std_logic;
   signal r_restart      : std_logic;
   
   signal r_read_addr    : std_logic_vector(2 downto 0);
@@ -84,27 +84,27 @@ architecture behaviour of i2c_wrapper is
       i_trig     : in std_logic;
       i_next     : in std_logic;
       o_data     : out std_logic_vector(7 downto 0);
-      o_rw       : out std_logic;
+      o_dir      : out std_logic;
+      o_ack      : out std_logic;
       o_restart  : out std_logic;
       o_valid    : out std_logic;
       o_addr     : out std_logic_vector(2 downto 0)
       );
   end component;
 
-  component i2c2 is
-    generic (
-      g_ADDR          : std_logic_vector(6 downto 0)
-      );
+  component i2c is
     port(	--inputs
       i_clk      : in std_logic;
       i_data     : in std_logic_vector(7 downto 0);
-      i_rw       : in std_logic;
+      i_dir      : in std_logic;
+      i_ack      : in std_logic;
       i_restart  : in std_logic;
       i_valid    : in std_logic;
       --outputs
       o_data     : out std_logic_vector (7 downto 0);
       o_datavalid: out std_logic;
       o_next     : out std_logic;
+      o_error    : out std_logic;
       -- i2c interface
       sda	     : inout std_logic := 'Z';
       scl	     : inout std_logic := 'Z'
@@ -168,25 +168,25 @@ begin
       i_trig     => i_trigger,
       i_next     => r_next,
       o_data     => r_seq_data,
-      o_rw       => r_rw,
+      o_dir      => r_dir,
+      o_ack      => r_ack,
       o_restart  => r_restart,
       o_valid    => r_seq_datavalid,
       o_addr     => r_write_addr
       );
   
-  i2c2_1 : i2c2
-    generic map (
-      g_ADDR     => g_I2C_ADDR
-      )
+  i2c_1 : i2c
     port map (
       i_clk       => r_i2c_clk,
       i_data      => r_seq_data,
-      i_rw        => r_rw,
+      i_dir       => r_dir,
+      i_ack       => r_ack,
       i_restart   => r_restart,
       i_valid     => r_seq_datavalid,
       o_data      => r_write_data,
       o_datavalid => r_write_enable,
       o_next      => r_next,
+      o_error     => open,
       sda	      => io_hk_sda,
       scl	      => io_hk_scl
       );

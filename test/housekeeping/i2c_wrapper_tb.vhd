@@ -27,13 +27,20 @@ architecture behave of i2c_wrapper_tb is
   signal r_count : std_logic_vector(7 downto 0) := "00000000";
   signal r_test  : std_logic_vector(15 downto 0) := "1010111101101000";
                                                    
-
+  constant c_testdata : t_i2c_data := (
+    -- write address:
+    (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+    -- write register (0xC0, i.e. chip id and rev):
+    (data => "11000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+    -- write address again and restart:
+    (data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+    -- read value of that reg, transmit NACK and save data at 001:
+    (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "001")  );
   
   
   component i2c_wrapper is
     generic (
        g_SUBSYSTEM_ADDR : std_logic_vector;
-       g_I2C_ADDR : std_logic_vector(6 downto 0);
        g_SEQ_DATA : t_i2c_data
       );
     port (
@@ -56,19 +63,7 @@ begin
   dut : i2c_wrapper
     generic map (
       g_SUBSYSTEM_ADDR => "00000100",
-      g_I2C_ADDR => "1001000",
-      g_SEQ_DATA => ((data => "00000001", restart => '0', rw => '0', addr => "XXX"),-- select config register
-                                (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger   conversion
-                                (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
-                                (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
-                                (data => "XXXXXXXX", restart => '1', rw => '1', addr => "000"),
-                                (data => "XXXXXXXX", restart => '0', rw => '1', addr => "001"),
-                                (data => "00000001", restart => '1', rw => '0', addr => "XXX"),-- select config register
-                                (data => "11000101", restart => '0', rw => '0', addr => "XXX"),-- trigger conversion
-                                (data => "10000000", restart => '0', rw => '0', addr => "XXX"),-- keep rest at default
-                                (data => "00000000", restart => '1', rw => '0', addr => "XXX"),-- select conversion register
-                                (data => "XXXXXXXX", restart => '1', rw => '1', addr => "010"),
-                                (data => "XXXXXXXX", restart => '0', rw => '1', addr => "011"))
+      g_SEQ_DATA => c_testdata
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
@@ -112,75 +107,75 @@ begin
     i_spi_mosi <= '1';
     i_dev_select <= "00000000";
 
-    for i in 1 to 64 loop
-      wait until io_hk_scl /= '0';
+    for word in 0 to 1 loop
+      -- wait for 8 rising edges
+      for i in 7 downto 0 loop
+        wait until io_hk_scl = '0';
+        wait until io_hk_scl /= '0';
+        if c_testdata(word).data(i) = '1' then
+          assert io_hk_sda /= '0' report "wrong data bit";
+        else
+          assert io_hk_sda = '0' report "wrong data bit";
+        end if;
+      end loop;
+      -- at the next falling edge assert ack low
       wait until io_hk_scl = '0';
-    end loop;
-    io_hk_sda <= '0'; --ack
-    for i in 7 downto 0 loop
+      io_hk_sda <= '0';
       wait until io_hk_scl /= '0';
-      wait until io_hk_scl = '0';
-      if r_test(i) = '0' then
-        io_hk_sda <= '0';
-      else
-        io_hk_sda <= 'Z';
-      end if;
+      io_hk_sda <= 'Z';
     end loop;
-    wait until io_hk_scl /= '0';
-    wait until io_hk_scl = '0';
-    io_hk_sda <= 'Z'; -- receive ack
-    for i in 15 downto 8 loop
-      wait until io_hk_scl /= '0';
-      wait until io_hk_scl = '0';
-      if r_test(i) = '0' then
-        io_hk_sda <= '0';
-      else
-        io_hk_sda <= 'Z';
-      end if;
-    end loop;
-    wait until io_hk_scl /= '0';
-    wait until io_hk_scl = '0';
-    io_hk_sda <= 'Z'; -- receive ack
-    
 
-    for i in 1 to 66 loop
-      wait until io_hk_scl /= '0';
-      wait until io_hk_scl = '0';
-    end loop;
-    io_hk_sda <= '0'; --ack
+    -- wait for a falling edge on sda and assert restart condition
+    wait until io_hk_sda /= '0';
+    wait until io_hk_sda = '0';
+    assert io_hk_scl /= '0';
+
+    -- transmit again
     for i in 7 downto 0 loop
-      wait until io_hk_scl /= '0';
       wait until io_hk_scl = '0';
-      if r_test(i) = '0' then
-        io_hk_sda <= '0';
+      wait until io_hk_scl /= '0';
+      if c_testdata(2).data(i) = '1' then
+        assert io_hk_sda /= '0' report "wrong data bit";
       else
-        io_hk_sda <= 'Z';
+        assert io_hk_sda = '0' report "wrong data bit";
       end if;
     end loop;
-    wait until io_hk_scl /= '0';
+    -- write ack again
     wait until io_hk_scl = '0';
-    io_hk_sda <= 'Z'; -- receive ack
-    for i in 15 downto 8 loop
-      wait until io_hk_scl /= '0';
+    io_hk_sda <= '0';
+    wait until io_hk_scl /= '0';
+    io_hk_sda <= 'Z';
+    
+    -- the last word is a read word:
+    for i in 7 downto 0 loop
       wait until io_hk_scl = '0';
-      if r_test(i) = '0' then
-        io_hk_sda <= '0';
-      else
+      if c_testdata(0).data(i) = '1' then -- we abuse the address as data
         io_hk_sda <= 'Z';
+      else
+        io_hk_sda <= '0';
       end if;
+      wait until io_hk_scl /= '0';
     end loop;
-    wait until io_hk_scl /= '0';
+    io_hk_sda <= 'Z';
+    -- READ ack
     wait until io_hk_scl = '0';
-    io_hk_sda <= 'Z'; -- receive ack
-    
-    
-    
+    wait until io_hk_scl /= '0';
+    --report "asserting ack at time " & time'image(now);
+    assert io_hk_sda /= '0' report "wrong ack bit";
+
+    -- consume one more rising edge
+    wait until io_hk_scl = '0';
+    wait until io_hk_scl /= '0';
+
 
     
-    wait for 600 us;
+    -- wait some time
+    wait for 50 us;
+    
+
 
     i_dev_select <= "00000100";
-    r_count <= "00000011";
+    r_count <= "00000001";
     wait for spi_period / 2;
 
     -- send spi message
