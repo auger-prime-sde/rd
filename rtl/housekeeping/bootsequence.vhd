@@ -42,7 +42,7 @@ architecture behave of bootsequence is
   --constant SPI_DIV : natural := 20;
   --signal spi_clk_counter : natural range 0 to SPI_DIV-1 := 0;
   
-  constant c_NUMBYTES : natural := 49;
+  constant c_NUMBYTES : natural := 53;
   type t_BYTESEQ is array(0 to c_NUMBYTES-1) of bit_vector(11 downto 0);
   signal c_BOOTSEQUENCE : t_BYTESEQ := (
     -- the first bit indicates if this is a transaction separatator
@@ -73,6 +73,8 @@ architecture behave of bootsequence is
     X"100", X"003", X"0D5", X"018",
     X"100", X"003", X"0D7", X"00C",
     X"100", X"003", X"0DB", X"020",
+    -- set default start offset 1024 (0x0400)
+    X"100", X"008", X"004", X"000",
     X"100" );
   
   type t_State is (s_Initial, s_LowClk, s_HighClk, s_Done);

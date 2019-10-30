@@ -16,6 +16,7 @@ package common is
   end record t_i2c_word;
   
   type t_i2c_data is array(natural range <>) of t_i2c_word;
+  type t_byte_seq is array(integer range <>) of std_logic_vector(7 downto 0);
   
 end package common;
 

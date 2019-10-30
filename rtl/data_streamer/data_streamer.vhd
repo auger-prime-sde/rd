@@ -21,6 +21,7 @@ entity data_streamer is
     i_tx_clk         : in std_logic;
     i_trigger        : in std_logic;
     i_start_transfer : in std_logic;
+    i_start_offset   : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
     o_tx_data        : out std_logic_vector(1 downto 0);
     o_tx_clk         : out std_logic;
     o_trigger_done   : out std_logic
@@ -88,12 +89,13 @@ architecture behaviour of data_streamer is
 
   
   component write_controller
-    generic (g_ADDRESS_BITS : natural; g_START_OFFSET : natural);
+    generic (g_ADDRESS_BITS : natural);
     port (
       i_clk          : in std_logic;
       i_trigger      : in std_logic;
       i_curr_addr    : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
       i_arm          : in std_logic;
+      i_start_offset : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
       o_write_en     : out std_logic;
       o_trigger_done : out std_logic;
       o_start_addr   : out std_logic_vector(g_ADDRESS_BITS-1 downto 0)
@@ -213,13 +215,14 @@ trigger_sync_1 : trigger_sync
     );
 
 write_controller_1 : write_controller
-  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE, g_START_OFFSET => 1024)
+  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE)
   port map (
     i_clk                                         => i_clk,
     i_trigger                                     => r_trigger,
     i_curr_addr(g_BUFFER_INDEXSIZE-1 downto 1)    => write_address,
     i_curr_addr(0)                                => '0',
     i_arm                                         => arm,
+    i_start_offset                                => i_start_offset,
     o_write_en                                    => buffer_write_en,
     o_start_addr                                  => start_address,
     o_trigger_done                                => trigger_done);

@@ -4,8 +4,7 @@ use ieee.numeric_std.all;
 
 entity write_controller is
   generic (
-    g_ADDRESS_BITS : natural := 11;
-    g_START_OFFSET : integer := 1024
+    g_ADDRESS_BITS : natural := 11
   );
   port (
     -- inputs
@@ -13,6 +12,7 @@ entity write_controller is
     i_trigger      : in std_logic;
     i_curr_addr    : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
     i_arm          : in std_logic;
+    i_start_offset : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
     -- outputs
     o_write_en     : out std_logic := '0';
     o_start_addr   : out std_logic_vector(g_ADDRESS_BITS-1 downto 0) := (others => '0');
@@ -22,7 +22,7 @@ end write_controller;
 
 architecture behavior of write_controller is
   -- Number of bytes to read before trigger: block size minus start offset
-  constant c_DELAY_COUNT : natural := (2**g_ADDRESS_BITS - g_START_OFFSET);
+  signal r_delay_count : natural range 0 to 2**g_ADDRESS_BITS-1;
   -- state machine type:
   type t_controller_state is (s_Idle, s_Armed, s_ArmReady, s_Triggered);
   -- In idle: no data is written to the buffer. This waits for an arm event
@@ -39,12 +39,15 @@ architecture behavior of write_controller is
   -- variables
   signal r_controller_state : t_controller_state := s_Idle;
   signal r_start_addr : natural range 0 to 2**g_ADDRESS_BITS-1 := 0;
-  signal r_count : natural range 0 to c_DELAY_COUNT := 0;
+  signal r_count : natural range 0 to 2**g_ADDRESS_BITS-1 := 0;
   --signal test_count : std_logic_vector(11 downto 0) := (others => '0');
   signal r_arm : std_logic := '0';
   --signal r_trigger : std_logic := '0';
   
 begin
+
+  r_delay_count <= 2**g_ADDRESS_BITS - to_integer(unsigned(i_start_offset));
+  
   p_main : process (i_clk) is
   begin
     if rising_edge(i_clk) then
@@ -64,9 +67,9 @@ begin
         when s_Armed =>
           -- wait for at least half the buffer to be filled
           r_start_addr <= r_start_addr;
-          r_count <= (r_count + 2) mod (c_DELAY_COUNT + 1);
+          r_count <= (r_count + 2);-- mod (r_delay_count + 1);
 
-          if r_count < c_DELAY_COUNT - 1 then
+          if r_count < to_integer(unsigned(i_start_offset)) then
             r_controller_state <= s_Armed;
           else
             r_controller_state <= s_ArmReady;
@@ -78,8 +81,7 @@ begin
           r_count <= 0;
 
           if i_trigger = '1' then
-            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - g_START_OFFSET + 2) mod 2**o_start_addr'length;
-            -- still don't fully understand the -2 here. 
+            r_start_addr <= (to_integer(unsigned(i_curr_addr)) - to_integer(unsigned(i_start_offset)) ) mod 2**o_start_addr'length;
             r_controller_state <= s_Triggered;
           else
             r_start_addr <= r_start_addr;
@@ -93,15 +95,12 @@ begin
           r_start_addr <= r_start_addr;
           r_count <= (r_count + 2) ;
 
-          if r_count < c_DELAY_COUNT - 5 then
-            -- -1 because c_DELAY_COUNT is the last address that we don't want
-            -- (i.e. we must stop at 2047 not 2048)
-            -- -2 because the counter actually starts counting 2 cycles after
-            -- the trigger.
-            -- -1 because the write_enable must go low on the clock tick before
-            -- the last write.
-            -- -1 because on this clock we change state and only on the next
-            -- clock will the write enable be changed.
+          if r_count < r_delay_count - 6 then
+            -- The minus 6 compensates for the fact that:
+            -- r_count starts counting after the trigger
+            -- o_write_enable should be asserted low before the last sample
+            -- there is a delay between going to idle and asserting
+            -- write_enbale low
             r_controller_state <= s_Triggered;
           else
             r_controller_state <= s_Idle;

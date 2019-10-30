@@ -67,7 +67,8 @@ begin
             -- proceed to Data state
             r_state <= s_Data;
           else
-            --r_sda <= '1';
+            -- this is needed to create the final STOP condition
+            r_sda <= '1';
           end if;
         when s_Data =>
           if scl /= '0' then

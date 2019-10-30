@@ -7,8 +7,8 @@ end write_controller_tb;
 
 architecture behavior of write_controller_tb is
   constant address_width : natural := 5; -- 32 entries in test buffer
-  constant start_offset : natural := 7; -- start at trigger address - 7
-  constant clk_period : time := 10 ns;
+  constant start_offset  : natural := 10; -- start at trigger address - 7
+  constant clk_period    : time := 10 ns;
 
   signal clk, stop, trigger, arm : std_logic := '0';
   signal write_en, trigger_done : std_logic;
@@ -18,8 +18,7 @@ architecture behavior of write_controller_tb is
 
   component write_controller is
     generic (
-      g_ADDRESS_BITS : natural;
-      g_START_OFFSET : natural
+      g_ADDRESS_BITS : natural
     );
     port (
       -- inputs
@@ -27,6 +26,7 @@ architecture behavior of write_controller_tb is
       i_trigger      : in std_logic;
       i_curr_addr    : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
       i_arm          : in std_logic;
+      i_start_offset : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
       -- outputs
       o_write_en     : out std_logic;
       o_start_addr   : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
@@ -44,20 +44,22 @@ architecture behavior of write_controller_tb is
 
 begin
   dut : write_controller
-    generic map (g_ADDRESS_BITS => address_width, g_START_OFFSET => start_offset)
+    generic map (g_ADDRESS_BITS => address_width)
     port map (
         i_clk => clk,
         i_trigger => trigger,
         i_curr_addr => curr_addr,
         i_arm => arm,
+        i_start_offset => std_logic_vector(to_unsigned(start_offset, address_width)),
         o_write_en => write_en,
         o_start_addr => start_addr,
         o_trigger_done => trigger_done
       );
 
+  curr_addr(0) <= '0';
   write_counter : simple_counter
-    generic map (g_SIZE => address_width)
-    port map ( i_clk => clk, o_count => curr_addr );
+    generic map (g_SIZE => address_width-1)
+    port map ( i_clk => clk, o_count => curr_addr(address_width-1 downto 1) );
 
   p_clk : process is
   begin
@@ -86,10 +88,10 @@ begin
 
     -- Stays armed when signal is removed?
     arm <= '0';
-    wait for 90 ns;
+    wait for 100 ns;
     assert write_en = '1' report "Buffer not writing when armed" severity error;
     -- wait for enough data to accumulate
-    wait for clk_period * 100;
+    wait for clk_period * 80;
     
     -- Generates start address when triggered
     trigger <= '1';

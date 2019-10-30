@@ -79,6 +79,8 @@ architecture behaviour of top is
   
   signal r_hk_trig_out : std_logic;
   signal r_trigger : std_logic;
+
+  signal start_offset : std_logic_vector(15 downto 0);
      
   component adc_driver
     port (alignwd: in  std_logic; clkin: in  std_logic; 
@@ -104,6 +106,7 @@ architecture behaviour of top is
       i_tx_clk         : in std_logic;
       i_trigger        : in std_logic;
       i_start_transfer : in std_logic;
+      i_start_offset   : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
       o_tx_data        : out std_logic_vector(1 downto 0);
       o_tx_clk         : out std_logic;
       o_trigger_done   : out std_logic
@@ -129,6 +132,7 @@ architecture behaviour of top is
       i_adc_miso     : in   std_logic;
       o_adc_mosi     : out  std_logic;
       o_adc_ce       : out  std_logic;
+      o_start_offset : out std_logic_vector(15 downto 0);
       io_ads1015_sda : inout std_logic;
       io_ads1015_scl : inout std_logic;
       io_si7060_sda  : inout std_logic;
@@ -246,6 +250,7 @@ begin
       i_adc_miso          => i_hk_adc_miso,
       o_adc_mosi          => o_hk_adc_mosi,
       o_adc_ce            => o_hk_adc_ce,
+      o_start_offset      => start_offset,
       io_ads1015_sda      => io_ads1015_sda,
       io_ads1015_scl      => io_ads1015_scl,
       io_si7060_sda       => io_si7060_sda,
@@ -260,6 +265,7 @@ begin
       i_tx_clk         => w_tx_clk,
       i_trigger        => r_trigger,
       i_start_transfer => '1',
+      i_start_offset   => start_offset(g_BUFFER_INDEXSIZE-1 downto 0),
       o_tx_data        => o_tx_data,
       o_tx_clk         => o_tx_clk,
       o_trigger_done   => r_trigger_done );
