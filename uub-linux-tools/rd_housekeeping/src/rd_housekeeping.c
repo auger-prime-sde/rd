@@ -272,7 +272,7 @@ static double get_si7060_data(int fd)
 	transfer(fd, tx, rx, sizeof(tx));
 
 	// decode the bytes to an int:
-	uint16_t val = ((rx[1] & 0b01111111)<<8) + rx[0];
+	uint16_t val = ((rx[3] & 0b01111111)<<8) + rx[2];
 	if (verbose)
 	{
 		printf("unsigned value: %u\n", val);
