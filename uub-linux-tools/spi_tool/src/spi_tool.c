@@ -400,6 +400,13 @@ static void transfer_buf(int fd, int len)
 
 int main(int argc, char *argv[])
 {
+	printf("spi_tool was intended for debugging only. Proceed at your own risk!\n"
+		   "This tool allows you to send arbitrary packages to the SPI housekeeping\n"
+		   "port of the RD module. This gives full access to e.g. the flash chip that\n"
+		   "contains the fpga bitfile. Only proceed if you know what you are doing...\n"
+		   "For almost all tasks involving the RD SPI housekeeping interface use:\n"
+		   "  rd_flash: for uploading/downloading firmware images\n"
+		   "  rd_housekeeping: for reading/setting housekeeping parameters.\n");
 	int ret = 0;
 	int fd;
 
