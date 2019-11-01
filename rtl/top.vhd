@@ -40,11 +40,13 @@ entity top is
     -- signal to/from housekeeping i2c adc:
     io_ads1015_sda      : inout std_logic;
     io_ads1015_scl      : inout std_logic;
+    i_ads1015_rdy       : in std_logic;
     -- signal to/from housekeeping i2c temp sensor:
     io_si7060_sda       : inout std_logic;
     io_si7060_scl       : inout std_logic;
     -- TODO: put this as one of the gpio lines, for now this is tied high
-    o_bias_t            : out std_logic
+    o_ns_bias_en        : out std_logic;
+    o_ew_bias_en        : out std_logic
     );
 end top;
 
@@ -54,6 +56,9 @@ architecture behaviour of top is
   signal w_adc_data  : std_logic_vector(4*g_ADC_BITS-1 downto 0);
   signal w_ddr_clk   : std_logic;
 
+  signal r_ads1015_rdy : std_logic;
+  attribute syn_keep : boolean;
+  attribute syn_keep of r_ads1015_rdy : signal is true;
   
   -- wires for internal spi connections
   --signal w_adc_clk   : std_logic;
@@ -179,7 +184,10 @@ architecture behaviour of top is
 
   
 begin
-  o_bias_t <= '1';
+  r_ads1015_rdy <= i_ads1015_rdy;
+  
+  o_ns_bias_en <= '1';
+  o_ew_bias_en <= '1';
   o_hk_adc_reset <= '0';
 
   r_trigger <= r_hk_trig_out or i_trigger;

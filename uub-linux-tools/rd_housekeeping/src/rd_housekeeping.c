@@ -244,14 +244,19 @@ static double * get_ads1015_data(int fd)
     for (ch = 0; ch < 4; ch++)
     {
         // decode the bytes to an int:
-        uint16_t val = (rx[2 + 2 * ch] << 4) + (rx[3 + 2 * ch] >> 4);
+        int32_t val = (rx[2 + 2 * ch] << 4) + (rx[3 + 2 * ch] >> 4);
+        // decode 2's complement:
+        if (val > 2047)
+        {
+        	val = val -4096;
+        }
         if (verbose)
         {
             printf("channel %d: integer value: %u\n", ch, val);
         }
 
         // convert to voltage
-        res[ch] = 0.001 * val; // assuming 2.048V FSR, LSB=1mV
+        res[ch] = 0.002 * val; // assuming +/-4.096 V FSR, LSB=2mV
         if (verbose)
         {
             printf("Voltage reading: %0.3fV\n", res[ch]);

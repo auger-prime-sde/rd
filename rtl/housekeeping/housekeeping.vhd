@@ -41,6 +41,9 @@ end housekeeping;
 
 architecture behaviour of housekeeping is
 
+  -- for debugging
+  signal r_reveal_clk : std_logic;
+  
   -- internal wires to select subsystem
   signal r_subsystem_select : std_logic_vector(g_DEV_SELECT_BITS-1 downto 0);
   
@@ -300,87 +303,140 @@ begin
   
   clock_divider_reveal : clock_divider
     generic map (
-      g_MAX_COUNT => 25 -- from 100 MHz to 4 MHz
+      g_MAX_COUNT => 10 -- from 100 MHz to 10 MHz
       )
     port map (
       i_clk => i_hk_fast_clk,
-      o_clk => open
+      o_clk => r_reveal_clk
       );
 
-  
+
+  -- The ADS1015 at it's maximum conversion speed (3300 SPS) takes 0.315 uS to
+  -- complete a conversion. This conversion starts immediately after the config
+  -- register is written. At 400kHz, 0.315uS is 126 clock cycles. I2C uses 9
+  -- clock cycles per byte so we have to inject 14 dummies after the trigger
+  -- before reading the result.
   ads1015_1 : i2c_wrapper
     generic map (
       g_SUBSYSTEM_ADDR => "00000100",
+      g_CLK_DIV =>  125,
       g_SEQ_DATA => (
-        -- write address:
+        -- set lo thres and high thres. Uncomment these to enable the RDY
+        -- function of the ALERT/RDY pin
+        --(data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        --(data => "00000010", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        --(data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        --(data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        --(data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+        --(data => "00000011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        --(data => "11111111", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        --(data => "11111111", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        
+        -- write mux and trigger:
         (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- select config register
         (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- write config register (trigger conversion, keep rest to default):
-        (data => "11000101", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "10000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --
-        -- write address:
+        (data => "11000011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        (data => "11100000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- stall 
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        -- read result
         (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- select conversion register
         (data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- write address (with read bit):
         (data => "10010001", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read 2 bytes and save in 000 and 001
         (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "000"),
         (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "001"),
 
-        -- write address:
+        -- write mux and trigger:
         (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- select config register
         (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- write config register (trigger conversion, keep rest to default):
-        (data => "11010101", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "10000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --
-        -- write address:
+        (data => "11010011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        (data => "11100000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- stall 
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        -- read result
         (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- select conversion register
         (data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- write address (with read bit):
         (data => "10010001", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read 2 bytes and save in 000 and 001
         (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "010"),
         (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "011"),
 
-        -- write address:
+        -- write mux and trigger:
         (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- select config register
         (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- write config register (trigger conversion, keep rest to default):
-        (data => "11100101", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "10000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --
-        -- write address:
+        (data => "11100011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        (data => "11100000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- stall 
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        -- read result
         (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- select conversion register
         (data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- write address (with read bit):
         (data => "10010001", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read 2 bytes and save in 000 and 001
         (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "100"),
         (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "101"),
 
-        -- write address:
+        -- write mux and trigger:
         (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- select config register
         (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- write config register (trigger conversion, keep rest to default):
-        (data => "11110101", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "10000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --
-        -- write address:
+        (data => "11110011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        (data => "11100000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+        -- stall 
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        (data => "00000000", restart => '1', dir => '1', ack=>'X', addr => "XXX"),
+        -- read result
         (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- select conversion register
         (data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- write address (with read bit):
         (data => "10010001", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read 2 bytes and save in 000 and 001
         (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "110"),
         (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "111")
         )
@@ -416,7 +472,7 @@ begin
         -- restart and write address again:
         --(data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
         -- read value of that reg, transmit NACK and save data at 000:
-        --(data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "000"),
+        --(data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "010"),
         --
         -- write address:
         (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
