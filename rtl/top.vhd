@@ -46,7 +46,10 @@ entity top is
     io_si7060_scl       : inout std_logic;
     -- TODO: put this as one of the gpio lines, for now this is tied high
     o_ns_bias_en        : out std_logic;
-    o_ew_bias_en        : out std_logic
+    o_ew_bias_en        : out std_logic;
+    -- leds
+    o_led_ns            : out std_logic;
+    o_led_ew            : out std_logic
     );
 end top;
 
@@ -185,6 +188,9 @@ architecture behaviour of top is
   
 begin
   r_ads1015_rdy <= i_ads1015_rdy;
+  
+  o_led_ns <= '0';
+  o_led_ew <= '0';
   
   o_ns_bias_en <= '1';
   o_ew_bias_en <= '1';
