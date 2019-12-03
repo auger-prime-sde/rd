@@ -1,0 +1,13 @@
+
+{signal: [
+  {name: 'clk',     wave: '10PPPPPPPPPPPPPPPPPPPPPP', phase:0},
+  {name: 'data[0]', wave: 'x....3...........43......', phase:0.65,  data:['Sample 0 Channel 0 [11:0]', 'parity', 'Sample 1 Channel 0 [11:0]', 'parity']},
+  {name: 'data[1]', wave: 'x....3...........43......', phase:0.65,  data:['Sample 0 Channel 1 [11:0]', 'parity', 'Sample 1 Channel 1 [11:0]', 'parity']},
+  
+  {name: 'clk',     wave: 'pP.................l....', phase:0},
+  {name: 'data[0]', wave: '3......4x................', phase:0.65,  data:[ 'Sample 2047 Channel 0 [11:0]', 'parity']},
+  {name: 'data[1]', wave: '3......4x................', phase:0.65,  data:[ 'Sample 2047 Channel 1 [11:0]', 'parity']},
+
+ ],
+  config: { hscale: 0.2}}
+
