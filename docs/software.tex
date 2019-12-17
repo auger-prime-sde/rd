@@ -50,6 +50,12 @@
   This document describes the internal firmware architecture of the Auger \acf{RD} module and the external interface to the \acs{UUB} board.  \acresetall
 \end{abstract}
 
+\begin{mdframed}[linewidth=2pt,linecolor=orange,backgroundcolor=orange!10]%
+  This document is work-in-progress.
+  It described both the currently implemented state of affairs as well as the intended final implementation.
+  At the time of this writing (December 2019) some details, in particular relating to the housekeeping interface, are not yet finalized and are subject to change. Note the warning boxes in the relevant sections. 
+\end{mdframed}
+  
 \tableofcontents
 
 \clearpage
@@ -130,9 +136,20 @@ Half of the 8 data signals carry the radio data traces and the other 4 are dedic
 TODO
 
 \subsection{Status LEDs}
-The leds are permanently on as soon as the RD is successfully booted.
+The LEDs are permanently on as soon as the RD is successfully booted.
+
 \begin{warning}
-  This behaviour is planned to change in the future. 
+  This behaviour is planned to change in the future.
+  Each channel has an LNA which is powered by a constant current driver that is inside the RD module.
+  The voltages of the two LNA constant-current drivers are polled every 5 seconds and the corresponding LEDs are updated accordingly.
+  \begin{tabular}{l|l}
+    LED & description \\\hline
+    constant off & RD not powered or not booted \\
+    constant on  & RD powered up and LNA voltage inside expected range \\
+    slow blink (once per second) & LNA voltage too high (no antenna connected) \\
+    fast blink (3 times per second) & LNA voltage too low (antenna shorted)\\
+  \end{tabular}
+  
 \end{warning}
 
 
@@ -145,14 +162,16 @@ One fast interface to capture radio traces, and one slower \ac{SPI} interface fo
 The Auger \ac{RD} module samples 12-bit data from 2 channels at 250 Msamples/s into a circular buffer.
 It does so continuously until it sees a rising edge on the trigger input.
 When the trigger is received the \ac{RD} will continue to write a configurable number of post-trigger samples to the buffer.
-The number of pre-trigger and post-trigger samples can be configured using the housekeeping \ac{SPI} interface and defaults to 1024/1024 at power-up.
-See Section \ref{sec:trigger_offset} for details. The total buffer always contains 2048 samples.
+The number of post-trigger samples can be configured using the housekeeping \ac{SPI} interface and defaults to 1024 at power-up.
+The total buffer always contains 2048 samples and therefore the number of pre-trigger samples equals $2048-\text{\#(pre-trigger samples)}$.
+See Section \ref{sec:trigger_offset} for details. 
 
 When the post-trigger samples have been recorded, the transfer is automatically initiated.
 Figures~\ref{fig:datatransferstart}~and~\ref{fig:datatransferfinish} show the data transfer protocol. 
 The transfer is clocked from the RD at 60 MHz. The clock is held high outside the transmission windows.
 \begin{warning}
-  The 60 MHz speed is subject to change. Due to the distribution of events, a 1\% reduction in transfer time would increase the number of recorded events by 5\%.
+  The 60 MHz speed is subject to change.
+  Due to the distribution of events, it is suspected that a small reduction  in transfer time could benefit the number of recorded events greatly.
 \end{warning}
 The transmission starts with a preamble consisting of 3 rising clock edges.
 After the preamble, the 2048 samples are transmitted. Data for the 2 channels is separately transmitted on the 2 data lines.
@@ -191,17 +210,13 @@ During the transmission and during the recording of the pre-trigger samples the 
 \subsection{Jitter and latency}\label{sec:latency}
 Data is transferred from an \ac{ADC} (ADS4229) to an \ac{FPGA} (Lattice ECP5 LFE5U-12F) over 12 LVDS pairs. The data transfer is \ac{DDR} which means that the even bits are transferred on the rising edges of the 250 MHz clock and the odd bits on the falling edges. In the \ac{FPGA} the \ac{DDR} data is decoded and further processed at 125 MHz. I.e., samples are processed 4 at a time (2 samples each from 2 channels). This means that triggers are also registered at the 125 MHz clock and that the RD inherently incurs an extra 1 sample jitter on the location of the trigger.
 \begin{warning}
-  This is subject to change. The planned next version will sample the trigger at 500 MHz and actually provide one additional bit of trigger location information that can recovered through the housekeeping.
+  This is subject to change. The next software update is scheduled to eliminate one bin of jitter.
 \end{warning}
 
 
 Using the trigger-offset feature of the \ac{SPI} housekeeping interface, the location of the data window relative to the trigger can be configured. By default the location is set to 1024. I.e. the center of the window. However, the trigger signal is synchronized to the 125 MHz clock domain using two registers. This results in 2 clock cycles delay (i.e. 4 samples).
 
-The \ac{ADC} is also subject to 16 clock cycles latency (at 250 MHz). In total there are therefore 1036 or 1037 samples before the trigger and 1011 or 1012 samples after the trigger.
-
-\begin{warning}
-  An experiment is planned but not yet executed to verify if the 12 sample delay is correctly calculated and --in particular-- if the jitter of 1 additional clock cycle is applied correctly in the mentioned figures.
-\end{warning}
+The \ac{ADC} is also subject to 16 clock cycles latency (at 250 MHz). With the default trigger offset of 1024, all factors included, there are therefore 1036 or 1037 samples before the trigger and 1011 or 1012 samples after the trigger.
 
 
 \begin{center}
@@ -278,6 +293,7 @@ The supported commands are:
 
 \subsubsection{Program flash pass-through (address 0x02)}
 Transactions to address 0x02 are forwarded transparently to the \ac{SPI} flash chip.
+This flash chip uses a standard JEDEC interface.
 Refer to the SST26VF032B documentation for details.
 
 \begin{center}
@@ -291,9 +307,36 @@ Refer to the SST26VF032B documentation for details.
   \captionof{figure}{Example SST26VF032B JEDEC-ID readout.}
 \end{center}
 
+The flash chip contains the FPGA user code that is loaded upon power-on.
+A Primary and a Golden Pattern are present. If the checksum of the Primary Pattern fails the address in the JUMP command section is used to locate the Golden Pattern.
+
+\begin{center}
+  \begin{tabular}{llll}
+    Start & End & Contents & Description\\\hline
+    0x000000 & 0x0AFFFF & Primary Pattern & Contains the user-code for the FPGA\\
+    0x0B0000 & 0x15FFFF & Golden Pattern & Fallback code for the FPGA\\
+    0x160000 & 0x3FFEFF & Calibration file & Ascii encoded calibraton data\\
+    0x3FFF00 & 0x2FFFFF & JUMP command & Start address of the Golden Pattern\\
+  \end{tabular}
+  \captionof{table}{Flash layout.}
+\end{center}
+
+If the Primary Pattern does not pass a checksum validation (e.g. after an interrupted write) the Golden Pattern is loaded instead. The Golden Pattern implements a version of the firmware that contains nothing else except SPI access to the program flash such that the incomplete image may be restored.
+Refer to the Lattice Dual Boot and Multiple Boot Features Techical Note (TN1216) for details about the dual boot procedure\footnote{\url{https://www.latticesemi.com/-/media/LatticeSemi/Documents/ApplicationNotes/AD/DualandMulitpleBootFeature.ashx}}.
+
+Neither the JUMP command not the Golden Pattern should be overwritten.
+An example program \texttt{rd\_flash} is provided which performs safe read and write methods to dump and write the Primary Pattern from a bit-file.
+Refer to the source in the git repository\footnote{\url{https://github.com/auger-prime-sde/rd/tree/master/uub-linux-tools/rd_flash}}.
+
+The provided \texttt{rd\_flash} tool will prohibit writes over the golden images, the jump command, or the calibration file. Note that the SPI flash interface itself provides no such protection. It is possible to brick the RD module if the sectors are erased.
+
+\begin{warning}
+  The first 6 RD module deployed in November 2019 are not equiped with a Golden Pattern or calibration section.
+\end{warning}
 
 
-\subsubsection{Science adc pass-through (address 0x03)}
+
+\subsubsection{Science ADC configuration SPI pass-through (address 0x03)}
 The science \ac{ADC} has a \ac{SPI} configuration interface. The ADS4229 expects \ac{SPI} mode 2 (cpol=1, cpha=0) but also works in \ac{SPI} mode 1 (cpol=0, cpha=1) which is achieved by inverting the clock signal from the \ac{UUB} interface.
 
 \begin{center}
@@ -307,17 +350,17 @@ The science \ac{ADC} has a \ac{SPI} configuration interface. The ADS4229 expects
   \captionof{figure}{Example ADS4229 transaction. This sets the channel A gain (config register address 0x25) to 2dB.}
 \end{center}
 
-
+Refer to the ADS4229 datasheet \footnote{\url{http://www.ti.com/lit/ds/symlink/ads4229.pdf}} for details on the available registers in the configuration interface.
 
 
 \subsubsection{ADS1015 current and voltage sensors (address 0x04)}
-\begin{warning}
-  The exact control of the ADS1015 and Si7060 is under debate and subject to change.
-\end{warning}
-
 The ADS1015 is a four port \ac{I2C} \ac{ADC} which is wired to measure the voltage and the current on both \ac{LNA} channels. This can be used to determine if the \ac{LNA} is properly connected and working as expected.
 
-Whenever a rising edge on the trigger input is received, the controller for this \ac{I2C} chip will execute a fixed sequence of \ac{I2C} commands and store the conversion result in a register. The register can be read via \ac{SPI} and contains eight bytes:
+\begin{warning}
+    This behaviour is not yet implemented in firmware version 3. In this version a conversion is triggered after the sample buffer write cycle is completed. 
+\end{warning}
+
+Periodically (every 5 seconds) the internal controller for this \ac{I2C} chip will execute a fixed sequence of \ac{I2C} commands and store the conversion result in a register. The register can be read via \ac{SPI} and contains eight bytes:
 
 \begin{center}
   \begin{tabular}{|l|l|}
@@ -337,12 +380,11 @@ Whenever a rising edge on the trigger input is received, the controller for this
   \captionof{table}{ADS1015 register layout}
 \end{center}
 
-Upon receiving a trigger, the \ac{RD} delays the readout of the \ac{I2C} devices until all science data has been written to the internal buffer. This is done to avoid polution of the spectrum. After completion of the write phase, but before initiating the science data transfer, the 4 ADS1015 conversions are started. Because the ADS1015 makes one \ac{ADC} conversion at a time the samples are not made in parallel but sequentially. Due to the maximum sampling frequency of the ADS1015 (3300 SPS) the \ac{RD} has to stall for 315 ns after each conversion. 
-All four conversions take 2.16 ms in total to complete. If another trigger is received in that time it does not cause another readout but rather assumes that the previously read values are still correct. Note that is such cases the \ac{I2C} communication may overlap with the start of the next data acquisition phase.
-
 The ADS1015 has a \ac{PGA}. All conversions are made with the $FSR=\pm4.096 V$ setting. I.e. $MSB = 2 mV$.
 
-To read a byte from the register, write the address of that register and read the data on the next byte. The next address can already be written during the read and therefore the whole register can efficiently be retrieved in a 10-byte transaction (including the sub-system address byte).
+To read a byte from the register, write the address of that register and read the data on the next byte. The next address can already be written during the read and therefore the whole register can efficiently be retrieved in a 10-byte transaction (including the sub-system address byte). 
+If the readout overlaps with a new measurement the readout is guaranteed to return consistent sample values.
+
 
 \begin{center}
   \begin{tikztimingtable}[timing/wscale=0.8]
@@ -356,13 +398,13 @@ To read a byte from the register, write the address of that register and read th
 
 
 \subsubsection{SI7060 temperature sensor (address 0x05)}
-\begin{warning}
-  The exact control of the ADS1015 and Si7060 is under debate and subject to change.
-\end{warning}
-
 The Si7060 is an \ac{I2C} temperature sensor which measures the temperature inside the \ac{RD} enclosure.
 
-Whenever a rising edge on the trigger input is detected, the controller for this \ac{I2C} chip will execute a fixed sequence of \ac{I2C} commands and stores the conversion result in a register. The register can be read via \ac{SPI} and contains two bytes:
+\begin{warning}
+  This behaviour is not yet implemented in firmware version 3. In this version a conversion is triggered after the sample buffer write cycle is completed. 
+\end{warning}
+
+Periodically (every 5 seconds), the controller for this \ac{I2C} chip will execute a fixed sequence of \ac{I2C} commands and stores the conversion result in a register. The register can be read via \ac{SPI} and contains two bytes:
 
 \begin{center}
   \begin{tabular}{|l|l|}
@@ -376,9 +418,7 @@ Whenever a rising edge on the trigger input is detected, the controller for this
   \captionof{table}{ADS1015 register layout.}
 \end{center}
 
-Upon receiving a trigger, the \ac{RD} delays the readout of the \ac{I2C} devices until all science data has been written to the internal buffer. This is done to avoid polution of the spectrum. After completion of the write phase, but before initiating the science data transfer, the Si7060 temperature conversion and readout is started.
 
-The entire readout including conversion takes 0.2475 ms in total to complete. If another trigger is received in that time it does not cause another readout but rather assumes that the previously read values are still correct.
 
 The raw 15-bit data is calculated as:
 $$
@@ -393,6 +433,7 @@ $$
 
 
 To read a byte from the register simply write the address of that register and read the data on the next byte. The next address can already be written during the read and therefore the whole register can efficiently be read in one 4-bute transaction (including the sub-system address byte).
+If the readout overlaps with a new measurement the readout is guaranteed to return consistent sample values.
 
 \begin{center}
   \begin{tikztimingtable}[timing/wscale=0.8]
@@ -421,6 +462,8 @@ The currently known version codes are:
     0x00 & legacy (version info not implemented) \\
     0x01, 0x02 & used during development \\
     0x03 & version shipped with \ac{RD} v3 units for the Malargue engineering array in November 2019\\
+    0xFE & fallback image used in the golden pattern\\
+    0xFF & may indicate SPI communication error on the UUB\\
     \hline
   \end{tabular}
 \end{center}
@@ -453,6 +496,11 @@ The written number represents the position in the data trace where the trigger w
   \end{tikztimingtable}
   \captionof{figure}{Example start-offset setting transaction.}
 \end{center}
+
+Values of 0, 1, 2047 and 2048 are not permissible.
+\begin{warning}
+  In the next firmware update this constraint will be dropped.
+\end{warning}
 
 
 \subsubsection{Boot time and boot sequence}
@@ -513,52 +561,28 @@ This initialization sequences takes approximately 170 us. During this time the \
 \subsection{\acs{ADC} driver}
 The adc\_driver converts the 12 \ac{DDR} 250 MHz data lines to 48 `normal' data lines at 125MHz.
 At each clock cycle 2 samples are produced for each of the 2 channels.
-In the ADS4229 datasheet we find that the bits of the samples are organized as follows:
+In the ADS4229 datasheet we find that the bits of the samples are organized slightly differently than the output of the auto-generated adc\_driver block produces them:
+
 \begin{center}
   \begin{tabular}{l|l|l}
-    \acs{RD} schema name & ADS4229 name & timing \\
-    \hline
-    250 MHz clk&      & \texttiming[timing/wscale=5,timing/initchar=H]{LHL0.04H}\\
-    \\
-    D0  & DA0  & \texttiming[timing/wscale=5]{uD{ch0 bit 0}D{ch0 bit 1}u}\\
-    D1  & DA2  & \texttiming[timing/wscale=5]{uD{ch0 bit 2}D{ch0 bit 3}u}\\
-    D2  & DA4  & \texttiming[timing/wscale=5]{uD{ch0 bit 4}D{ch0 bit 5}u}\\
-    D3  & DA6  & \texttiming[timing/wscale=5]{uD{ch0 bit 6}D{ch0 bit 7}u}\\
-    D4  & DA8  & \texttiming[timing/wscale=5]{uD{ch0 bit 8}D{ch0 bit 9}u}\\
-    D5  & DA10 & \texttiming[timing/wscale=5]{uD{ch0 bit 10}D{ch0 bit 11}u}\\
-    \\
-    D6  & DB0  & \texttiming[timing/wscale=5]{uD{ch1 bit 0}D{ch1 bit 1}u}\\
-    D7  & DB2  & \texttiming[timing/wscale=5]{uD{ch1 bit 2}D{ch1 bit 3}u}\\
-    D8  & DB4  & \texttiming[timing/wscale=5]{uD{ch1 bit 4}D{ch1 bit 5}u}\\
-    D9  & DB6  & \texttiming[timing/wscale=5]{uD{ch1 bit 6}D{ch1 bit 7}u}\\
-    D10 & DB8  & \texttiming[timing/wscale=5]{uD{ch1 bit 8}D{ch1 bit 9}u}\\
-    D11 & DB10 & \texttiming[timing/wscale=5]{uD{ch1 bit 10}D{ch1 bit 11}u}\\
+    RD & ADC & timing\\\hline
+    \multicolumn{2}{l|}{250 MHz clk}  & \texttiming[timing/wscale=9]{LHLHL0.04H}\\
+    \multicolumn{2}{l|}{125 MHz clk} & \texttiming[timing/wscale=9]{L2H2L0.04H}\vspace*{2mm}\\
+    D0  & DA0   & \texttiming[timing/wscale=9]{u[fill=green!30]D{Q[0]=S[A][2k][0]}[fill=green!30]D{Q[13]=S[A][2k][1]}[fill=orange!30]D{Q[26]=S[A][2k+1][0]}[fill=orange!30]D{Q[39]=S[A][2k+1][1]}[fill=gray]u}\\
+    D1  & DA2   & \texttiming[timing/wscale=9]{u[fill=green!30]D{Q[1]=S[A][2k][2]}[fill=green!30]D{Q[14]=S[A][2k][3]}[fill=orange!30]D{Q[27]=S[A][2k+1][2]}[fill=orange!30]D{Q[40]=S[A][2k+1][3]}[fill=gray]u}\\
+    D2  & DA4   & \texttiming[timing/wscale=9]{u[fill=green!30]D{Q[2]=S[A][2k][4]}[fill=green!30]D{Q[15]=S[A][2k][5]}[fill=orange!30]D{Q[28]=S[A][2k+1][4]}[fill=orange!30]D{Q[41]=S[A][2k+1][5]}[fill=gray]u}\\
+    D3  & DA6   & \texttiming[timing/wscale=9]{u[fill=green!30]D{Q[3]=S[A][2k][6]}[fill=green!30]D{Q[16]=S[A][2k][7]}[fill=orange!30]D{Q[29]=S[A][2k+1][6]}[fill=orange!30]D{Q[42]=S[A][2k+1][7]}[fill=gray]u}\\
+    D4  & DA8   & \texttiming[timing/wscale=9]{u[fill=green!30]D{Q[4]=S[A][2k][8]}[fill=green!30]D{Q[17]=S[A][2k][9]}[fill=orange!30]D{Q[30]=S[A][2k+1][8]}[fill=orange!30]D{Q[43]=S[A][2k+1][9]}[fill=gray]u}\\
+    D5  & FA10  & \texttiming[timing/wscale=9]{u[fill=green!30]D{Q[5]=S[A][2k][10]}[fill=green!30]D{Q[18]=S[A][2k][11]}[fill=orange!30]D{Q[31]=S[A][2k+1][10]}[fill=orange!30]D{Q[44]=S[A][2k+1][11]}[fill=gray]u}    \vspace*{2mm}\\
+    D6  & DB0   & \texttiming[timing/wscale=9]{u[fill=blue!30]D{Q[6]=S[B][2k][0]}[fill=blue!30]D{Q[19]=S[B][2k][1]}[fill=red!30]D{Q[32]=S[B][2k+1][0]}[fill=red!30]D{Q[45]=S[B][2k+1][1]}[fill=gray]u}\\
+    D7  & DB2   & \texttiming[timing/wscale=9]{u[fill=blue!30]D{Q[7]=S[B][2k][2]}[fill=blue!30]D{Q[20]=S[B][2k][3]}[fill=red!30]D{Q[33]=S[B][2k+1][2]}[fill=red!30]D{Q[46]=S[B][2k+1][3]}[fill=gray]u}\\
+    D8  & DB4   & \texttiming[timing/wscale=9]{u[fill=blue!30]D{Q[8]=S[B][2k][4]}[fill=blue!30]D{Q[21]=S[B][2k][5]}[fill=red!30]D{Q[34]=S[B][2k+1][4]}[fill=red!30]D{Q[47]=S[B][2k+1][5]}[fill=gray]u}\\
+    D9  & DB6   & \texttiming[timing/wscale=9]{u[fill=blue!30]D{Q[9]=S[B][2k][6]}[fill=blue!30]D{Q[22]=S[B][2k][7]}[fill=red!30]D{Q[35]=S[B][2k+1][6]}[fill=red!30]D{Q[48]=S[B][2k+1][7]}[fill=gray]u}\\
+    D10 & DB8   & \texttiming[timing/wscale=9]{u[fill=blue!30]D{Q[10]=S[B][2k][8]}[fill=blue!30]D{Q[23]=S[B][2k][9]}[fill=red!30]D{Q[36]=S[B][2k+1][8]}[fill=red!30]D{Q[49]=S[B][2k+1][9]}[fill=gray]u}\\
+    D11 & FB10  & \texttiming[timing/wscale=9]{u[fill=blue!30]D{Q[11]=S[B][2k][10]}[fill=blue!30]D{Q[24]=S[B][2k][11]}[fill=red!30]D{Q[37]=S[B][2k+1][10]}[fill=red!30]D{Q[50]=S[B][2k+1][11]}[fill=gray]u}    \vspace*{2mm}\\
+    \multicolumn{2}{l|}{trigger}    & \texttiming[timing/wscale=9]{u[fill=green!30]D{Q[12]}[fill=blue!30]D{Q[25]}[fill=orange!30]D{Q[38]}[fill=red!30]D{Q[51]}[fill=gray]u}\\
   \end{tabular}
-  \captionof{figure}{Organization of samples on the \ac{DDR} lines.}
-\end{center}
-
-The (auto generated) adc\_driver outputs the bits in a different layout (i.e. grouped by arrival time):
-
-
-\begin{center}
-  \begin{tikztimingtable}[timing/wscale=3]
-    250 MHz clk         & [H]LHLHL0.04H\\
-    125 MHz clk         & L2H2L0.04H\\
-    RD-D0  ADS4229-DA0  & uD{q[0] }D{q[13]}D{q[26]}D{q[39]}u\\
-    RD-D1  ADS4229-DA2  & uD{q[1] }D{q[14]}D{q[27]}D{q[40]}u\\
-    RD-D2  ADS4229-DA4  & uD{q[2] }D{q[15]}D{q[28]}D{q[41]}u\\
-    RD-D3  ADS4229-DA6  & uD{q[3] }D{q[16]}D{q[29]}D{q[42]}u\\
-    RD-D4  ADS4229-DA8  & uD{q[4] }D{q[17]}D{q[30]}D{q[43]}u\\
-    RD-D5  ADS4229-FA10 & uD{q[5] }D{q[18]}D{q[31]}D{q[44]}u\\
-    RD-D6  ADS4229-DB0  & uD{q[6] }D{q[19]}D{q[32]}D{q[45]}u\\
-    RD-D7  ADS4229-DB2  & uD{q[7] }D{q[20]}D{q[33]}D{q[46]}u\\
-    RD-D8  ADS4229-DB4  & uD{q[8] }D{q[21]}D{q[34]}D{q[47]}u\\
-    RD-D9  ADS4229-DB6  & uD{q[9] }D{q[22]}D{q[35]}D{q[48]}u\\
-    RD-D10 ADS4229-DB8  & uD{q[10]}D{q[23]}D{q[36]}D{q[49]}u\\
-    RD-D11 ADS4229-FB10 & uD{q[11]}D{q[24]}D{q[37]}D{q[50]}u\\
-    trigger             & uD{q[12]}D{q[25]}D{q[38]}D{q[51]}u\\
-  \end{tikztimingtable}
-  \captionof{figure}{Adc\_driver output format.}
+  \captionof{figure}{Adc\_driver output format. Q is the data format of the adc\_driver output. S is the data format of the ADC. Note that for historical compatibility channel A on the ADC is channel 2 of the RD and channel B on the ADC is channel 1 of the RD. The four samples that are processed by the RD simultaneously have been color coded. The trigger signal is sampled with the ADC data but it is not actually transmitted with the samples.}
 \end{center}
 
 
