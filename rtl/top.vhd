@@ -3,17 +3,20 @@
 library ieee;
 use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
+library ecp5u;
+use ecp5u.components.all;
+
 
 entity top is
   generic (
     -- Number of data bits from the ADC channels
-    g_ADC_BITS : natural := 12;
+    g_ADC_BITS         : natural := 13;
     -- Number of bits in index counters (11 gives 2048 samples stored on each channel)
-    g_BUFFER_INDEXSIZE : natural := 11 );
+    g_BUFFER_INDEXSIZE : natural := 11);
 
   port (
     -- signals for adc driver:
-    i_data_in           : in std_logic_vector (g_ADC_BITS-1 downto 0);
+    i_data_in           : in std_logic_vector (g_ADC_BITS-1-1 downto 0);
     i_adc_clk           : in std_logic;
     -- signals for data streamer
     i_xtal_clk          : in std_logic;
@@ -40,7 +43,6 @@ entity top is
     -- signal to/from housekeeping i2c adc:
     io_ads1015_sda      : inout std_logic;
     io_ads1015_scl      : inout std_logic;
-    i_ads1015_rdy       : in std_logic;
     -- signal to/from housekeeping i2c temp sensor:
     io_si7060_sda       : inout std_logic;
     io_si7060_scl       : inout std_logic;
@@ -59,10 +61,7 @@ architecture behaviour of top is
   signal w_adc_data  : std_logic_vector(4*g_ADC_BITS-1 downto 0);
   signal w_ddr_clk   : std_logic;
 
-  signal r_ads1015_rdy : std_logic;
-  attribute syn_keep : boolean;
-  attribute syn_keep of r_ads1015_rdy : signal is true;
-  
+
   -- wires for internal spi connections
   --signal w_adc_clk   : std_logic;
   --signal w_adc_ce    : std_logic;
@@ -87,7 +86,8 @@ architecture behaviour of top is
   
   signal r_hk_trig_out : std_logic;
   signal r_trigger : std_logic;
-
+  signal w_trigger : std_logic;
+  
   signal start_offset : std_logic_vector(15 downto 0);
      
   component adc_driver
@@ -96,15 +96,15 @@ architecture behaviour of top is
         start: in  std_logic; sync_clk: in  std_logic; 
 
         sync_reset: in  std_logic; 
-        datain: in  std_logic_vector(11 downto 0); 
-        q: out  std_logic_vector(47 downto 0));
+        datain: in  std_logic_vector(12 downto 0); 
+        q: out  std_logic_vector(51 downto 0));
   end component;
 
   
   component data_streamer
     generic (
     -- Number of data bits from the ADC channels
-    g_ADC_BITS : natural := 12;
+    g_ADC_BITS : natural := 13;
     -- Number of bits in index counters (11 gives 2048 samples stored)
     g_BUFFER_INDEXSIZE : natural := 11 );
 
@@ -113,8 +113,9 @@ architecture behaviour of top is
       i_clk            : in std_logic;
       i_tx_clk         : in std_logic;
       i_trigger        : in std_logic;
+      i_trigger_even   : in std_logic;
       i_start_transfer : in std_logic;
-      i_start_offset   : in std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0);
+      i_start_offset   : in std_logic_vector(g_BUFFER_INDEXSIZE downto 0);
       o_tx_data        : out std_logic_vector(1 downto 0);
       o_tx_clk         : out std_logic;
       o_trigger_done   : out std_logic
@@ -187,8 +188,7 @@ architecture behaviour of top is
 
   
 begin
-  r_ads1015_rdy <= i_ads1015_rdy;
-  
+
   o_led_ns <= '0';
   o_led_ew <= '0';
   
@@ -196,7 +196,7 @@ begin
   o_ew_bias_en <= '1';
   o_hk_adc_reset <= '0';
 
-  r_trigger <= r_hk_trig_out or i_trigger;
+  r_trigger <= w_adc_data(51);-- 38 25 12
   
   process (w_hk_fast_clk) is
   begin
@@ -232,7 +232,8 @@ begin
       start      => '1',
       sync_clk   => w_hk_fast_clk,
       sync_reset => '0',
-      datain     => i_data_in,
+      datain(11 downto 0) => i_data_in,
+      datain(12) => i_trigger,
       q          => w_adc_data);
 
     
@@ -277,9 +278,10 @@ begin
       i_adc_data       => w_adc_data,
       i_clk            => w_ddr_clk,
       i_tx_clk         => w_tx_clk,
-      i_trigger        => r_trigger,
+      i_trigger        => w_adc_data(51),
+      i_trigger_even   => w_adc_data(25),
       i_start_transfer => '1',
-      i_start_offset   => start_offset(g_BUFFER_INDEXSIZE-1 downto 0),
+      i_start_offset   => start_offset(g_BUFFER_INDEXSIZE downto 0),
       o_tx_data        => o_tx_data,
       o_tx_clk         => o_tx_clk,
       o_trigger_done   => r_trigger_done );

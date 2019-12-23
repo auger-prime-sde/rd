@@ -11,13 +11,16 @@ import sys
 
 ## Number of FFTs to average
 averages = 1
+dev = None
 
-dev          = serial.Serial()
-dev.port     = '/dev/ttyUSB1'
-dev.baudrate = int(6.05e6)
-dev.timeout  = 1
-dev.open()
-dev.write("r".encode('utf-8')) # reset parity error counters in debug board
+def open_serial():
+    global dev
+    dev          = serial.Serial()
+    dev.port     = '/dev/ttyUSB1'
+    dev.baudrate = int(2.015e6)
+    dev.timeout  = 1
+    dev.open()
+    dev.write("r".encode('utf-8')) # reset parity error counters in debug board
 
 ##
 # Detect if we're running in interactive mode to avoid problems with matplotlib
@@ -34,79 +37,37 @@ def in_ipython():
 # Trigger the digitizer using the DTR line on the UART.  The DTR line is active low so writing a 0 here gives a 1 on the physical line.
 ##
 def trigger():
-    dev.write("t".encode('utf-8'))
-    time.sleep(0.0002)
-    dev.write("t".encode('utf-8'))
+    global dev
+    dev.write("T".encode('utf-8'))
+    dev.flush()
+    #time.sleep(0.0002)
+    #dev.write("t".encode('utf-8'))
 
 def dump_to_uart():
+    global dev
+    dev.reset_input_buffer()
     dev.write("d".encode('utf-8'))
 
+    
 ##
-# Convert a single sample value (as 2 byte pair) into a signed integer representation
+# Read and decompose input bytes. Returns a numpy array with, for each sample number, two sample values, 2 parity checks and 2 trigger bits
 ##
-def val_from_raw(raw1, raw0):
-    val_unsigned = ((raw0 & 0x3F) << 6) + (raw1 & 0x3F)
-    bits0 = bin(raw0)[2:]
-    bits1 = bin(raw1)[2:]
-    numones = len([x for x in bits0+bits1 if x=='1'])
-    #print("raw: {} {}".format(bin(raw0)[2:].rjust(8,'0'),bin(raw1)[2:].rjust(8,'0')))
-    #print("numones: {}".format(numones))
-    #if (numones % 2) == 0:
-    #    print("parity mismatch!")
-    if val_unsigned > 2047:
-        return val_unsigned - 4096
-    else:
-        return val_unsigned
-
-def parity_from_raw(raw1, raw0):
-    val_unsigned = ((raw0 & 0x3F) << 6) + (raw1 & 0x3F)
-    bits0 = bin(raw0)[2:]
-    bits1 = bin(raw1)[2:]
-    numones = len([x for x in bits0+bits1 if x=='1'])
-    return numones % 2
-
-
-##
-# Trigger the digitizer and read the resulting set of samples from the UART.  Return a list of samples for each channel separately.
-#
-# Usage: (ch1, ch2) = read_samples()
-##
-def read_samples():
-    ch1_data = []
-    ch2_data = []
-
+def read_buffer():
     dump_to_uart()
-
-    par0,par1 = 0,0
-    for b in range(2048):
-        raw = dev.read(2)
-        #print("raw: {} {}".format(bin(raw[0]), bin(raw[1])))
-        ch1 = val_from_raw(raw[1], raw[0])
-        par0 += parity_from_raw(raw[1], raw[0])
-        ch1_data.append(ch1)
-
-    for b in range(2048):
-        raw = dev.read(2)
-        #print("raw: {}".format(raw))
-        ch2 = val_from_raw(raw[1], raw[0])
-        par1 += parity_from_raw(raw[1], raw[0])
-        ch2_data.append(ch2)
-        #print("{0:06b} {1:07b} = {2}".format(raw[0], raw[1], ch2))
-
-    par0 = 2048 - par0
-    par1 = 2048 - par1
-    print("parity check errors: {} {}".format(par0, par1))
-    #pprint("raw data:")
-    #for i in range(100):
-    #    print("{0:b}".format(ch2_data[i]))
-    #pprint(ch1_data[0:99])
-    #pprint(ch2_data[0:99])
-
-    print("done")
-    #dev.timeout = 1
-    #junk = dev.read(10000)
-    #print("%d bytes remained in buffer after read"%len(junk))
-    return (ch1_data, ch2_data)
+    data = np.zeros((2048, 6)) # for each sample 2 channel values, 2 parity checks and 2 trigger bits
+    for ch in range(2):
+        for b in range(2048):
+            raw = dev.read(2)
+            val_unsigned = ((raw[0] & 0x7F) << 5) + (raw[1] >> 3)
+            if val_unsigned > 2047:
+                val_unsigned = val_unsigned - 4096
+            bits = bin(raw[0]) + bin(raw[1] >> 2)
+            numones = len([x for x in bits if x=='1'])
+            data[b, 0+ch] = val_unsigned
+            data[b, 2+ch] = 1 - (numones % 2)
+            data[b, 4+ch] = raw[0] >> 7
+            #print("ch{} sample {:4d}: raw: {:08b} {:08b} val: {:5d} {}".format(ch, b, raw[0], raw[1], val_unsigned, "parity ok" if numones % 2 == 1 else "Parity FAIL" ))
+    return data
 
 
 ##
@@ -177,39 +138,84 @@ def print_fft(xf, ypow0, ypow1):
 ##
 # Example run code
 ##
-ypow0 = np.zeros(1024, dtype='float')
-ypow1 = np.zeros(1024, dtype='float')
+#ypow0 = np.zeros(1024, dtype='float')
+#ypow1 = np.zeros(1024, dtype='float')
 
-for i in range(0, averages):
-    dev.reset_input_buffer()
-    trigger()
+def plot_time(data):
+    print('rising trigger high at {}'.format(2048-sum(data[:,5])), end='    ')
+    print('fallin trigger high at {}'.format(2048-sum(data[:,4])))
 
-    # after the trigger is received we have to wait for:
-    # * the second half of the buffer to fill (1024 samples at 250MHz)
-    # * the transfer to the machxo to complete (2048 samples, 13 bits each, channels parallel at 60MHz)
-    # this is under 0.5 ms so the overhead in driver + os + python is probably already much more.
-    # the transfer automatically starts after the buffer is filled.
-    time.sleep(2048*13/60e6+1024/250e6) 
+    #continue
+    grid = plt.GridSpec(5, 1, hspace=0.02, wspace=0.02)
+    fig = plt.figure()
+    ax_main = fig.add_subplot(grid[:3, :])
+    ax_main.plot(data[:, 0], linewidth=1, label='Chan A')
+    ax_main.plot(data[:, 1], linewidth=1, label='Chan B')
+    #ax_main.set_ylim(-2048, 2048)
+    ax_main.set_ylabel('adc value')
 
-    (ch0, ch1) = read_samples()
+    ax_trig = ax_main.twinx()
+    ax_trig._get_lines.prop_cycler = ax_main._get_lines.prop_cycler
+    ax_trig.set_ylim(-0.1, 1.1)
+    #ax_trig.step(np.arange(2048), data[:, 4], linewidth=1, where='mid', label='rising trigger (high at {})'.format(2048-sum(data[:,4])))
+    #plt.plot(np.arange(2048), data[:, 4], 'C1o', alpha=0.5)
+    #ax_trig.step(np.arange(2048), data[:, 5], linewidth=1, where='mid', label='falling trigger (high at {})'.format(2048-sum(data[:,5])))
+    #plt.plot(np.arange(2048), data[:, 5], 'C1o', alpha=0.5)
+    xtrig = np.arange(4096)/2
+    ytrig = [x for t in zip(data[:,5], data[:,4]) for x in t]
+    ax_trig.step(xtrig, ytrig, linewidth=1, where='mid', label='trigger (high at {})'.format(2048-sum(ytrig)/2))
+    #plt.scatter(np.arange(2048), data[:, 5], label='trig level')
+    #plt.scatter(np.arange(2048)+0.5, data[:, 4], label='trig super-sample')
 
-    (xf, ypow0_new) = fft_from_samples(ch0)
-    (xf, ypow1_new) = fft_from_samples(ch1)
+    ax_err = fig.add_subplot(grid[4,:])
+    ax_err._get_lines.prop_cycler = ax_trig._get_lines.prop_cycler
+    ax_err.plot(data[:, 2], label='parity errors Chan A')
+    ax_err.plot(data[:, 3], label='parity errors Chan B')
+    ax_err.set_ylim(-0.1, 1.1)
+    ax_err.set_xlabel('time (samples)')
 
-    ypow0 += ypow0_new
-    ypow1 += ypow1_new
-
-ypow0 /= averages
-ypow1 /= averages
-
-print_fft(xf, ypow0, ypow1)
+    ax_main.legend()
+    ax_trig.legend()
+    ax_err.legend()
+    fig.tight_layout()
+    
+ 
 
 ##
-# Fix plotting in interactive mode...
-if in_ipython():
-    plt.ion()
-
+# Some helpers
 ##
-# Show results
-plt.show()
+def get_trig(data):
+    ytrig = [x for t in zip(data[:,5], data[:,4]) for x in t] 
+    #return (2048-sum(ytrig)/2)
+    return min([i for i,t in enumerate(ytrig) if t > 0]) / 2
+  
+def get_next(): 
+    trigger() 
+    return read_buffer() 
+
+    
+if __name__=="__main__":
+    ##
+    # Open serial connection
+    open_serial()
+    ##
+    # Fix plotting in interactive mode...
+    if in_ipython():
+        plt.ion()
+
+    for i in range(0, averages):
+        trigger()
+
+        # after the trigger is received we have to wait for:
+        # * the second half of the buffer to fill (1024 samples at 250MHz)
+        # * the transfer to the machxo to complete (2048 samples, 13 bits each, channels parallel at 60MHz)
+        # this is under 0.5 ms so the overhead in driver + os + python is probably already much more.
+        # the transfer automatically starts after the buffer is filled.
+        time.sleep(2048*13/60e6+1024/250e6) 
+        data = read_buffer()
+        plot_time(data)
+
+    ##
+    # Show results
+    plt.show()
 

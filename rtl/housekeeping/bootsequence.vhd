@@ -84,6 +84,7 @@ architecture behave of bootsequence is
   signal r_done : std_logic := '0';
   signal r_count : natural range 0 to g_DIV-1 := 0;
 
+
   -- signal r_boot_ce   : std_logic;
   -- signal r_boot_clk  : std_logic;
   -- signal r_boot_mosi : std_logic;
