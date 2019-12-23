@@ -45,7 +45,7 @@
             <lattice:device>LFE5U-12F-8BG381I</lattice:device>
             <lattice:synthesis>lse</lattice:synthesis>
             <lattice:date>2018-07-11.11:42:52</lattice:date>
-            <lattice:modified>2019-05-01.11:10:44 AM</lattice:modified>
+            <lattice:modified>2019-12-03.03:25:36 PM</lattice:modified>
             <lattice:diamond>3.10.3.144.3</lattice:diamond>
             <lattice:language>VHDL</lattice:language>
             <lattice:attributes>
@@ -115,7 +115,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Date</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">05/01/2019</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">12/03/2019</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>ModuleName</lattice:lpckey>
@@ -131,7 +131,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>Time</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">11:10:42</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">15:25:33</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>VendorName</lattice:lpckey>
@@ -248,7 +248,7 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>bandwidth</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">6000</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">6500</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>enClkIBuf</lattice:lpckey>
@@ -296,16 +296,16 @@
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>width</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">12</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">13</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcentry>
                     <lattice:lpckey>width2</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">12</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">13</lattice:lpcvalue>
                 </lattice:lpcentry>
                 <lattice:lpcsection lattice:name="Command"/>
                 <lattice:lpcentry>
                     <lattice:lpckey>cmd_line</lattice:lpckey>
-                    <lattice:lpcvalue lattice:resolve="constant">-w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 12 -freq_in 250 -gear 4 -eclk_bridge -del 128</lattice:lpcvalue>
+                    <lattice:lpcvalue lattice:resolve="constant">-w -n adc_driver -lang vhdl -synth lse -bus_exp 7 -bb -arch sa5p00 -type iol -mode Receive -io_type LVDS -width 13 -freq_in 250 -gear 4 -eclk_bridge -del 128</lattice:lpcvalue>
                 </lattice:lpcentry>
             </lattice:lpc>
             <lattice:groups/>

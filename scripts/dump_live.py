@@ -4,27 +4,30 @@ import serial
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.animation as animation
 #import scipy.signal as sig
 #from pprint import pprint
 #import sys
 import platform
 
 ## Number of FFTs to average
-averages = 16
+averages = 1
+dev      = None
 
-dev          = serial.Serial()
-
-if platform.system() == 'Windows' :
-    dev.port     = 'COM9'
-elif platform.system() == 'Darwin' :
-    dev.port  = '/dev/tty.usbserial-14201'
-else:
-    dev.port = '/dev/ttyUSB1'
+def open_serial():
+    global dev
+    dev = serial.Serial()
+    if platform.system() == 'Windows' :
+        dev.port     = 'COM9'
+    elif platform.system() == 'Darwin' :
+        dev.port  = '/dev/tty.usbserial-14201'
+    else:
+        dev.port = '/dev/ttyUSB1'
     
-dev.baudrate = int(2.015e6)#115200#int(6.05e6)
-dev.timeout  = 1
-dev.open()
-dev.write("r".encode('utf-8'))
+    dev.baudrate = int(2.015e6)#115200#int(6.05e6)
+    dev.timeout  = 1
+    dev.open()
+    dev.write("r".encode('utf-8'))
 
 ##
 # Detect if we're running in interactive mode to avoid problems with matplotlib
@@ -41,88 +44,38 @@ def in_ipython():
 # Trigger the digitizer using the DTR line on the UART.  The DTR line is active low so writing a 0 here gives a 1 on the physical line.
 ##
 def trigger():
+    global dev
     dev.write("T".encode('utf-8'))
     dev.flush()
-    #time.sleep(0.01)
-    #dev.write("t".encode('utf-8'))
-
-def start_transfer():
-    dev.write("x".encode('utf-8'))
-    #time.sleep(0.01)
-    dev.write("x".encode('utf-8'))
 
 def dump_to_uart():
+    global dev
+    dev.reset_input_buffer()
     dev.write("d".encode('utf-8'))
     dev.flush()
 
+  
 ##
-# Convert a single sample value (as 2 byte pair) into a signed integer representation
+# Read and decompose input bytes. Returns a numpy array with, for each sample number, two sample values, 2 parity checks and 2 trigger bits
 ##
-def val_from_raw(raw1, raw0):
-    val_unsigned = ((raw0 & 0x3F) << 6) + (raw1 & 0x3F)
-    bits0 = bin(raw0)[2:]
-    bits1 = bin(raw1)[2:]
-    numones = len([x for x in bits0+bits1 if x=='1'])
-    #print("raw: {} {}".format(bin(raw0)[2:].rjust(8,'0'),bin(raw1)[2:].rjust(8,'0')))
-    #print("numones: {}".format(numones))
-    #if (numones % 2) == 0:
-    #    print("parity mismatch!")
-    if val_unsigned > 2047:
-        return val_unsigned - 4096
-    else:
-        return val_unsigned
-
-def parity_from_raw(raw1, raw0):
-    val_unsigned = ((raw0 & 0x3F) << 6) + (raw1 & 0x3F)
-    bits0 = bin(raw0)[2:]
-    bits1 = bin(raw1)[2:]
-    numones = len([x for x in bits0+bits1 if x=='1'])
-    return numones % 2
-
-
-##
-# Trigger the digitizer and read the resulting set of samples from the UART.  Return a list of samples for each channel separately.
-#
-# Usage: (ch1, ch2) = read_samples()
-##
-def read_samples():
-    ch1_data = []
-    ch2_data = []
-
+def read_buffer():
     dump_to_uart()
+    data = np.zeros((2048, 6)) # for each sample 2 channel values, 2 parity checks and 2 trigger bits
+    for ch in range(2):
+        for b in range(2048):
+            raw = dev.read(2)
+            val_unsigned = ((raw[0] & 0x7F) << 5) + (raw[1] >> 3)
+            if val_unsigned > 2047:
+                val_unsigned = val_unsigned - 4096
+            bits = bin(raw[0]) + bin(raw[1] >> 2)
+            numones = len([x for x in bits if x=='1'])
+            data[b, 0+ch] = val_unsigned
+            data[b, 2+ch] = 1 - (numones % 2)
+            data[b, 4+ch] = raw[0] >> 7
+            #print("ch{} sample {:4d}: raw: {:08b} {:08b} val: {:5d} {}".format(ch, b, raw[0], raw[1], val_unsigned, "parity ok" if numones % 2 == 1 else "Parity FAIL" ))
+    return data
 
-    par0,par1 = 0,0
-    for b in range(2048):
-        raw = dev.read(2)
-        #print("raw: {} {}".format(bin(raw[0]), bin(raw[1])))
-        ch1 = val_from_raw(raw[1], raw[0])
-        par0 += parity_from_raw(raw[1], raw[0])
-        ch1_data.append(ch1)
 
-    for b in range(2048):
-        raw = dev.read(2)
-        #print("raw: {}".format(raw))
-        ch2 = val_from_raw(raw[1], raw[0])
-        par1 += parity_from_raw(raw[1], raw[0])
-        ch2_data.append(ch2)
-        #print("{0:06b} {1:07b} = {2}".format(raw[0], raw[1], ch2))
-
-    par0 = 2048 - par0
-    par1 = 2048 - par1
-    
-    if (par0 > 0) or (par1 > 0): 
-	    print("parity check errors: {} {}".format(par0, par1))
-    #pprint("raw data:")
-    #for i in range(100):
-    #    print("{0:b}".format(ch2_data[i]))
-    #pprint(ch1_data[0:99])
-    #pprint(ch2_data[0:99])
-
-    #print("done")
-    #dev.timeout = 1
-    #junk = dev.read(10000)
-    #print("%d bytes remained in buffer after read"%len(junk))
-    return (ch1_data, ch2_data)
 
 
 ##
@@ -213,7 +166,55 @@ def update_fft_plot(ypow0, ypow1):
     
     fig.canvas.draw()
     fig.canvas.flush_events()
+
+
+
+def make_time_plot():
+    global fig, errA, errB, chanA, chanB, trigStep, trigDots1, trigDots2
+    # setup grid and axes
+    grid = plt.GridSpec(5, 1, hspace=0.02, wspace=0.02)
+    fig = plt.figure()
+    #ax_main = fig.add_subplot(grid[:3, :])
+    ax_main = plt.gca()
+    ax_trig = ax_main.twinx()
+    #ax_err = fig.add_subplot(grid[4,:])
+    # configure main axis
+    ax_main.set_ylabel('adc value')
+    ax_main.set_ylim(-20, 20)
+    chanA, = ax_main.plot([], linewidth=1, label='Chan A')
+    chanB, = ax_main.plot([], linewidth=1, label='Chan B')
     
+    # configure trig axis
+    ax_trig._get_lines.prop_cycler = ax_main._get_lines.prop_cycler
+    ax_trig.set_ylim(-0.1, 1.1)
+    xtrig = np.arange(4096)/2
+    ytrig = np.zeros(4096)
+    trigStep, = ax_trig.step(xtrig, ytrig, linewidth=1, where='mid', label='trigger')
+    trigDots1, = ax_trig.plot(np.arange(2048), np.zeros(2048), '.', label='trig level')
+    trigDots2, = ax_trig.plot((np.arange(2048)+0.5), np.zeros(2048), '.', label='trig super-sample')
+
+    # configure error axis
+    #ax_err._get_lines.prop_cycler = ax_trig._get_lines.prop_cycler
+    #errA, = ax_err.plot(np.arange(2048), [None for _ in range(2048)], label='parity errors Chan A')
+    #errB, = ax_err.plot(np.arange(2048), [None for _ in range(2048)], label='parity errors Chan B')
+    #ax_err.set_ylim(-0.1, 1.1)
+    #ax_err.set_xlabel('time (us)')
+
+    ax_main.legend()
+    ax_trig.legend()
+    #ax_err.legend()
+
+def update_time_plot(data):
+    # update channel values
+    chanA.set_data(np.arange(2048), data[:,0])
+    chanB.set_data(np.arange(2048), data[:,1])
+    # update error plot
+    #errA.set_data(np.arange(2048), data[:,2])
+    #errB.set_data(np.arange(2048), data[:,3])
+    # update trigger
+    trigStep.set_ydata([x for t in zip(data[:,5], data[:,4]) for x in t])
+    trigDots1.set_ydata(data[:,5])
+    trigDots2.set_ydata(data[:,4])
 
 ##
 # Example run code
@@ -224,18 +225,33 @@ N = 2048
 T = 1.0 / 250.0
 x = np.linspace(0.0, N*T, N)
 xf = np.linspace(0.0, 1.0/(2.0*T), int(N/2))
-make_fft_plot(xf)
+#make_fft_plot(xf)
+
+plt.ion()
+make_time_plot()
 
 ##
 # Fix plotting in interactive mode...
 #if in_ipython():
-plt.ion()
+#plt.ion()
 
 ##
 # Show results
-plt.show()
+#plt.show()
 
+
+
+open_serial()
 while True:
+    trigger()
+    data = read_buffer()
+    update_time_plot(data)
+    plt.show()
+    plt.pause(0.05)
+
+    
+
+while False:
     ypow0 = np.zeros(1024, dtype='float')
     ypow1 = np.zeros(1024, dtype='float')
 
