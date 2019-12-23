@@ -4,6 +4,7 @@ import serial
 import time
 import numpy as np
 import matplotlib.pyplot as plt
+import matplotlib.ticker as ticker
 import scipy.signal as sig
 from pprint import pprint
 import sys
@@ -58,14 +59,14 @@ def read_buffer():
     for ch in range(2):
         for b in range(2048):
             raw = dev.read(2)
-            val_unsigned = ((raw[0] & 0x7F) << 5) + (raw[1] >> 3)
+            val_unsigned = ((raw[0] & 0x3F) << 6) + (raw[1] & 0x3F)
             if val_unsigned > 2047:
                 val_unsigned = val_unsigned - 4096
-            bits = bin(raw[0]) + bin(raw[1] >> 2)
+            bits = bin(raw[0]) + bin(raw[1])
             numones = len([x for x in bits if x=='1'])
             data[b, 0+ch] = val_unsigned
             data[b, 2+ch] = 1 - (numones % 2)
-            data[b, 4+ch] = raw[0] >> 7
+            # for debugging
             #print("ch{} sample {:4d}: raw: {:08b} {:08b} val: {:5d} {}".format(ch, b, raw[0], raw[1], val_unsigned, "parity ok" if numones % 2 == 1 else "Parity FAIL" ))
     return data
 
@@ -83,13 +84,6 @@ def fft_from_samples(data):
     T = 1.0 / 250.0
     x = np.linspace(0.0, N*T, N)
     xf = np.linspace(0.0, 1.0/(2.0*T), N/2)
-
-    fix,ax = plt.subplots()
-    line = (ax.plot(x,y))[0]
-    line.set_marker("o")
-    line.set_markersize(3)
-    ax.set_xlabel("time (us)")
-    ax.set_ylabel("V")
 
     # Apply windowing function (7-term Blackman-Harris)
     # Compute FFT, default size = data size
@@ -141,42 +135,45 @@ def print_fft(xf, ypow0, ypow1):
 #ypow0 = np.zeros(1024, dtype='float')
 #ypow1 = np.zeros(1024, dtype='float')
 
+default_formatter = ticker.ScalarFormatter()
+@ticker.FuncFormatter
+def sample_formatter(x, pos):
+    return default_formatter.format_data_short(x*250+1040).strip()
+
 def plot_time(data):
-    print('rising trigger high at {}'.format(2048-sum(data[:,5])), end='    ')
-    print('fallin trigger high at {}'.format(2048-sum(data[:,4])))
+    fig, (ax_t, ax_f) = plt.subplots(2, 1)
 
-    #continue
-    grid = plt.GridSpec(5, 1, hspace=0.02, wspace=0.02)
-    fig = plt.figure()
-    ax_main = fig.add_subplot(grid[:3, :])
-    ax_main.plot(data[:, 0], linewidth=1, label='Chan A')
-    ax_main.plot(data[:, 1], linewidth=1, label='Chan B')
-    #ax_main.set_ylim(-2048, 2048)
-    ax_main.set_ylabel('adc value')
+    ax_t.plot((np.arange(2048)-1040)/250, data[:, 0], linewidth=1, label='Chan A')
+    ax_t.plot((np.arange(2048)-1040)/250, data[:, 1], linewidth=1, label='Chan B')
+    ax_t.set_ylabel('adc value')
 
-    ax_trig = ax_main.twinx()
-    ax_trig._get_lines.prop_cycler = ax_main._get_lines.prop_cycler
-    ax_trig.set_ylim(-0.1, 1.1)
-    #ax_trig.step(np.arange(2048), data[:, 4], linewidth=1, where='mid', label='rising trigger (high at {})'.format(2048-sum(data[:,4])))
-    #plt.plot(np.arange(2048), data[:, 4], 'C1o', alpha=0.5)
-    #ax_trig.step(np.arange(2048), data[:, 5], linewidth=1, where='mid', label='falling trigger (high at {})'.format(2048-sum(data[:,5])))
-    #plt.plot(np.arange(2048), data[:, 5], 'C1o', alpha=0.5)
-    xtrig = np.arange(4096)/2
-    ytrig = [x for t in zip(data[:,5], data[:,4]) for x in t]
-    ax_trig.step(xtrig, ytrig, linewidth=1, where='mid', label='trigger (high at {})'.format(2048-sum(ytrig)/2))
-    #plt.scatter(np.arange(2048), data[:, 5], label='trig level')
-    #plt.scatter(np.arange(2048)+0.5, data[:, 4], label='trig super-sample')
+    # fake, for the legend
+    ax_t.axvspan(0, 0, alpha=0.5, linewidth=0, color='red', label='parity errors')
+    for i in range(len(data)):
+        if data[i, 2] != 0 or data[i,3] != 0:
+            ax_t.axvspan((i-0.5-1040)/250, (i+0.5-1040)/250, alpha=0.5, linewidth=0, color='red')
+    
+    ax_t.set_xlabel('time (us)')
+    ax2 = ax_t.twiny()
+    #ax2.xaxis.set_ticks_position('bottom') 
+    #ax2.xaxis.set_label_position('bottom')
+    #ax2.spines['bottom'].set_position(('outward', 36))
+    ax2.set_xlabel('time (samples)')
+    ax2.set_xlim(ax_t.get_xlim())
+    ax2.xaxis.set_major_formatter(sample_formatter)
+    ax2.xaxis.set_minor_locator(ticker.AutoMinorLocator())
 
-    ax_err = fig.add_subplot(grid[4,:])
-    ax_err._get_lines.prop_cycler = ax_trig._get_lines.prop_cycler
-    ax_err.plot(data[:, 2], label='parity errors Chan A')
-    ax_err.plot(data[:, 3], label='parity errors Chan B')
-    ax_err.set_ylim(-0.1, 1.1)
-    ax_err.set_xlabel('time (samples)')
+    # FFT
+    xf, ypow = fft_from_samples(data[:, 0])
+    ax_f.plot(xf, ypow)
+    xf, ypow = fft_from_samples(data[:, 1])
+    ax_f.plot(xf, ypow)
 
-    ax_main.legend()
-    ax_trig.legend()
-    ax_err.legend()
+    ax_f.set_ylabel('power (dBm)')
+    ax_f.set_xlabel('freq (MHz)')
+    
+    ax_t.legend()
+    ax_f.legend()
     fig.tight_layout()
     
  
@@ -184,11 +181,6 @@ def plot_time(data):
 ##
 # Some helpers
 ##
-def get_trig(data):
-    ytrig = [x for t in zip(data[:,5], data[:,4]) for x in t] 
-    #return (2048-sum(ytrig)/2)
-    return min([i for i,t in enumerate(ytrig) if t > 0]) / 2
-  
 def get_next(): 
     trigger() 
     return read_buffer() 

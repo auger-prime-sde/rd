@@ -10,13 +10,13 @@ use ecp5u.components.all;
 entity top is
   generic (
     -- Number of data bits from the ADC channels
-    g_ADC_BITS         : natural := 13;
+    g_ADC_BITS         : natural := 12;
     -- Number of bits in index counters (11 gives 2048 samples stored on each channel)
     g_BUFFER_INDEXSIZE : natural := 11);
 
   port (
     -- signals for adc driver:
-    i_data_in           : in std_logic_vector (g_ADC_BITS-1-1 downto 0);
+    i_data_in           : in std_logic_vector (g_ADC_BITS-1 downto 0);
     i_adc_clk           : in std_logic;
     -- signals for data streamer
     i_xtal_clk          : in std_logic;
@@ -58,7 +58,7 @@ end top;
 
 architecture behaviour of top is
   -- wires from adc driver to data streamer:
-  signal w_adc_data  : std_logic_vector(4*g_ADC_BITS-1 downto 0);
+  signal w_adc_data  : std_logic_vector(4*(g_ADC_BITS+1)-1 downto 0);
   signal w_ddr_clk   : std_logic;
 
 
@@ -104,12 +104,12 @@ architecture behaviour of top is
   component data_streamer
     generic (
     -- Number of data bits from the ADC channels
-    g_ADC_BITS : natural := 13;
+    g_ADC_BITS : natural := 12;
     -- Number of bits in index counters (11 gives 2048 samples stored)
     g_BUFFER_INDEXSIZE : natural := 11 );
 
     port (
-      i_adc_data       : in std_logic_vector(4*g_ADC_BITS-1 downto 0);
+      i_adc_data       : in std_logic_vector(4*(g_ADC_BITS+1)-1 downto 0);
       i_clk            : in std_logic;
       i_tx_clk         : in std_logic;
       i_trigger        : in std_logic;
