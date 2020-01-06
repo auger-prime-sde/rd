@@ -210,21 +210,32 @@ During the transmission and during the recording of the pre-trigger samples the 
 
 
 \subsection{Jitter and latency}\label{sec:latency}
-Data is transferred from an \ac{ADC} (ADS4229) to an \ac{FPGA} (Lattice ECP5 LFE5U-12F) over 12 LVDS pairs. The data transfer is \ac{DDR} which means that the even bits are transferred on the rising edges of the 250 MHz clock and the odd bits on the falling edges. In the \ac{FPGA} the \ac{DDR} data is decoded and further processed at 125 MHz. I.e., samples are processed 4 at a time (2 samples each from 2 channels). This means that triggers are also registered at the 125 MHz clock and that the RD inherently incurs an extra 1 sample jitter on the location of the trigger.
-\begin{warning}
-  This is subject to change. The next software update is scheduled to eliminate one bin of jitter.
-\end{warning}
+Data is transferred from an \ac{ADC} (ADS4229) to an \ac{FPGA} (Lattice ECP5 LFE5U-12F) over 12 LVDS pairs. The data transfer is \ac{DDR} which means that the even bits are transferred on the rising edges of the 250 MHz clock and the odd bits on the falling edges. 
 
-
-Using the trigger-offset feature of the \ac{SPI} housekeeping interface, the location of the data window relative to the trigger can be configured. By default the location is set to 1024. I.e. the center of the window. However, the trigger signal is synchronized to the 125 MHz clock domain using two registers. This results in 2 clock cycles delay (i.e. 4 samples).
-
-The \ac{ADC} is also subject to 16 clock cycles latency (at 250 MHz). With the default trigger offset of 1024, all factors included, there are therefore 1036 or 1037 samples before the trigger and 1011 or 1012 samples after the trigger.
-
+There is at most a sample jitter on the data.
 
 \begin{center}
-  \includegraphics[width=\textwidth]{img/rd_timing.pdf}
+  \includegraphics[width=\textwidth]{img/trigger_jitter.png}
+  \captionof{figure}{Trigger line fed back into data signal via an external probe. Note that the rising edge of the trigger is transformed into a wavelet by the analog filters on the RD. Two thousand traces are plotted over each other with high transparency.}\label{fig:trigger_jitter}
+\end{center}
+
+\begin{center}
+  \includegraphics[width=6cm]{img/trigger_hist.png}
+  \captionof{figure}{Location of the highest peak in Figure~\ref{fig:trigger_jitter}.}
+\end{center}
+
+Using the trigger-offset feature of the \ac{SPI} housekeeping interface, the location of the data window relative to the trigger can be configured. By default the location is set to 1024. 
+The \ac{ADC} is also subject to 16 clock cycles latency (at 250 MHz). With the default trigger offset of 1024, all factors included, there are therefore 1040 samples before the trigger and 1008 samples after the trigger.
+
+\begin{center}
+  \includegraphics[width=\textwidth]{img/rd_timing_v2.pdf}
   \captionof{figure}{Timing of \ac{RD} capture.}\label{fig:rd_timing}
 \end{center}
+
+\begin{warning}
+  In firmware versions prior to v4 the trigger was delayed by 4 samples due to clock synchonization. Including the 16 samples ADC latency, the trigger would fall on the 12th sample after the configured start offset instead of the 16th. There was also one additional sample jitter in the registration of the trigger which was removed in firmware version 4. 
+\end{warning}
+
 
 \subsection{\acs{SPI} housekeeping interface}
 
