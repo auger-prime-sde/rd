@@ -81,12 +81,9 @@ architecture behaviour of top is
   signal r_adc_rst_count : natural := 0;
   signal r_adc_rst : std_logic := '1';
 
-  -- trigger from readout for housekeeping
-  signal r_trigger_done : std_logic;
-  
   signal r_hk_trig_out : std_logic;
   signal r_trigger : std_logic;
-  signal w_trigger : std_logic;
+  --signal w_trigger : std_logic;
   
   signal start_offset : std_logic_vector(15 downto 0);
      
@@ -117,9 +114,7 @@ architecture behaviour of top is
       i_start_transfer : in std_logic;
       i_start_offset   : in std_logic_vector(g_BUFFER_INDEXSIZE downto 0);
       o_tx_data        : out std_logic_vector(1 downto 0);
-      o_tx_clk         : out std_logic;
-      o_trigger_done   : out std_logic
-    );
+      o_tx_clk         : out std_logic    );
   end component;
 
   component housekeeping
@@ -130,8 +125,6 @@ architecture behaviour of top is
       i_hk_uub_mosi  : in   std_logic;
       o_hk_uub_miso  : out  std_logic;
       i_hk_uub_ce    : in   std_logic;
-      i_trigger      : in   std_logic;
-      o_trigger      : out  std_logic;
       o_gpio_data    : out  std_logic_vector(7 downto 0);
       o_flash_clk    : out  std_logic;
       i_flash_miso   : in   std_logic;
@@ -254,8 +247,6 @@ begin
       i_hk_uub_mosi       => i_hk_uub_mosi,
       o_hk_uub_miso       => o_hk_uub_miso,
       i_hk_uub_ce         => i_hk_uub_ce,
-      i_trigger           => r_trigger_done,
-      o_trigger           => r_hk_trig_out,
       o_gpio_data         => o_hk_gpio,
       o_flash_clk         => w_flash_clk,
       i_flash_miso        => i_hk_flash_miso,
@@ -283,7 +274,6 @@ begin
       i_start_transfer => '1',
       i_start_offset   => start_offset(g_BUFFER_INDEXSIZE downto 0),
       o_tx_data        => o_tx_data,
-      o_tx_clk         => o_tx_clk,
-      o_trigger_done   => r_trigger_done );
+      o_tx_clk         => o_tx_clk );
 
 end;

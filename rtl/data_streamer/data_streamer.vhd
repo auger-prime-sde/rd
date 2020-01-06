@@ -24,8 +24,7 @@ entity data_streamer is
     i_start_transfer : in std_logic;
     i_start_offset   : in std_logic_vector(g_BUFFER_INDEXSIZE downto 0);
     o_tx_data        : out std_logic_vector(1 downto 0);
-    o_tx_clk         : out std_logic;
-    o_trigger_done   : out std_logic
+    o_tx_clk         : out std_logic
     );
   end data_streamer;
 
@@ -111,7 +110,6 @@ architecture behaviour of data_streamer is
 
 begin
   r_trigger_odd <= not i_trigger_even; 
-  o_trigger_done <= trigger_done;
 
 write_index_counter : simple_counter
   generic map (g_SIZE => g_BUFFER_INDEXSIZE)

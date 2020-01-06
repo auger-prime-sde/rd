@@ -12,9 +12,6 @@ entity housekeeping is
     i_hk_uub_mosi : in  std_logic;
     o_hk_uub_miso : out std_logic;
     i_hk_uub_ce   : in  std_logic;
-    -- trigger a housekeeping data refresh
-    i_trigger     : in std_logic;
-    o_trigger     : out std_logic;
     -- digitalout:
     o_gpio_data         : out std_logic_vector(7 downto 0);
     -- flash:
@@ -43,6 +40,11 @@ architecture behaviour of housekeeping is
 
   -- for debugging
   signal r_reveal_clk : std_logic;
+
+  -- trigger for housekeeping
+  signal r_periodic_trigger : std_logic;
+  signal r_artificial_trigger : std_logic;
+  signal r_trigger : std_logic;
   
   -- internal wires to select subsystem
   signal r_subsystem_select : std_logic_vector(g_DEV_SELECT_BITS-1 downto 0);
@@ -146,7 +148,7 @@ architecture behaviour of housekeeping is
     port (
       -- clock
       i_hk_fast_clk : in std_logic;
-      --   trigger
+      -- trigger
       i_trigger     : in std_logic;
       -- spi interface
       i_spi_clk     : in std_logic;
@@ -224,7 +226,16 @@ architecture behaviour of housekeeping is
       );
   end component;
       
-  
+  component periodic_trigger is
+    generic (
+      g_PERIOD : natural;
+      g_HIGH : natural
+      );
+    port (
+      i_clk: in std_logic;
+      o_trig: out std_logic
+      );
+    end component;
   
 begin
 
@@ -233,7 +244,21 @@ begin
 
   -- select the housekeeping output miso depending on the selected peripheral 
   o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso;
-    
+
+  -- r_trigger is the combination of periodic and artificial triggers
+  r_trigger <= r_periodic_trigger or r_artificial_trigger;
+  
+  periodic_trigger_1 : periodic_trigger
+    generic map (
+      g_PERIOD => 500000000,-- 5 seconds at 100 MHz
+      g_HIGH   => 500 -- more than one clk at 800 khz (how fast the i2c
+                      -- wrappers poll the trigger input.
+      )
+    port map (
+      i_clk => i_hk_fast_clk,
+      o_trig => r_periodic_trigger
+      );
+      
 
   spi_wrapper_flash : spi_wrapper
     generic map (
@@ -447,7 +472,7 @@ begin
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
-      i_trigger     => i_trigger,
+      i_trigger     => r_trigger,
       i_spi_clk     => r_internal_clk,
       i_spi_mosi    => r_internal_mosi,
       o_spi_miso    => r_ads1015_miso,
@@ -526,7 +551,7 @@ begin
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
-      i_trigger     => i_trigger,
+      i_trigger     => r_trigger,
       i_spi_clk     => r_internal_clk,
       i_spi_mosi    => r_internal_mosi,
       o_spi_miso    => r_si7060_miso,
@@ -547,7 +572,7 @@ begin
       i_spi_mosi       => r_internal_mosi,
       o_spi_miso       => open,
       i_dev_select     => r_subsystem_select,
-      o_trigger        => o_trigger
+      o_trigger        => r_artificial_trigger
       );
 
   -- version info

@@ -118,8 +118,6 @@ LOCATE COMP "o_ew_bias_en" SITE "D3" ;
 LOCATE COMP "o_ns_bias_en" SITE "D5" ;
 IOBUF PORT "o_ns_bias_en" IO_TYPE=LVCMOS33 ;
 IOBUF PORT "o_ew_bias_en" IO_TYPE=LVCMOS33 ;
-LOCATE COMP "i_ads1015_rdy" SITE "E4" ;
-IOBUF PORT "i_ads1015_rdy" IO_TYPE=LVCMOS33 PULLMODE=NONE ;
 FREQUENCY NET "housekeeping_1/si7060_1/r_i2c_clk" 0.800000 MHz ;
 LOCATE COMP "o_led_ew" SITE "C3" ;
 LOCATE COMP "o_led_ns" SITE "C4" ;
