@@ -31,7 +31,10 @@ entity housekeeping is
     io_ads1015_scl      : inout std_logic;
     -- housekeeping temp sens
     io_si7060_sda       : inout std_logic;
-    io_si7060_scl       : inout std_logic
+    io_si7060_scl       : inout std_logic;
+    -- leds
+    o_led_ns            : out std_logic;
+    o_led_ew            : out std_logic
     );
 end housekeeping;
 
@@ -87,6 +90,9 @@ architecture behaviour of housekeeping is
   signal r_adc_clk    : std_logic;
   signal r_adc_ce     : std_logic;
   signal r_adc_miso   : std_logic;
+
+  signal r_ads1015_data : std_logic_vector(63 downto 0);
+  
 
   component spi_demux is
     generic ( g_DEV_SELECT_BITS : natural := g_DEV_SELECT_BITS );
@@ -158,9 +164,20 @@ architecture behaviour of housekeeping is
       
       -- i2c interface
       io_hk_sda     : inout std_logic;
-      io_hk_scl     : inout std_logic
+      io_hk_scl     : inout std_logic;
+
+      -- parellel out
+      o_latched     : out std_logic_vector(63 downto 0)
       );
   end component;
+
+  component status_led is
+    port (
+      i_clk : in std_logic;
+      i_data : in std_logic_vector(31 downto 0);
+      o_led : out std_logic
+      );
+    end component;
 
   component  spi_wrapper is
     generic (
@@ -245,8 +262,9 @@ begin
   -- select the housekeeping output miso depending on the selected peripheral 
   o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso;
 
-  -- r_trigger is the combination of periodic and artificial triggers
+  --r_trigger is the combination of periodic and artificial triggers
   r_trigger <= r_periodic_trigger or r_artificial_trigger;
+  --r_trigger <= r_artificial_trigger;
   
   periodic_trigger_1 : periodic_trigger
     generic map (
@@ -478,9 +496,24 @@ begin
       o_spi_miso    => r_ads1015_miso,
       i_dev_select  => r_subsystem_select,
       io_hk_sda     => io_ads1015_sda,
-      io_hk_scl     => io_ads1015_scl
+      io_hk_scl     => io_ads1015_scl,
+      o_latched     => r_ads1015_data
       );
 
+  ns_led : status_led
+    port map (
+      i_clk  => i_hk_fast_clk,
+      i_data => r_ads1015_data(31 downto 0),
+      o_led  => o_led_ns
+      );
+
+  ew_led : status_led
+    port map (
+      i_clk  => i_hk_fast_clk,
+      i_data => r_ads1015_data(63 downto 32),
+      o_led  => o_led_ew
+      );
+      
 
   si7060_1 : i2c_wrapper
     generic map (

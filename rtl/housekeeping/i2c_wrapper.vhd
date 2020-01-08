@@ -24,7 +24,10 @@ entity i2c_wrapper is
 
     -- i2c interface
     io_hk_sda     : inout std_logic;
-    io_hk_scl     : inout std_logic
+    io_hk_scl     : inout std_logic;
+
+    -- parallel output of all bytes
+    o_latched     : out std_logic_vector(8*8-1 downto 0)
     );
 end i2c_wrapper;
 
@@ -41,6 +44,9 @@ architecture behaviour of i2c_wrapper is
   signal r_dir          : std_logic;
   signal r_ack          : std_logic;
   signal r_restart      : std_logic;
+  
+  signal r_write_latch  : std_logic;
+  signal r_read_latch   : std_logic;
   
   signal r_read_addr    : std_logic_vector(2 downto 0);
   signal r_write_addr   : std_logic_vector(2 downto 0);
@@ -88,7 +94,8 @@ architecture behaviour of i2c_wrapper is
       o_ack      : out std_logic;
       o_restart  : out std_logic;
       o_valid    : out std_logic;
-      o_addr     : out std_logic_vector(2 downto 0)
+      o_addr     : out std_logic_vector(2 downto 0);
+      o_done     : out std_logic
       );
   end component;
 
@@ -121,13 +128,17 @@ architecture behaviour of i2c_wrapper is
       i_read_clk    : in  std_logic;
       i_read_enable : in  std_logic;
       i_read_addr   : in  std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
-      o_read_data   : out std_logic_vector(g_DATA_WIDTH-1 downto 0)
+      o_read_data   : out std_logic_vector(g_DATA_WIDTH-1 downto 0);
+      i_write_latch : in std_logic;
+      i_read_latch  : in std_logic;
+      o_latched     : out std_logic_vector(2**g_ADDRESS_WIDTH*g_DATA_WIDTH-1 downto 0)
     );
   end component;
 
 
 begin
-  r_spi_ce <= '0' when i_dev_select = g_SUBSYSTEM_ADDR else '1';
+  r_read_latch <= '1' when i_dev_select = g_SUBSYSTEM_ADDR else '0';
+  r_spi_ce <= not r_read_latch;
   o_spi_miso <= not r_spi_ce and r_spi_miso;
   r_read_addr <= r_spi_data(2 downto 0);
   --r_read_enable <= '1' when r_recv_count = std_logic_vector(to_unsigned(0, r_recv_count'length)) else '0';
@@ -172,7 +183,8 @@ begin
       o_ack      => r_ack,
       o_restart  => r_restart,
       o_valid    => r_seq_datavalid,
-      o_addr     => r_write_addr
+      o_addr     => r_write_addr,
+      o_done     => r_write_latch
       );
   
   i2c_1 : i2c
@@ -201,7 +213,10 @@ begin
       i_read_clk     => i_hk_fast_clk,
       i_read_enable  => r_read_enable,
       i_read_addr    => r_read_addr,
-      o_read_data    => r_read_data
+      o_read_data    => r_read_data,
+      i_write_latch  => r_write_latch,
+      i_read_latch   => r_read_latch,
+      o_latched      => o_latched
       );
   
   

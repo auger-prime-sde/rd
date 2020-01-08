@@ -17,7 +17,8 @@ entity read_sequence is
     o_ack      : out std_logic;
     o_restart  : out std_logic;
     o_valid    : out std_logic;
-    o_addr     : out std_logic_vector(2 downto 0)
+    o_addr     : out std_logic_vector(2 downto 0);
+    o_done     : out std_logic
     );
 end read_sequence;
 
@@ -30,7 +31,8 @@ architecture behave of read_sequence is
   
 begin
   test_count <= std_logic_vector(to_unsigned(r_count, test_count'length));
-
+  o_done <= '1'when r_state = s_Done else '0';
+    
   process(i_clk) is
   begin
     if rising_edge(i_clk) then

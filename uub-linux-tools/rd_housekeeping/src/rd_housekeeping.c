@@ -270,14 +270,14 @@ static double get_si7060_data(int fd)
 {
 	uint8_t tx[] = {
 			0x05/*subsystem*/,
-			0x00/*data low word*/,
-			0x01/*data high word*/,
-			0x00/*padding for the result*/ };
+			0x00/*request data low word*/,
+			0x01/*read low word, request data high word*/,
+			0x00/*read the high word*/ };
 	uint8_t* rx = malloc(sizeof(tx));
 	transfer(fd, tx, rx, sizeof(tx));
 
 	// decode the bytes to an int:
-	uint16_t val = ((rx[3] & 0b01111111)<<8) + rx[2];
+	uint16_t val = ((rx[3] & 0b01111111) << 8) + rx[2];
 	if (verbose)
 	{
 		printf("unsigned value: %u\n", val);

@@ -138,7 +138,10 @@ architecture behaviour of top is
       io_ads1015_sda : inout std_logic;
       io_ads1015_scl : inout std_logic;
       io_si7060_sda  : inout std_logic;
-      io_si7060_scl  : inout std_logic
+      io_si7060_scl  : inout std_logic;
+      o_led_ns       : out std_logic;
+      o_led_ew       : out std_logic
+
       );
   end component;
 
@@ -182,9 +185,6 @@ architecture behaviour of top is
   
 begin
 
-  o_led_ns <= '0';
-  o_led_ew <= '0';
-  
   o_ns_bias_en <= '1';
   o_ew_bias_en <= '1';
   o_hk_adc_reset <= '0';
@@ -260,7 +260,9 @@ begin
       io_ads1015_sda      => io_ads1015_sda,
       io_ads1015_scl      => io_ads1015_scl,
       io_si7060_sda       => io_si7060_sda,
-      io_si7060_scl       => io_si7060_scl
+      io_si7060_scl       => io_si7060_scl,
+      o_led_ns            => o_led_ns,
+      o_led_ew            => o_led_ew
     );
   
   data_streamer_1 : data_streamer
