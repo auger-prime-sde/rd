@@ -394,6 +394,8 @@ Periodically (every 5 seconds) the internal controller for this \ac{I2C} chip wi
 \end{center}
 
 The ADS1015 has a \ac{PGA}. All conversions are made with the $FSR=\pm4.096 V$ setting. I.e. $MSB = 2 mV$.
+Note that the bias voltage is measured over a 1:1 voltage divider so the actual bias voltage is twice that of the measured inputs.
+The bias currents are measured with a 200 V/V current sensing amplifier over a $0.2\Omega$ current sensing resistor. I.e., the bias current is $0.025 * V_{\text{ADC voltage}}$.
 
 To read a byte from the register, write the address of that register and read the data on the next byte. The next address can already be written during the read and therefore the whole register can efficiently be retrieved in a 10-byte transaction (including the sub-system address byte). 
 If the readout overlaps with a new measurement the readout is guaranteed to return consistent sample values.

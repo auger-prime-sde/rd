@@ -318,12 +318,21 @@ loop:
 		sw_trigger(fd);
 	V = get_ads1015_data(fd);
 	T = get_si7060_data(fd);
-	printf("Temperature: %0.3f\n", T);
+	printf("Temperature: %0.3f (°C)\n", T);
 	int ch;
-	for (ch=0; ch<4; ch++)
-	{
-		printf("Channel %d voltage: %0.3f\n", ch, V[ch]);
-	}
+    if (verbose)
+    {
+        for (ch=0; ch<4; ch++)
+        {
+            printf("Channel %d ADC voltage: %0.3f\n", ch, V[ch]);
+        }
+    }
+    
+    printf("N/S bias current: %5.3f (A)\n", V[0] * 0.025); // bias current is measured with 200V/V amplification over a 200 mOhm sense resistor
+    printf("N/S bias voltage: %5.3f (V)\n", V[1] * 2);     // bias voltage is measured over a 1:1 voltage divider
+    printf("E/W bias current: %5.3f (A)\n", V[2] * 0.025);
+    printf("E/W bias voltage: %5.3f (V)\n", V[3] * 2);
+    
 	free(V);
 
 	if (loop)
