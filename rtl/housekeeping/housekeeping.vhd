@@ -69,7 +69,7 @@ architecture behaviour of housekeeping is
   -- internal wires for i2c:
   signal r_ads1015_miso : std_logic;
   signal r_si7060_miso  : std_logic;
-  
+  signal r_ads1015_data : std_logic_vector(63 downto 0);
   signal r_i2c_clk      : std_logic;
   
   -- internal lines between boot seq and spi selector
@@ -91,8 +91,8 @@ architecture behaviour of housekeeping is
   signal r_adc_ce     : std_logic;
   signal r_adc_miso   : std_logic;
 
-  signal r_ads1015_data : std_logic_vector(63 downto 0);
   
+
 
   component spi_demux is
     generic ( g_DEV_SELECT_BITS : natural := g_DEV_SELECT_BITS );
@@ -172,6 +172,10 @@ architecture behaviour of housekeeping is
   end component;
 
   component status_led is
+    generic (
+      g_MIN_VOLTAGE: natural;
+      g_MAX_VOLTAGE: natural
+      );
     port (
       i_clk : in std_logic;
       i_data : in std_logic_vector(31 downto 0);
@@ -501,6 +505,10 @@ begin
       );
 
   ns_led : status_led
+    generic map (
+      g_MIN_VOLTAGE => 550,
+      g_MAX_VOLTAGE => 650
+      )
     port map (
       i_clk  => i_hk_fast_clk,
       i_data => r_ads1015_data(31 downto 0),
@@ -508,6 +516,10 @@ begin
       );
 
   ew_led : status_led
+    generic map (
+      g_MIN_VOLTAGE => 550,
+      g_MAX_VOLTAGE => 650
+      )
     port map (
       i_clk  => i_hk_fast_clk,
       i_data => r_ads1015_data(63 downto 32),
