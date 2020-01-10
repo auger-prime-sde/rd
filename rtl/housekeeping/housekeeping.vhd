@@ -624,7 +624,7 @@ begin
   version_info_1 : version_info
     generic map (
       g_SUBSYSTEM_ADDR => "00000111",
-      g_VERSION => "00000011"
+      g_VERSION => std_logic_vector(to_unsigned(4, 8))
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
