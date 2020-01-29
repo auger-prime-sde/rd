@@ -83,6 +83,26 @@
 
 \subsubsection{Trigger-offset register (0x08)}
 
+\subsubsection{Raw data capture (0x12)}
+
+\begin{warning}
+  This sub-system is not compiled in the default distributed firmware. It can be enabled in housekeeping.vhd.
+\end{warning}
+
+Raw data capture allows reading of the ADC data via the housekeeping interface.
+This is completely separate from the science acquisition process.
+It neither relies on, nor interferes with the normal trigger and transfer processes.
+The data is stored in a separate buffer.
+
+Upto 8192 samples can be retrieved. If the \ac{SPI} transaction continues after that the first samples will be re-transmitted. Note that due to the nature of the \spi{ADC} data alignment the order of the samples is:
+$$
+\ldots \text{channel A sample } n \Rightarrow \text{channel B sample } n \Rightarrow \text{channel A sample } n+1 \Rightarrow \text{channel B sample } n+1 => \ldots
+$$
+
+Each sample contains 13 bits. The first bit is the value of a digital pin on the \ac{FPGA} which can be used to calibrate the phase of the received signal. Note that these bits in channel B are sampled at the falling clock edges of the 250MHz sample clock and that the digital pin is effectively sampled at 500MHz. The last 12 bits are the sample value. Like the science data it is transferred MSB-first and in 2's-complement. 
+
+It is safe to abort the \ac{SPI} transfer before the end of the buffer. The capture will restart to run as soon as CE is released. Note that there is no mechanisms to prevent overlapping transfers from producing corrupted traces. I.e., to be sure to capture a clean trace, wait at least $8192/250 (MHz) \simeq 33 (us)$ after the release of the CE before pulling it low again (including the subsystem selection byte).
+
 \subsection{\acs{ADC} driver}
 The adc\_driver converts the 12 \ac{DDR} 250 MHz data lines to 48 `normal' data lines at 125MHz.
 At each clock cycle 2 samples are produced for each of the 2 channels.

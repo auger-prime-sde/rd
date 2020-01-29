@@ -3,8 +3,12 @@ use ieee.std_logic_1164.all;
 use ieee.numeric_std.all;
 use work.common.all;
 
+
 entity housekeeping is
-  generic ( g_DEV_SELECT_BITS : natural :=  8 );
+  generic (
+    g_DEV_SELECT_BITS : natural :=  8;
+    g_DATA_WIDTH : natural
+    );
   port (
     i_hk_fast_clk        : in  std_logic; -- 100 MHz for internal operations
     -- signals to/from UUB:
@@ -24,6 +28,9 @@ entity housekeeping is
     i_adc_miso          : in std_logic;
     o_adc_mosi          : out std_logic;
     o_adc_ce            : out std_logic;
+    -- raw capture via spi:
+    i_data_clk          : in std_logic;
+    i_data              : in std_logic_vector(g_DATA_WIDTH-1 downto 0);
     -- output for trigger offset
     o_start_offset      : out std_logic_vector(15 downto 0);
     -- housekeeping adc
@@ -51,6 +58,9 @@ architecture behaviour of housekeeping is
   
   -- internal wires to select subsystem
   signal r_subsystem_select : std_logic_vector(g_DEV_SELECT_BITS-1 downto 0);
+  
+  -- wires for raw capture via spi block
+  signal r_capture_miso : std_logic;
   
   -- internal wires for gpio:
   signal r_gpio_in      : std_logic_vector(15 downto 0);
@@ -258,13 +268,28 @@ architecture behaviour of housekeeping is
       );
     end component;
   
+
+  component spi_capture is
+    generic (g_SUBSYSTEM_ADDR : std_logic_vector;
+             g_DATA_WIDTH: natural;
+             g_BUFFER_LEN: natural );
+    port ( i_spi_clk : in std_logic;
+           i_spi_mosi : in std_logic;
+           o_spi_miso : out std_logic;
+           i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+           -- raw data
+           i_data : in std_logic_vector(g_DATA_WIDTH-1 downto 0);
+           i_data_clk : in std_logic);
+  end component;
+
+
 begin
 
   -- adc has inverted clock polarity
   r_adc_clk <= not r_internal_clk;
 
   -- select the housekeeping output miso depending on the selected peripheral 
-  o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso;
+  o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso or r_capture_miso;
 
   --r_trigger is the combination of periodic and artificial triggers
   r_trigger <= r_periodic_trigger or r_artificial_trigger;
@@ -649,7 +674,77 @@ begin
       );
   
       
-  
+  spi_capture_1 : spi_capture
+    generic map (
+      g_SUBSYSTEM_ADDR => "00010010",
+      g_DATA_WIDTH => g_DATA_WIDTH,
+      g_BUFFER_LEN => 4096 )
+    port map (
+      i_spi_clk => r_internal_clk,
+      i_spi_mosi => r_internal_mosi,
+      o_spi_miso => r_capture_miso,
+      i_dev_select => r_subsystem_select,
+      -- channel A, first sample, MSB first
+      i_data(51 downto 39)  => (
+      51=>i_data(12), -- smuggled trigger bit
+      50=>i_data(18),
+      49=>i_data( 5),
+      48=>i_data(17),
+      47=>i_data( 4),
+      46=>i_data(16),
+      45=>i_data( 3),
+      44=>i_data(15),
+      43=>i_data( 2),
+      42=>i_data(14),
+      41=>i_data( 1),
+      40=>i_data(13),
+      39=>i_data( 0)     ),
+    -- channel B, first sample, MSB first
+    i_data(38 downto 26)  => (
+      38=>i_data(25), -- smuggled trigger bit
+      37=>i_data(24),
+      36=>i_data(11),
+      35=>i_data(23),
+      34=>i_data(10),
+      33=>i_data(22),
+      32=>i_data( 9),
+      31=>i_data(21),
+      30=>i_data( 8),
+      29=>i_data(20),
+      28=>i_data( 7),
+      27=>i_data(19),
+      26=>i_data( 6)       ),
+    -- channel A, second sample, MSB first
+    i_data(25 downto 13)  => (
+      25=>i_data(38), -- smuggled trigger bit
+      24=>i_data(44),
+      23=>i_data(31),
+      22=>i_data(43),
+      21=>i_data(30),
+      20=>i_data(42),
+      19=>i_data(29),
+      18=>i_data(41),
+      17=>i_data(28),
+      16=>i_data(40),
+      15=>i_data(27),
+      14=>i_data(39),
+      13=>i_data(26)      ),
+    -- channel B, second sample, MSB first
+    i_data(12 downto 0)  => (
+      12=>i_data(51), -- smuggled trigger bit
+      11=>i_data(50),
+      10=>i_data(37),
+      9 =>i_data(49),
+      8 =>i_data(36),
+      7 =>i_data(48),
+      6 =>i_data(35),
+      5 =>i_data(47),
+      4 =>i_data(34),
+      3 =>i_data(46),
+      2 =>i_data(33),
+      1 =>i_data(45),
+      0 =>i_data(32)     ),
+      i_data_clk => i_data_clk );
   
   
   -- instantiate gpio subsystem
