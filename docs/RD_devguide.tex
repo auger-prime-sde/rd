@@ -138,8 +138,7 @@ The second (q[25]) is used to determine if the even or odd sample will be used a
 The sub-sample trigger information (q[12] \textbf{xor} q[25] \textbf{xor} q[36]) can be retrieved through the housekeeping \ac{SPI} interface.
 
 \begin{warning}
-  This behaviour has not yet been implemented.
-  The current implementation simply forwards the external trigger to the write\_controller which samples it as 125 MHz with minimal synchonization.
+  The retrieval of the sub-sample trigger information is not actually implemented at the time of this writing.
 \end{warning}
 
 

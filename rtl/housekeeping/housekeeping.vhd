@@ -393,17 +393,6 @@ begin
       g_SUBSYSTEM_ADDR => "00000100",
       g_CLK_DIV =>  125,
       g_SEQ_DATA => (
-        -- set lo thres and high thres. Uncomment these to enable the RDY
-        -- function of the ALERT/RDY pin
-        --(data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        --(data => "00000010", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --(data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --(data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --(data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        --(data => "00000011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --(data => "11111111", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --(data => "11111111", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        
         -- write mux and trigger:
         (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
         (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
