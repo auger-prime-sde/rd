@@ -670,9 +670,9 @@ begin
       
   spi_capture_1 : spi_capture
     generic map (
-      g_SUBSYSTEM_ADDR => "00010010",
+      g_SUBSYSTEM_ADDR => "00001011",
       g_DATA_WIDTH => g_DATA_WIDTH,
-      g_BUFFER_LEN => 4096 )
+      g_BUFFER_LEN => 8192 )
     port map (
       i_spi_clk => r_internal_clk,
       i_spi_mosi => r_internal_mosi,

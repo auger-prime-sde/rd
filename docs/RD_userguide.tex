@@ -536,6 +536,20 @@ The digital interface is identical to the GPIO except that the output of the reg
   \end{tabular}
 \end{center}
   
+\subsection{Raw data access (address 0x0B)}
+Raw data can be captured completely independent of the trigger and fast readout.
+This also allows access to longer consecutive traces than the normal data pipeline.
+Upto 8192 samples can be retrieved via this interface.
+Samples are continuously stored in a circular buffer. When a transaction to address 0x0B is started the write process is temporarily paused and the data is returned.
+It is not mandatory to read the whole buffer. E.g., it is allowed to read 2048 samples and then release the CE line. This will cause the write process to resume.
+There are no precautions that inhibit reads while the buffer was not fully overwritten. There is no parity information in this buffer.
+There is a 13th bit with each sample that represents the value of the trigger input at that sample. For the EW channel this is sampled at the falling edge of the sample clock. I.e. there is 500 MSPS information on the trigger input line. This is in the last/highest bit of each sample.
+
+The returned data is tightly packed (i.e., no aligned to bytes). Bits in the sample are transferred MSB first.
+The oldest sample is transmitted first and the newest last.
+The samples from the NS and EW channel are interleaved, starting with a NS sample, followed by the corresponding EW sample.
+
+
 \subsubsection{Boot time and boot sequence}
 After power is applied the \ac{FPGA} loads its configuration from the SST26VF032B \ac{SPI} flash.
 As soon as the user code is running the \ac{RD} executes a hard-coded initialization sequence on the \ac{SPI} interface, as if the \ac{UUB} had sent the following commands:
