@@ -549,6 +549,10 @@ The returned data is tightly packed (i.e., no aligned to bytes). Bits in the sam
 The oldest sample is transmitted first and the newest last.
 The samples from the NS and EW channel are interleaved, starting with a NS sample, followed by the corresponding EW sample.
 
+\begin{warning}
+  This sub-system was used for debugging and may or may not be included in releases.
+  In some cases the available memory may be reduced to 2048 or 4096 samples if other modules require more memory.
+\end{warning}
 
 \subsubsection{Boot time and boot sequence}
 After power is applied the \ac{FPGA} loads its configuration from the SST26VF032B \ac{SPI} flash.
