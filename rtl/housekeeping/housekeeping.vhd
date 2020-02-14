@@ -41,7 +41,10 @@ entity housekeeping is
     io_si7060_scl       : inout std_logic;
     -- leds
     o_led_ns            : out std_logic;
-    o_led_ew            : out std_logic
+    o_led_ew            : out std_logic;
+    -- bias enable
+    o_bias_ns           : out std_logic;
+    o_bias_ew           : out std_logic
     );
 end housekeeping;
 
@@ -69,6 +72,8 @@ architecture behaviour of housekeeping is
   signal r_gpio_trigger : std_logic;
   signal r_gpio_ce      : std_logic;
   signal r_gpio_miso    : std_logic;
+  -- signals for bias dis/en-able
+  signal r_bias_miso    : std_logic;
 
   -- wires for version info block:
   signal r_version_miso : std_logic;
@@ -289,7 +294,7 @@ begin
   r_adc_clk <= not r_internal_clk;
 
   -- select the housekeeping output miso depending on the selected peripheral 
-  o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso or r_capture_miso;
+  o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso or r_fft_miso or r_bias_miso;
 
   --r_trigger is the combination of periodic and artificial triggers
   r_trigger <= r_periodic_trigger or r_artificial_trigger;
@@ -750,7 +755,21 @@ begin
       o_data => o_gpio_data
       );  
 
-  
+  digitaloutput_bias : digitaloutput
+    generic map (
+      g_SUBSYSTEM_ADDR => "00001010",
+      g_DEFAULT_OUTPUT => "11111111"
+      )
+    port map (
+      i_clk => i_hk_fast_clk,
+      i_spi_clk => r_internal_clk,
+      i_spi_mosi => r_internal_mosi,
+      o_spi_miso => r_bias_miso,
+      i_dev_select => r_subsystem_select,
+      o_data(0) => o_bias_ns,
+      o_data(1) => o_bias_ew,
+      o_data(7 downto 2) => open
+      );
   
 end behaviour;
   
