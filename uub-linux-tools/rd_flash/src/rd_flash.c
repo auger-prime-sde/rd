@@ -36,13 +36,18 @@
 #define SECTOR_SIZE 4096
 
 // end addresses are exclusive
-// there is unused space from 0x0B0000 to 0x200000 (between primary and golden pattern)
+// we don't use non-volatile write protection so we can put all blocks back-to-back
+// 0x0B0000 is the theoretical maximum size of a bitstream size
 #define PRIMARY_PATTERN_START 0x000000
 #define PRIMARY_PATTERN_END   0x0B0000
-#define GOLDEN_PATTERN_START  0x200000
-#define GOLDEN_PATTERN_END    0x2B0000
-#define USER_DATA_START       0x2B0000
-#define USER_DATA_END         0x3FFF00
+// golden pattern follows primary immediately
+#define GOLDEN_PATTERN_START  0x0B0000
+#define GOLDEN_PATTERN_END    0x160000
+// user data follows golden pattern immediately
+#define USER_DATA_START       0x160000
+#define USER_DATA_END         0x3FF000
+// small gap to align with 4k eraseable sectors
+// the last 256-byte page must contain the jump command
 #define JUMP_COMMAND_START    0x3FFF00
 #define JUMP_COMMAND_END      0x3FFFFF
 
@@ -63,12 +68,17 @@ static bool print_chipid = false;
 static bool print_bpr = false;
 static bool print_firmwareid = false;
 static bool enable_dig_ifc = false;
+static bool do_write_jump_addr = false;
 
 static char *primary_input = NULL;
+static char *golden_input = NULL;
+static char *userdata_input = NULL;
 static char *primary_output = NULL;
-static char *chip_output = NULL;
 static char *golden_output = NULL;
 static char *userdata_output = NULL;
+static char *chip_output = NULL;
+
+
 
 
 static void hex_dump(const void *src, size_t length, size_t line_size,  char *prefix)
@@ -111,14 +121,14 @@ static void transfer(int fd, uint8_t const *tx, uint8_t const *rx, size_t len, b
 		.bits_per_word = bits,
 	};
 
-	if (verbose)
+	if (verbose && tx)
 		hex_dump(tx, len, 32, "TX");
 
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 	if (ret < 1)
 		pabort("can't send spi message");
 
-	if (verbose)
+	if (verbose && rx)
 		hex_dump(rx, len, 32, "RX");
 }
 
@@ -154,12 +164,12 @@ static void print_usage(const char *prog)
 		 "  -i --flashid        print flash id\n"
 	     "  -b --bpr            read and print the volatile block protection register\n"
 		 "  -f --firmwareid     print currently running RD firmware number\n"
-	     "     --enable-dig-ifc enable real pin io if not already enabled by writing bit 16 in DIG_IFC_CONTROL register"
+	     "     --enable-dig-ifc enable real pin io if not already enabled by writing bit 16 in DIG_IFC_CONTROL register\n"
 		 "  -r --dump-primary   file to write primary pattern to\n"
 		 "  -g --dump-golden    file to write golden pattern to\n"
 		 "  -u --dump-user      file to write user data to\n"
 		 "  -a --dump-all       dump entire memory including the golden image, user data and jump command\n"
-		 "  -w --write-primary  overwrite primary pattern with file contents\n"
+		 "  -w --prog-primary   overwrite primary pattern with file contents\n"
 		  );
 	exit(1);
 }
@@ -182,11 +192,15 @@ static void parse_opts(int argc, char *argv[])
 			{ "dump-user",     required_argument, NULL, 'u' },
 			{ "dump-all",      required_argument, NULL, 'a' },
 			{ "prog-primary",  required_argument, NULL, 'w' },
-			{ NULL,            no_argument,       NULL, NULL},
+			// some more undocumented methods for developers only
+			{ "prog-golden",   required_argument, NULL, 'G' },
+			{ "prog-user",     required_argument, NULL, 'U' },
+			{ "write-jump-cmd",no_argument,       NULL, 'J' },
+			{ NULL,            no_argument,       NULL, NULL}
 		};
 		int c;
 
-		c = getopt_long(argc, argv, "D:s:c:vibfr:g:u:w:a:", lopts, NULL);
+		c = getopt_long(argc, argv, "D:s:c:vibfr:g:u:w:a:G:U:J", lopts, NULL);
 
 		if (c == -1)
 			break;
@@ -230,6 +244,15 @@ static void parse_opts(int argc, char *argv[])
 			break;
 		case 'w':
 			primary_input = optarg;
+			break;
+		case 'G':
+			golden_input = optarg;
+			break;
+		case 'U':
+			userdata_input = optarg;
+			break;
+		case 'J':
+			do_write_jump_addr = true;
 			break;
 		default:
 			print_usage(argv[0]);
@@ -304,7 +327,108 @@ void verify_dig_ifc()
 	}
 }
 
-void write_from_file(int fd, char* filename)
+
+uint8_t reverse_bits(uint8_t inp)
+{
+	uint8_t res = 0;
+	int i;
+	for (i=0; i < 8; i++)
+	{
+
+		res += ((inp >> i) & 0x01 ) << (7-i);
+	}
+	return res;
+}
+void write_jump_addr(int fd)
+{
+	/* According to the Multi boot documentation of the ECP5 the JUMP command should look like this:
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF (8 dummy bytes)
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF (8 dummy bytes)
+	 * 0xBD 0xB3                               (2 byes preable)
+	 * 0xC4 0x00 0x00 0x00 0x00 0x00 0x00 0x00 (1 byte Control Register, 3 bytes Command info, 4 bytes Control data)
+	 * 0xFE 0x00 0x00 0x00 [  ] [            ] (1 byte Jump command, 3 bytes command info, 1 byte spi mode(0x03 for normal speed), 3 bytes address)
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF (8 dummy bytes)
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF (8 dummy bytes)
+	 *
+	 * Note that the bytes are all stored big-endian so reversed from the 'normal' data
+	 *
+	 * However, when inspecting a JUMP sector generated by lattice it appears as follows:
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
+	 * 0xFF 0xFF 0xBD 0xCD 0xFF 0xFF 0xFF 0xFF (..preable....?)
+	 * 0x7E 0x00 0x00 0x00 0xC0 0xD0 0x00 0x00 (.....[reversed addr])
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
+	 * 0xFF 0xFF
+	 *
+	 * The above is generated with the Lattice advance spi flash tool
+	 * When generating with the Dual boot tool you get this: It appears that the bit-order is reversed
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
+	 * 0xFF 0xFF 0xBD 0xB3 0xFF 0xFF 0xFF 0xFF
+	 * 0x7E 0x00 0x00 0x00 0x03 0x0B 0x00 0x00
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
+	 * 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF 0xFF
+	 *
+	 */
+
+	// prepare an empty buffer
+	uint8_t buf[256+5];
+	uint8_t jmp[256];
+	memset(&jmp, 0xFF, sizeof(jmp));
+
+	jmp[18] = 0xBD;
+	jmp[19] = 0xB3;
+	jmp[24] = 0x7E;
+	jmp[25] = 0x00;
+	jmp[26] = 0x00;
+	jmp[27] = 0x00;
+	jmp[28] = 0x03;
+	jmp[29] = (GOLDEN_PATTERN_START >> 16) & 0xFF;
+	jmp[30] = (GOLDEN_PATTERN_START >>  8) & 0xFF;
+	jmp[31] = (GOLDEN_PATTERN_START      ) & 0xFF;
+
+
+	// write enable:
+	buf[0] = 0x02; // select flash subsystem
+	buf[1] = 0x06; // Write enable
+	transfer(fd, buf, NULL, 2, verbose);
+
+	// sector erase:
+	buf[0] = 0x02; // select flash subsystem
+	buf[1] = 0x20; // sector erase
+	buf[2] = (JUMP_COMMAND_START >> 16) & 0xFF; // word 3 of addr
+	buf[3] = (JUMP_COMMAND_START >>  8) & 0xFF; // word 2 of addr
+	buf[4] = (JUMP_COMMAND_START      ) & 0xFF; // word 1 of addr
+	transfer(fd, buf, NULL, 5, verbose);
+	usleep(25000);
+
+	// write enable:
+	buf[0] = 0x02; // select flash subsystem
+	buf[1] = 0x06; // Write enable
+	transfer(fd, buf, NULL, 2, verbose);
+
+	// prepare page program
+	buf[0] = 0x02; // select flash subsystem
+	buf[1] = 0x02; // page program command of spi flash
+	buf[2] = (JUMP_COMMAND_START >> 16) & 0xFF; // word 3 of addr
+	buf[3] = (JUMP_COMMAND_START >>  8) & 0xFF; // word 2 of addr
+	buf[4] = (JUMP_COMMAND_START      ) & 0xFF; // word 1 of addr
+	memcpy(buf+5, jmp, 256);
+
+	// do the spi transfer
+	transfer(fd, buf, NULL, 5+256, verbose);
+
+	// page program takes at most 1.5ms
+	usleep(1500);
+
+
+	// TODO: verify
+
+}
+
+
+void write_from_file(int fd, int start, int end, char* filename)
 {
 	// get file size:
 	struct stat st;
@@ -314,9 +438,10 @@ void write_from_file(int fd, char* filename)
 	}
 	int filesize = st.st_size;
 
-	if (filesize >= PRIMARY_PATTERN_END)
+	if (filesize >= end - start)
 	{
-		printf("WARNING: file size is larger than reserved space for primary pattern. File will be truncated!\n");
+		printf("WARNING: file size is larger than reserved space for this section. File will be truncated!\n");
+		filesize = end - start;
 	}
 
 	int numpages = 1 + (filesize - 1) / PAGE_SIZE;
@@ -333,14 +458,15 @@ void write_from_file(int fd, char* filename)
 
 
 	// Erase necessary sectors:
-	int numsectors = (PRIMARY_PATTERN_END - PRIMARY_PATTERN_START) / SECTOR_SIZE - 1; // END address is exclusive
+	int start_sector = start / SECTOR_SIZE;
+	int end_sector   = end   / SECTOR_SIZE;
 	int sector;
-	for (sector=0; sector<numsectors; ++sector)
+	for (sector=start_sector; sector<end_sector; ++sector)
 	{
 		// write enable:
 		buf[0] = 0x02; // select flash subsystem
 		buf[1] = 0x06; // Write enable
-		transfer(fd, buf, NULL, 2, false);
+		transfer(fd, buf, NULL, 2, verbose);
 
 		// sector erase:
 		int offset = sector * SECTOR_SIZE;
@@ -349,13 +475,13 @@ void write_from_file(int fd, char* filename)
 		buf[2] = (offset >> 16) & 0xFF; // word 3 of addr
 		buf[3] = (offset >>  8) & 0xFF; // word 2 of addr
 		buf[4] = (offset      ) & 0xFF; // word 1 of addr
-		transfer(fd, buf, NULL, 5, false);
+		transfer(fd, buf, NULL, 5, verbose);
 
 		// TODO: verify if chip is ready for next, sector erase can take upto 25ms
 		usleep(25000);
 
 		// print progress
-		printf("\rErasing 0x%06X-0x%06X: %d/%d sectors erased", PRIMARY_PATTERN_START, PRIMARY_PATTERN_END, sector + 1, numsectors);
+		printf("\rErasing 0x%06X-0x%06X: %d/%d sectors erased", start, end, sector - start_sector + 1, end_sector - start_sector);
 		fflush(stdout);
 	}
 	printf("\n");
@@ -373,14 +499,14 @@ void write_from_file(int fd, char* filename)
 		// enable writes:
 		buf[0] = 0x02; // select flash subsystem
 		buf[1] = 0x06; // Write enable
-		transfer(fd, buf, NULL, 2, false);
+		transfer(fd, buf, NULL, 2, verbose);
 
 		// prepare page program
 		buf[0] = 0x02; // select flash subsystem
 		buf[1] = 0x02; // page program command of spi flash
-		buf[2] = (offset >> 16) & 0xFF; // word 3 of addr
-		buf[3] = (offset >>  8) & 0xFF; // word 2 of addr
-		buf[4] = (offset      ) & 0xFF; // word 1 of addr
+		buf[2] = ((start + offset) >> 16) & 0xFF; // word 3 of addr
+		buf[3] = ((start + offset) >>  8) & 0xFF; // word 2 of addr
+		buf[4] = ((start + offset)      ) & 0xFF; // word 1 of addr
 
 		// read 256 bytes from file
 		int numread = fread(buf + 5, 1, pagesize, file);
@@ -390,7 +516,7 @@ void write_from_file(int fd, char* filename)
 		}
 
 		// do the spi transfer
-		transfer(fd, buf, NULL, 5+pagesize, false);
+		transfer(fd, buf, NULL, 5+pagesize, verbose);
 
 		// page program takes at most 1.5ms
 		usleep(1500);
@@ -440,7 +566,7 @@ void write_block_protection_register(int fd, uint8_t* bpr)
 	free(buf);
 }
 
-void print_block_protection_register(int fd, uint8_t* bpr)
+void print_block_protection_register(uint8_t* bpr)
 {
 	int i;
 	for (i=0; i<10; i++)
@@ -543,6 +669,10 @@ void verify_with_file(int fd, int start, int end, char * filename)
 	}
 	int filesize = st.st_size;
 
+	// write is truncated
+	if (filesize > end - start)
+		filesize = end - start;
+
 	int numchunks = 1 + (filesize -1) / chunksize;
 
 	// prepare tx buffer (we use the same buffer for tx and rx)
@@ -561,7 +691,7 @@ void verify_with_file(int fd, int start, int end, char * filename)
 		int offset = start + chunk * chunksize;
 
 		// calculate size of current chunk
-		int thischunksize = filesize - offset;
+		int thischunksize = filesize - chunk * chunksize;
 		if (thischunksize > chunksize) thischunksize = chunksize;
 
 		// we have to reset these every time
@@ -572,7 +702,7 @@ void verify_with_file(int fd, int start, int end, char * filename)
 		spi_buf[2] = (offset >> 16) & 0xFF; // word 3 of addr
 		spi_buf[3] = (offset >>  8) & 0xFF; // word 2 of addr
 		spi_buf[4] = (offset      ) & 0xFF; // word 1 of addr
-		transfer(fd, spi_buf, spi_buf, 5+thischunksize, false);
+		transfer(fd, spi_buf, spi_buf, 5+thischunksize, verbose);
 
 		// read the same number of bytes from file
 		int numread = fread(file_buf, 1, thischunksize, file);
@@ -584,6 +714,12 @@ void verify_with_file(int fd, int start, int end, char * filename)
 		if (memcmp(file_buf, spi_buf+5, thischunksize))
 		{
 			printf("Verification failed in chunk 0x%06X-0x%06X\n", offset, offset+thischunksize);
+			if (verbose) {
+				printf("raw spi data: \n");
+				hex_dump(spi_buf+5, thischunksize, 32, "EEPROM");
+				printf("file data: \n");
+				hex_dump(file_buf, thischunksize, 32, "FILE");
+			}
 			abort();
 		}
 
@@ -594,7 +730,7 @@ void verify_with_file(int fd, int start, int end, char * filename)
 	fclose(file);
 	free(spi_buf);
 	free(file_buf);
-	printf("\rVerification complete                                \n");
+	printf("\nVerification complete                                \n");
 }
 
 void print_firmware_version(int fd)
@@ -618,40 +754,62 @@ void verify_block_protect_register(int fd)
 	// bpr[1] = bits 71:64
 	// bpr[2] = bits 63:56
 	// etc etc
-	uint8_t target_bpr[10] = {0x55, 0x00, 0xBF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFC, 0x00};
+	uint8_t target_bpr[10] = {0x55, 0x55, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
 
-	if (print_bpr || primary_input != NULL)
+	uint8_t target_bpr_primary[10]  = {0x55, 0x00, 0xBF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFC, 0x00};
+	uint8_t target_bpr_golden[10]   = {0x55, 0x55, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xE0, 0x03, 0xFF};
+	uint8_t target_bpr_userdata[10] = {0x00, 0x55, 0x40, 0x00, 0x00, 0x00, 0x00, 0x1F, 0xFF, 0xFF};
+	uint8_t target_bpr_jump[10]     = {0x15, 0x55, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF};
+
+
+
+	if (print_bpr || primary_input != NULL || golden_input != NULL || userdata_input != NULL || do_write_jump_addr)
 	{
+		// read the current BRP status
 		read_block_protection_register(fd, bpr);
 		if (print_bpr)
 		{
-			printf("Block protection register:\n");
-			print_block_protection_register(fd, bpr);
+			printf("Current block protection register:\n");
+			print_block_protection_register(bpr);
 		}
 
-		if (primary_input != NULL)
+		// Calculate desireable BPR
+		int i;
+		for (i=0; i<10; i++)
 		{
-			bool tootight = false;
-			bool tooloose = false;
-			int i;
-			for (i=0; i<10; i++)
-			{
-				if (bpr[i] & !target_bpr[i] != 0)
-					tootight = true;
-				bpr[i] = bpr[i] & target_bpr[i];
-				if (bpr[i] != target_bpr[i])
-					tooloose = true;
-			}
+			if (primary_input != NULL)
+				target_bpr[i] = target_bpr[i] & target_bpr_primary[i];
+			if (golden_input!= NULL)
+				target_bpr[i] = target_bpr[i] & target_bpr_golden[i];
+			if (userdata_input != NULL)
+				target_bpr[i] = target_bpr[i] & target_bpr_userdata[i];
+			if (do_write_jump_addr)
+				target_bpr[i] = target_bpr[i] & target_bpr_jump[i];
+		}
+		printf("Target block protection register:\n");
+		print_block_protection_register(target_bpr);
 
-			if (tooloose)
-			{
-				printf("warning: block protect register is not maximally tight!!\n");
-			}
-			if (tootight)
-			{
-				printf("Erasing block protection register bits needed for primary pattern\n");
-				write_block_protection_register(fd, bpr);
-			}
+		// determine if changes to bpr are needed
+		bool tootight = false;
+		bool tooloose = false;
+		for (i=0; i<10; i++)
+		{
+			if (bpr[i] & ~target_bpr[i] != 0)
+				tootight = true;
+			bpr[i] = bpr[i] & target_bpr[i];
+			if (bpr[i] != target_bpr[i])
+				tooloose = true;
+		}
+
+		if (tooloose)
+		{
+			printf("warning: block protect register is not maximally tight!!\n");
+		}
+		if (tootight)
+		{
+			printf("Some block protection register bits need clearing. Writing new BPR:\n");
+			print_block_protection_register(bpr);
+			write_block_protection_register(fd, bpr);
 		}
 	}
 }
@@ -691,16 +849,33 @@ int main(int argc, char* argv[])
 
 	// todo: abort if output file exists
 
+	if (do_write_jump_addr)
+	{
+		write_jump_addr(fd);
+	}
 
 	// program flash:
 	if (primary_input != NULL)
 	{
-		write_from_file(fd, primary_input);
+		write_from_file( fd, PRIMARY_PATTERN_START, PRIMARY_PATTERN_END, primary_input);
 		verify_with_file(fd, PRIMARY_PATTERN_START, PRIMARY_PATTERN_END, primary_input);
 		printf("Upload complete. The new firmware will be loaded on the next power cycle.\n");
 		printf("Execute slowc -P0x033f followed by slowc -P0x03ff to power-cycle the RD module.\n");
 		printf("The version number of the running RD firmware can be checked with rd_flash -f\n");
 	}
+	if (golden_input != NULL)
+	{
+		write_from_file( fd, GOLDEN_PATTERN_START, GOLDEN_PATTERN_END, golden_input);
+		verify_with_file(fd, GOLDEN_PATTERN_START, GOLDEN_PATTERN_END, golden_input);
+		printf("Golden pattern upload complete.\n");
+	}
+	if (userdata_input != NULL)
+	{
+		write_from_file( fd, USER_DATA_START, USER_DATA_END, userdata_input);
+		verify_with_file(fd, USER_DATA_START, USER_DATA_END, userdata_input);
+		printf("Userdata upload complete.\n");
+	}
+
 
 	if (primary_output != NULL)
 	{

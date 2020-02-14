@@ -326,10 +326,10 @@ A Primary and a Golden Pattern are present. If the checksum of the Primary Patte
 \begin{center}
   \begin{tabular}{llll}
     Start & End & Contents & Description\\\hline
-    0x000000 & 0x0AFFFF & Primary Pattern & Contains the user-code for the FPGA\\
-    0x0B0000 & 0x15FFFF & Golden Pattern & Fallback code for the FPGA\\
-    0x160000 & 0x3FFEFF & Calibration file & Ascii encoded calibraton data\\
-    0x3FFF00 & 0x2FFFFF & JUMP command & Start address of the Golden Pattern\\
+    0x00 00 00 & 0x0A FF FF & Primary Pattern & Contains the user-code for the FPGA\\
+    0x0B 00 00 & 0x15 FF FF & Golden Pattern & Fallback code for the FPGA\\
+    0x16 00 00 & 0x3F F0 00 & Calibration file & Ascii encoded calibraton data\\
+    0x3F FF 00 & 0x3F FF FF & JUMP command & Start address of the Golden Pattern\\
   \end{tabular}
   \captionof{table}{Flash layout.}
 \end{center}
@@ -340,6 +340,8 @@ Refer to the Lattice Dual Boot and Multiple Boot Features Techical Note (TN1216)
 Neither the JUMP command not the Golden Pattern should be overwritten.
 An example program \texttt{rd\_flash} is provided which performs safe read and write methods to dump and write the Primary Pattern from a bit-file.
 Refer to the source in the git repository\footnote{\url{https://github.com/auger-prime-sde/rd/tree/master/uub-linux-tools/rd_flash}}.
+
+Note that a small gap is left unused between the calibration data and the jump command. This is to ensure that the jump command does not share eraseable sectors with the userdata. I.e., writing the last page of the user data does not require clearing (and therefore re-writing) the jump command.
 
 The provided \texttt{rd\_flash} tool will prohibit writes over the golden images, the jump command, or the calibration file. Note that the SPI flash interface itself provides no such protection. It is possible to brick the RD module if the sectors are erased.
 
