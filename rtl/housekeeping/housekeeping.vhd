@@ -294,7 +294,7 @@ begin
   r_adc_clk <= not r_internal_clk;
 
   -- select the housekeeping output miso depending on the selected peripheral 
-  o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso or r_fft_miso or r_capture_miso or r_bias_miso;
+  o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso  or r_capture_miso or r_bias_miso;
 
   --r_trigger is the combination of periodic and artificial triggers
   r_trigger <= r_periodic_trigger or r_artificial_trigger;
