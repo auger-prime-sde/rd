@@ -59,6 +59,10 @@ end top;
 architecture behaviour of top is
   -- wires from adc driver to data streamer:
   signal w_adc_data  : std_logic_vector(4*(g_ADC_BITS+1)-1 downto 0);
+  signal w_triangle_even, w_triangle_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
+
+  signal w_data_ns_even, w_data_ns_odd, w_data_ew_even, w_data_ew_odd : std_logic_vector(g_ADC_BITS-1 downto 0);
+  
   signal w_ddr_clk   : std_logic;
 
 
@@ -82,8 +86,7 @@ architecture behaviour of top is
   signal r_adc_rst : std_logic := '1';
 
   signal r_hk_trig_out : std_logic;
-  signal r_trigger : std_logic;
-  --signal w_trigger : std_logic;
+  signal w_trigger : std_logic_vector(0 to 3);
   
   signal start_offset : std_logic_vector(15 downto 0);
      
@@ -97,6 +100,26 @@ architecture behaviour of top is
         q: out  std_logic_vector(51 downto 0));
   end component;
 
+
+  component ddr_unscrambler
+    port (
+      i_data : in std_logic_vector(51 downto 0);
+      o_data_ns_even : out std_logic_vector(11 downto 0);
+      o_data_ns_odd  : out std_logic_vector(11 downto 0);
+      o_data_ew_even : out std_logic_vector(11 downto 0);
+      o_data_ew_odd  : out std_logic_vector(11 downto 0);
+      o_trigger      : out std_logic_vector(0 to 3));
+  end component;
+  
+  component triangle_source is
+    generic (g_ADC_BITS : natural := 12);
+    port (
+      i_clk : in std_logic;
+      o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
+      o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
+      );
+  end component;
+
   
   component data_streamer
     generic (
@@ -106,7 +129,7 @@ architecture behaviour of top is
     g_BUFFER_INDEXSIZE : natural := 11 );
 
     port (
-      i_adc_data       : in std_logic_vector(4*(g_ADC_BITS+1)-1 downto 0);
+      i_adc_data       : in std_logic_vector(4*(g_ADC_BITS)-1 downto 0);
       i_clk            : in std_logic;
       i_tx_clk         : in std_logic;
       i_trigger        : in std_logic;
@@ -190,8 +213,6 @@ begin
 
   o_hk_adc_reset <= '0';
 
-  r_trigger <= w_adc_data(51);-- 38 25 12
-  
   process (w_hk_fast_clk) is
   begin
     if rising_edge(w_hk_fast_clk) then
@@ -228,8 +249,26 @@ begin
       sync_reset => '0',
       datain(11 downto 0) => i_data_in,
       datain(12) => i_trigger,
-      q          => w_adc_data);
+      q          => w_adc_data
+      --q          => open
+      );
 
+  ddr_unscrambler_1 : ddr_unscrambler
+    port map (
+      i_data => w_adc_data,
+      o_data_ns_even => w_data_ns_even,
+      o_data_ns_odd  => w_data_ns_odd,
+      o_data_ew_even => w_data_ew_even,
+      o_data_ew_odd  => w_data_ew_odd,
+      o_trigger      => w_trigger );
+      
+
+  source : triangle_source
+    port map (
+      i_clk   => w_ddr_clk,
+      o_data_even => w_triangle_even,
+      o_data_odd  => w_triangle_odd
+      );
     
   u1: USRMCLK port map (
     USRMCLKI => w_flash_clk,
@@ -260,7 +299,22 @@ begin
       o_adc_mosi          => o_hk_adc_mosi,
       o_adc_ce            => o_hk_adc_ce,
       i_data_clk          => w_ddr_clk,
-      i_data              => w_adc_data,
+      -- four trigger lines are merged into the data as the 13'th bit of each sample
+      i_data(51)          => w_trigger(3),
+      i_data(38)          => w_trigger(2),
+      i_data(25)          => w_trigger(1),
+      i_data(12)          => w_trigger(0),
+      -- real data:
+      i_data(50 downto 39) => w_data_ns_even,
+      i_data(37 downto 26) => w_data_ew_even,
+      i_data(24 downto 13) => w_data_ns_odd,
+      i_data(11 downto  0) => w_data_ew_odd,
+      -- uncomment this instead if you want perfect triangle waves:
+      --i_data(50 downto 39) => w_triangle_even,
+      --i_data(37 downto 26) => w_triangle_even,
+      --i_data(24 downto 13) => w_triangle_odd,
+      --i_data(11 downto  0) => w_triangle_odd,
+      -- 
       o_start_offset      => start_offset,
       io_ads1015_sda      => io_ads1015_sda,
       io_ads1015_scl      => io_ads1015_scl,
@@ -275,11 +329,21 @@ begin
   data_streamer_1 : data_streamer
     generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
     port map (
-      i_adc_data       => w_adc_data,
+      -- data lines
+      i_adc_data(47 downto 36) => w_data_ns_even,
+      i_adc_data(35 downto 24) => w_data_ew_even,
+      i_adc_data(23 downto 12) => w_data_ns_odd,
+      i_adc_data(11 downto  0) => w_data_ew_odd,
+      -- uncomment these instead if you want perfect triangle waves
+      --i_adc_data(47 downto 36) => w_triangle_even,
+      --i_adc_data(35 downto 24) => w_triangle_even,
+      --i_adc_data(23 downto 12) => w_triangle_odd,
+      --i_adc_data(11 downto  0) => w_triangle_odd,
+      -- 
       i_clk            => w_ddr_clk,
       i_tx_clk         => w_tx_clk,
-      i_trigger        => w_adc_data(51),
-      i_trigger_even   => w_adc_data(25),
+      i_trigger        => w_trigger(3),
+      i_trigger_even   => w_trigger(1),
       i_start_transfer => '1',
       i_start_offset   => start_offset(g_BUFFER_INDEXSIZE downto 0),
       o_tx_data        => o_tx_data,

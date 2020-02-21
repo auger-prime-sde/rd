@@ -816,6 +816,10 @@ void verify_block_protect_register(int fd)
 
 int main(int argc, char* argv[])
 {
+	printf("This is rd_flash\n(c)Radboud Radio Lab\nAuthor: Sjoerd T. Timmer (s.timmer@astro.ru.nl)\n");
+	printf("Compiled on %s at %s\n", __DATE__, __TIME__);
+
+
 	parse_opts(argc, argv);
 
 	// open spi device

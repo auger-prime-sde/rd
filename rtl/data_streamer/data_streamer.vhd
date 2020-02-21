@@ -16,7 +16,7 @@ entity data_streamer is
     g_BUFFER_INDEXSIZE : natural := 11
     );
   port (
-    i_adc_data       : in std_logic_vector(4*(g_ADC_BITS+1)-1 downto 0);
+    i_adc_data       : in std_logic_vector(4*(g_ADC_BITS)-1 downto 0);
     i_clk            : in std_logic;
     i_tx_clk         : in std_logic;
     i_trigger        : in std_logic;
@@ -127,66 +127,7 @@ data_buffer_1 : data_buffer
     i_read_clk     => i_tx_clk,
     i_read_enable  => buffer_read_en,
     i_read_addr    => read_address,
-    -- channel A, first sample, MSB first
-    i_write_data(47 downto 36)  => (
-      --51=>i_adc_data(12), -- smuggled trigger bit
-      47=>i_adc_data(18),
-      46=>i_adc_data( 5),
-      45=>i_adc_data(17),
-      44=>i_adc_data( 4),
-      43=>i_adc_data(16),
-      42=>i_adc_data( 3),
-      41=>i_adc_data(15),
-      40=>i_adc_data( 2),
-      39=>i_adc_data(14),
-      38=>i_adc_data( 1),
-      37=>i_adc_data(13),
-      36=>i_adc_data( 0)     ),
-    -- channel B, first sample, MSB first
-    i_write_data(35 downto 24)  => (
-      --38=>i_adc_data(25), -- smuggled trigger bit
-      35=>i_adc_data(24),
-      34=>i_adc_data(11),
-      33=>i_adc_data(23),
-      32=>i_adc_data(10),
-      31=>i_adc_data(22),
-      30=>i_adc_data( 9),
-      29=>i_adc_data(21),
-      28=>i_adc_data( 8),
-      27=>i_adc_data(20),
-      26=>i_adc_data( 7),
-      25=>i_adc_data(19),
-      24=>i_adc_data( 6)       ),
-    -- channel A, second sample, MSB first
-    i_write_data(23 downto 12)  => (
-      --25=>i_adc_data(38), -- smuggled trigger bit
-      23=>i_adc_data(44),
-      22=>i_adc_data(31),
-      21=>i_adc_data(43),
-      20=>i_adc_data(30),
-      19=>i_adc_data(42),
-      18=>i_adc_data(29),
-      17=>i_adc_data(41),
-      16=>i_adc_data(28),
-      15=>i_adc_data(40),
-      14=>i_adc_data(27),
-      13=>i_adc_data(39),
-      12=>i_adc_data(26)      ),
-    -- channel B, second sample, MSB first
-    i_write_data(11 downto 0)  => (
-      --12=>i_adc_data(51), -- smuggled trigger bit
-      11=>i_adc_data(50),
-      10=>i_adc_data(37),
-      9 =>i_adc_data(49),
-      8 =>i_adc_data(36),
-      7 =>i_adc_data(48),
-      6 =>i_adc_data(35),
-      5 =>i_adc_data(47),
-      4 =>i_adc_data(34),
-      3 =>i_adc_data(46),
-      2 =>i_adc_data(33),
-      1 =>i_adc_data(45),
-      0 =>i_adc_data(32)      ),
+    i_write_data  => i_adc_data,
     o_read_data    => data_output_bus);
 
 data_writer_1 : data_writer

@@ -296,6 +296,9 @@ static double get_si7060_data(int fd)
 
 int main(int argc, char *argv[])
 {
+	printf("This is rd_housekeeping\n(c)Radboud Radio Lab\nAuthor: Sjoerd T. Timmer (s.timmer@astro.ru.nl)\n");
+	printf("Compiled on %s at %s\n", __DATE__, __TIME__);
+
 	parse_opts(argc, argv);
 
 	int fd = open(device, O_RDWR);
