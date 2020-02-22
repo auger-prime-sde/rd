@@ -35,9 +35,50 @@ architecture behave of spi_capture is
   signal r_read_bit   : natural range 0 to g_DATA_WIDTH-1;
   signal r_read_data  : std_logic_vector(g_DATA_WIDTH-1 downto 0);
   signal r_addr       : natural range 0 to g_BUFFER_LEN-1;
+  signal r_write_enable : std_logic;
 
+  signal t_read_bit : std_logic_vector(15 downto 0);
+  signal t_addr     : std_logic_vector(15 downto 0);
+  
+  component spi_register is
+    generic (
+      g_SUBSYSTEM_ADDR : std_logic_vector;
+      g_REGISTER_WIDTH : natural := 8
+      );
+    port (
+      i_hk_fast_clk : in std_logic;
+      i_spi_clk : in std_logic;
+      i_spi_mosi : in std_logic;
+      o_spi_miso : out std_logic;
+      i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+      o_value: out std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
+      );
+  end component;
+  
+    
+  
 begin
 
+  t_addr     <= std_logic_vector(to_unsigned(r_addr, 16));
+  t_read_bit <= std_logic_vector(to_unsigned(r_read_bit, 16));
+  
+
+  control_register : spi_register
+    generic map (
+      g_SUBSYSTEM_ADDR => g_SUBSYSTEM_ADDR, -- shared with data 
+      g_REGISTER_WIDTH => 8) -- can't set this to 1 because that triggers a bug
+    port map (
+      i_hk_fast_clk => i_data_clk,
+      i_spi_clk     => i_spi_clk,
+      i_spi_mosi    => i_spi_mosi,
+      o_spi_miso    => open,
+      i_dev_select  => i_dev_select,
+      o_value(0)    => r_write_enable,
+      o_value(7 downto 1) => open
+      );
+      
+      
+  
   -- silence data when not in use
   o_spi_miso <= r_spi_miso when r_spi_ce = '0' else '0';
 
@@ -50,6 +91,7 @@ begin
   process(i_data_clk) is
   begin
     if rising_edge(i_data_clk) then
+      r_read_data <= ram(r_addr);
       -- bring ce and spi clk into our clock domain
       if i_dev_select = g_SUBSYSTEM_ADDR then
         r_spi_ce <= '0';
@@ -60,26 +102,31 @@ begin
       -- latch old values so we can soft-detect rising and falling edges
       r_spi_clk_prev <= r_spi_clk;
 
-      if r_spi_ce = '1' then
+      if r_write_enable = '1' then
         -- write part:
         r_addr <= (r_addr + 1) mod g_BUFFER_LEN;
         ram(r_addr) <= i_data;
         -- reset the read counter
-        r_read_bit <= 0;
-        r_read_data <= (others => 'X');-- just an optimization
+        --r_read_bit <= 0;
+        --r_read_data <= (others => 'X');-- just an optimization
       else -- if r_spi_ce = '0'
-        -- read part
-        r_read_data <= ram((r_addr) mod g_BUFFER_LEN);
-        if r_spi_clk = '0' and r_spi_clk_prev = '1' then
-          -- increment bit counter for next cycle
-          r_read_bit <= (r_read_bit + 1) mod g_DATA_WIDTH;
-          -- write output bit
-          --r_spi_miso <= r_read_data(r_read_bit);
-          r_spi_miso <= r_read_data(g_DATA_WIDTH-r_read_bit-1);
-          -- increment addr if bit counter overflows
-          if r_read_bit = g_DATA_WIDTH-1 then
-            r_addr <= (r_addr + 1) mod g_BUFFER_LEN;
+        if r_spi_ce = '0' then
+          -- read part
+          --
+          if r_spi_clk = '0' and r_spi_clk_prev = '1' then
+            -- increment bit counter for next cycle
+            r_read_bit <= (r_read_bit + 1) mod g_DATA_WIDTH;
+            -- write output bit
+            --r_spi_miso <= r_read_data(r_read_bit);
+            r_spi_miso <= r_read_data(g_DATA_WIDTH-r_read_bit-1);
+            -- increment addr if bit counter overflows
+            if r_read_bit = g_DATA_WIDTH-1 then
+              r_addr <= (r_addr + 1) mod g_BUFFER_LEN;
+            end if;
           end if;
+        else
+          -- reset the read counter
+          r_read_bit <= 0;
         end if;
       end if;
     end if;

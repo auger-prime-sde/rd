@@ -305,6 +305,8 @@ begin
       i_data(25)          => w_trigger(1),
       i_data(12)          => w_trigger(0),
       -- real data:
+      -- in the spi data access the highest bits are sent first and interpreted
+      -- as the NS channel by the accompanying tool
       i_data(50 downto 39) => w_data_ns_even,
       i_data(37 downto 26) => w_data_ew_even,
       i_data(24 downto 13) => w_data_ns_odd,
@@ -314,7 +316,12 @@ begin
       --i_data(37 downto 26) => w_triangle_even,
       --i_data(24 downto 13) => w_triangle_odd,
       --i_data(11 downto  0) => w_triangle_odd,
-      -- 
+      -- or zeroes:
+      --i_data(50 downto 39) => (others => '0'),
+      --i_data(37 downto 26) => (others => '0'),
+      --i_data(24 downto 13) => (others => '0'),
+      --i_data(11 downto  0) => (others => '0'),
+      
       o_start_offset      => start_offset,
       io_ads1015_sda      => io_ads1015_sda,
       io_ads1015_scl      => io_ads1015_scl,
@@ -330,15 +337,24 @@ begin
     generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
     port map (
       -- data lines
-      i_adc_data(47 downto 36) => w_data_ns_even,
-      i_adc_data(35 downto 24) => w_data_ew_even,
-      i_adc_data(23 downto 12) => w_data_ns_odd,
-      i_adc_data(11 downto  0) => w_data_ew_odd,
+      -- the data_writer in data_streamer sends the lower bits as channel 1 and
+      -- the higher bits as channel 2 which are then interpreted as NS and EW
+      -- resp. by rd_scope in the uub. So here NS/EW appear reversed from the
+      -- way they are sent to the housekeeping above.
+      i_adc_data(47 downto 36) => w_data_ew_even,
+      i_adc_data(35 downto 24) => w_data_ns_even,
+      i_adc_data(23 downto 12) => w_data_ew_odd,
+      i_adc_data(11 downto  0) => w_data_ns_odd,
       -- uncomment these instead if you want perfect triangle waves
       --i_adc_data(47 downto 36) => w_triangle_even,
       --i_adc_data(35 downto 24) => w_triangle_even,
       --i_adc_data(23 downto 12) => w_triangle_odd,
       --i_adc_data(11 downto  0) => w_triangle_odd,
+      -- or zeroes:
+      --i_adc_data(47 downto 36) => (others => '0'),
+      --i_adc_data(35 downto 24) => (others => '0'),
+      --i_adc_data(23 downto 12) => (others => '0'),
+      --i_adc_data(11 downto  0) => (others => '0'),
       -- 
       i_clk            => w_ddr_clk,
       i_tx_clk         => w_tx_clk,
