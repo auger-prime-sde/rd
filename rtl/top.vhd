@@ -61,9 +61,18 @@ architecture behaviour of top is
   signal w_adc_data  : std_logic_vector(4*(g_ADC_BITS+1)-1 downto 0);
   signal w_triangle_even, w_triangle_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
 
-  signal w_data_ns_even, w_data_ns_odd, w_data_ew_even, w_data_ew_odd : std_logic_vector(g_ADC_BITS-1 downto 0);
+  signal
+    w_data_ns_even,
+    w_data_ns_odd,
+    w_data_ew_even,
+    w_data_ew_odd,
+    w_data_ns_even_accumulated,
+    w_data_ns_odd_accumulated,
+    w_data_ew_even_accumulated,
+    w_data_ew_odd_accumulated : std_logic_vector(g_ADC_BITS-1 downto 0);
   
   signal w_ddr_clk   : std_logic;
+  signal w_accumulator_clk : std_logic;
 
 
   -- wires for internal spi connections
@@ -119,6 +128,21 @@ architecture behaviour of top is
       o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
       );
   end component;
+
+  component accumulator is
+    generic (
+      g_WIDTH : natural;
+      g_LENGTH: natural);
+    port (
+      i_clk  : in std_logic;
+      i_data_even: in std_logic_vector(g_WIDTH-1 downto 0);
+      i_data_odd: in std_logic_vector(g_WIDTH-1 downto 0);
+      o_clk : out std_logic;
+      o_data_even: out std_logic_vector(g_WIDTH-1 downto 0);
+      o_data_odd: out std_logic_vector(g_WIDTH-1 downto 0)
+      );
+  end component;
+  
 
   
   component data_streamer
@@ -263,6 +287,33 @@ begin
       o_trigger      => w_trigger );
       
 
+  accumulator_ns : accumulator
+    generic map ( g_WIDTH => g_ADC_BITS,
+                  g_LENGTH => 3)
+    port map (
+      i_clk => w_ddr_clk,
+      i_data_even => w_data_ns_even,
+      i_data_odd  => w_data_ns_odd,
+      --i_data_even => w_triangle_even,
+      --i_data_odd  => w_triangle_odd,
+      o_clk => w_accumulator_clk,
+      o_data_even => w_data_ns_even_accumulated,
+      o_data_odd  => w_data_ns_odd_accumulated);
+
+  accumulator_ew : accumulator
+    generic map ( g_WIDTH => g_ADC_BITS,
+                  g_LENGTH => 3)
+    port map (
+      i_clk => w_ddr_clk,
+      i_data_even => w_data_ew_even,
+      i_data_odd  => w_data_ew_odd,
+      --i_data_even => w_triangle_even,
+      --i_data_odd  => w_triangle_odd,
+      o_clk => open,
+      o_data_even => w_data_ew_even_accumulated,
+      o_data_odd  => w_data_ew_odd_accumulated);
+  
+  
   source : triangle_source
     port map (
       i_clk   => w_ddr_clk,
@@ -298,24 +349,36 @@ begin
       i_adc_miso          => i_hk_adc_miso,
       o_adc_mosi          => o_hk_adc_mosi,
       o_adc_ce            => o_hk_adc_ce,
-      i_data_clk          => w_ddr_clk,
+      --i_data_clk          => w_ddr_clk,
+      i_data_clk          => w_accumulator_clk,
       -- four trigger lines are merged into the data as the 13'th bit of each sample
       i_data(51)          => w_trigger(3),
       i_data(38)          => w_trigger(2),
       i_data(25)          => w_trigger(1),
       i_data(12)          => w_trigger(0),
-      -- real data:
+
       -- in the spi data access the highest bits are sent first and interpreted
       -- as the NS channel by the accompanying tool
-      i_data(50 downto 39) => w_data_ns_even,
-      i_data(37 downto 26) => w_data_ew_even,
-      i_data(24 downto 13) => w_data_ns_odd,
-      i_data(11 downto  0) => w_data_ew_odd,
+      
+      -- real data:
+      --i_data(50 downto 39) => w_data_ns_even,
+      --i_data(37 downto 26) => w_data_ew_even,
+      --i_data(24 downto 13) => w_data_ns_odd,
+      --i_data(11 downto  0) => w_data_ew_odd,
+
+      -- uncomment this to use the accumulated data for a longer window
+      -- also use w_accumulator_clk instead of w_ddr_clk above
+      i_data(50 downto 39) => w_data_ns_even_accumulated,
+      i_data(37 downto 26) => w_data_ew_even_accumulated,
+      i_data(24 downto 13) => w_data_ns_odd_accumulated,
+      i_data(11 downto  0) => w_data_ew_odd_accumulated,
+
       -- uncomment this instead if you want perfect triangle waves:
       --i_data(50 downto 39) => w_triangle_even,
       --i_data(37 downto 26) => w_triangle_even,
       --i_data(24 downto 13) => w_triangle_odd,
       --i_data(11 downto  0) => w_triangle_odd,
+
       -- or zeroes:
       --i_data(50 downto 39) => (others => '0'),
       --i_data(37 downto 26) => (others => '0'),
@@ -336,27 +399,38 @@ begin
   data_streamer_1 : data_streamer
     generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
     port map (
-      -- data lines
       -- the data_writer in data_streamer sends the lower bits as channel 1 and
       -- the higher bits as channel 2 which are then interpreted as NS and EW
       -- resp. by rd_scope in the uub. So here NS/EW appear reversed from the
       -- way they are sent to the housekeeping above.
-      i_adc_data(47 downto 36) => w_data_ew_even,
-      i_adc_data(35 downto 24) => w_data_ns_even,
-      i_adc_data(23 downto 12) => w_data_ew_odd,
-      i_adc_data(11 downto  0) => w_data_ns_odd,
+
+      -- use data lines (normal operations)
+      --i_adc_data(47 downto 36) => w_data_ew_even,
+      --i_adc_data(35 downto 24) => w_data_ns_even,
+      --i_adc_data(23 downto 12) => w_data_ew_odd,
+      --i_adc_data(11 downto  0) => w_data_ns_odd,
+
+      -- uncomment this to use the accumulated data for a longer window
+      -- also use w_accumulator_clk instead of w_ddr_clk below
+      i_adc_data(47 downto 36) => w_data_ew_even_accumulated,
+      i_adc_data(35 downto 24) => w_data_ns_even_accumulated,
+      i_adc_data(23 downto 12) => w_data_ew_odd_accumulated,
+      i_adc_data(11 downto  0) => w_data_ns_odd_accumulated,
+      
       -- uncomment these instead if you want perfect triangle waves
       --i_adc_data(47 downto 36) => w_triangle_even,
       --i_adc_data(35 downto 24) => w_triangle_even,
       --i_adc_data(23 downto 12) => w_triangle_odd,
       --i_adc_data(11 downto  0) => w_triangle_odd,
+
       -- or zeroes:
       --i_adc_data(47 downto 36) => (others => '0'),
       --i_adc_data(35 downto 24) => (others => '0'),
       --i_adc_data(23 downto 12) => (others => '0'),
       --i_adc_data(11 downto  0) => (others => '0'),
       -- 
-      i_clk            => w_ddr_clk,
+      --i_clk            => w_ddr_clk,
+      i_clk            => w_accumulator_clk,
       i_tx_clk         => w_tx_clk,
       i_trigger        => w_trigger(3),
       i_trigger_even   => w_trigger(1),
