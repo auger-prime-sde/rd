@@ -66,7 +66,7 @@ architecture behaviour of data_streamer is
   end component;
 
   component data_writer
-    generic (g_WORDSIZE: natural);
+    generic (g_WORDSIZE: natural; g_TARGET_PARITY : std_logic := '1');
     port (
       i_data        : in std_logic_vector(2*g_WORDSIZE-1 downto 0);
       i_dataready   : in std_logic;
@@ -131,7 +131,7 @@ data_buffer_1 : data_buffer
     o_read_data    => data_output_bus);
 
 data_writer_1 : data_writer
-  generic map (g_WORDSIZE => g_ADC_BITS)
+  generic map (g_WORDSIZE => g_ADC_BITS, g_TARGET_PARITY => '0')
   port map (
     i_data         => data_output_bus,
     i_dataready    => tx_enable,

@@ -63,7 +63,7 @@ architecture behaviour of housekeeping is
   signal r_subsystem_select : std_logic_vector(g_DEV_SELECT_BITS-1 downto 0);
   
   -- wires for raw capture via spi block
-  signal r_capture_miso : std_logic;
+  signal r_capture_miso : std_logic := '0';
   
   -- internal wires for gpio:
   signal r_gpio_in      : std_logic_vector(15 downto 0);
@@ -73,7 +73,7 @@ architecture behaviour of housekeeping is
   signal r_gpio_ce      : std_logic;
   signal r_gpio_miso    : std_logic;
   -- signals for bias dis/en-able
-  signal r_bias_miso    : std_logic;
+  signal r_bias_miso    : std_logic := '0';
 
   -- wires for version info block:
   signal r_version_miso : std_logic;
@@ -668,18 +668,18 @@ begin
       );
   
       
-  spi_capture_1 : spi_capture
-    generic map (
-      g_SUBSYSTEM_ADDR => "00001011",
-      g_DATA_WIDTH => g_DATA_WIDTH,
-      g_BUFFER_LEN => 4096/*8192/*16384*/ )
-    port map (
-      i_spi_clk => r_internal_clk,
-      i_spi_mosi => r_internal_mosi,
-      o_spi_miso => r_capture_miso,
-      i_dev_select => r_subsystem_select,
-      i_data => i_data,
-      i_data_clk => i_data_clk );
+  --spi_capture_1 : spi_capture
+  --  generic map (
+  --    g_SUBSYSTEM_ADDR => "00001011",
+  --    g_DATA_WIDTH => g_DATA_WIDTH,
+  --    g_BUFFER_LEN => 4096 ) -- 8192 / 16384
+  --  port map (
+  --    i_spi_clk => r_internal_clk,
+  --    i_spi_mosi => r_internal_mosi,
+  --    o_spi_miso => r_capture_miso,
+  --    i_dev_select => r_subsystem_select,
+  --    i_data => i_data,
+  --    i_data_clk => i_data_clk );
   
   
   -- instantiate gpio subsystem

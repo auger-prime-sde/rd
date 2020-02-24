@@ -289,7 +289,7 @@ begin
 
   accumulator_ns : accumulator
     generic map ( g_WIDTH => g_ADC_BITS,
-                  g_LENGTH => 3)
+                  g_LENGTH => 4)
     port map (
       i_clk => w_ddr_clk,
       i_data_even => w_data_ns_even,
@@ -302,7 +302,7 @@ begin
 
   accumulator_ew : accumulator
     generic map ( g_WIDTH => g_ADC_BITS,
-                  g_LENGTH => 3)
+                  g_LENGTH => 4)
     port map (
       i_clk => w_ddr_clk,
       i_data_even => w_data_ew_even,
