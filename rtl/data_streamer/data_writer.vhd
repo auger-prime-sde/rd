@@ -7,7 +7,8 @@ use ieee.numeric_std.all;
 -- it writes one extra (13th) bit that is the parity bit
 entity data_writer is
   generic (
-    g_WORDSIZE : natural := 12
+    g_WORDSIZE : natural := 12;
+    g_TARGET_PARITY : std_logic := '1'
     );
   port (
     -- inputs
@@ -54,8 +55,8 @@ begin
           -- immediately start first bit
           o_data_1 <= i_data(g_WORDSIZE-1);
           o_data_2 <= i_data(2*g_WORDSIZE-1);
-		  r_Parity_1 <= not i_data(g_WORDSIZE-1);
-		  r_Parity_2 <= not i_data(2*g_WORDSIZE-1);
+		  r_Parity_1 <= i_data(g_WORDSIZE-1) xor g_TARGET_PARITY;
+		  r_Parity_2 <= i_data(2*g_WORDSIZE-1) xor g_TARGET_PARITY;
         else
           o_data_1 <= '1';
           o_data_2 <= '1';
@@ -79,8 +80,8 @@ begin
         
 		o_data_1 <= r_Parity_1;
 		o_data_2 <= r_Parity_2;
-        r_Parity_1 <= '1';
-        r_Parity_2 <= '1';
+        r_Parity_1 <= g_TARGET_PARITY;
+        r_Parity_2 <= g_TARGET_PARITY;
       when s_Done =>
         r_State <= s_Idle;
         r_outputvalid <= '0';

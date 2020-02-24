@@ -94,7 +94,7 @@ This is completely separate from the science acquisition process.
 It neither relies on, nor interferes with the normal trigger and transfer processes.
 The data is stored in a separate buffer.
 
-Upto 8192 samples can be retrieved. If the \ac{SPI} transaction continues after that the first samples will be re-transmitted. Note that due to the nature of the \spi{ADC} data alignment the order of the samples is:
+Upto 8192 samples can be retrieved. If the \ac{SPI} transaction continues after that the first samples will be re-transmitted. Note that due to the nature of the \ac{ADC} data alignment the order of the samples is:
 $$
 \ldots \text{channel A sample } n \Rightarrow \text{channel B sample } n \Rightarrow \text{channel A sample } n+1 \Rightarrow \text{channel B sample } n+1 => \ldots
 $$
@@ -211,6 +211,46 @@ The inverted CE of this submodule is or'ed with the external trigger input. It i
   \captionof{figure}{Internal wiring of internal and external trigger.}
 \end{center}
 
+
+\subsubsection{Data\_writer module}
+
+The data\_writer is responsible for writing the data parallel data sequentially to the two data lines.
+It also controls the transmission clock which is inverted with respect to the data clock to make sure that data is stable at the rising edge at the receiving end of the data lines.
+The transmission clock is suppressed when there is no transmission to avoid noise from the transmission lines.
+
+Data\_writer has an input i\_clk\_padding which, when high, indicates that the clock should be transmitted even though there is no data. This is used to generate 4 leading and 11 trailing clock edges for each data transmission.
+
+Figures~\ref{fig:datawriter_timing_start} and \ref{fig:datawriter_timing_end} illustrates the behaviour of data\_writer.
+\begin{center}
+  \begin{minipage}[b]{\textwidth}
+    \centering
+    \begin{tikztimingtable}[timing/wscale=1.2]
+      i\_clk          & CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC \\
+      i\_clk\_padding & LLLHHHHHHHHUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
+      i\_dataready    & LLLLLLLLLHHUUUUUUUUUUUUUUUUUUUUUUUUHHUUUUUUUU \\
+      i\_data[23:12]  & UUUUUUUUUDD{A}UUUUUUUUUUUUUUUUUUUUUUUUDD{C}UUUUUUUU \\
+      i\_data[11:0]   & UUUUUUUUUDD{B}UUUUUUUUUUUUUUUUUUUUUUUUDD{D}UUUUUUUU \\
+      o\_clk          & HHHHHCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC \\
+      o\_data[0]      & UUUUUUUUUUUDD{A[11]}DD{A[10]}DD{A[9]}DD{A[8]}DD{A[7]}DD{A[6]}DD{A[5]}DD{A[4]}DD{A[3]}DD{A[2]}DD{A[1]}DD{A[0]}DD{P(A)}DD{C[11]}DD{C[10]}DD{C[9]}DD{\ldots} \\
+      o\_data[1]      & UUUUUUUUUUUDD{B[11]}DD{B[10]}DD{B[9]}DD{B[8]}DD{B[7]}DD{B[6]}DD{B[5]}DD{B[4]}DD{B[3]}DD{B[2]}DD{B[1]}DD{B[0]}DD{P(B)}DD{D[11]}DD{D[10]}DD{D[9]}DD{\ldots} \\
+    \end{tikztimingtable}
+    \captionof{figure}{Start of data\_writer transmission.}\label{fig:datawriter_timing_start}
+  \end{minipage}\vspace{\baselineskip}
+  \begin{minipage}[b]{\textwidth}
+    \centering
+    \begin{tikztimingtable}[timing/wscale=1.2]
+      i\_clk          & HCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC \\
+      i\_clk\_padding & UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUHHHHHHHHHHLLLLL \\
+      i\_dataready    & UUUUHHUUUUUUUUUUUUUUUUUUUUUUUULLLLLLLLLLLLLLL \\
+      i\_data[23:12]  & UUUUDD{Y}UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
+      i\_data[11:0]   & UUUUDD{Z}UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
+      o\_clk          & CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCHHHHH \\
+      o\_data[0]      & DD{\ldots}DD{W[0]}DD{P(W)}DD{Y[11]}DD{Y[10]}DD{Y[9]}DD{Y[8]}DD{Y[7]}DD{Y[6]}DD{Y[5]}DD{Y[4]}DD{Y[3]}DD{Y[2]}DD{Y[1]}DD{Y[0]}DD{P(Y)}UUUUUUUUUUUUU \\
+      o\_data[1]      & DD{\ldots}DD{X[0]}DD{P(X)}DD{Z[11]}DD{Z[10]}DD{Z[9]}DD{Z[8]}DD{Z[7]}DD{Z[6]}DD{Z[5]}DD{Z[4]}DD{Z[3]}DD{Z[2]}DD{Z[1]}DD{Z[0]}DD{P(Z)}UUUUUUUUUUUUU \\     
+    \end{tikztimingtable}    
+    \captionof{figure}{End of data\_writer transmission.}\label{fig:datawriter_timing_end}
+  \end{minipage}
+\end{center}
 
 
 

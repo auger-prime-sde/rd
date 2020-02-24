@@ -18,7 +18,8 @@ architecture behavior of data_writer_tb is
   
   component data_writer is
     generic (
-      g_WORDSIZE : natural := 12 );
+      g_WORDSIZE : natural := 12;
+      g_TARGET_PARITY : std_logic := '1');
     port (
       -- inputs
       i_data      : in std_logic_vector(2*g_WORDSIZE-1 downto 0);
@@ -35,6 +36,7 @@ architecture behavior of data_writer_tb is
 begin
   -- DUT instantiation
   dut : data_writer
+    generic map (g_TARGET_PARITY => '1')
     port map (
       i_data       => data,
       i_dataready  => tx_enable,
