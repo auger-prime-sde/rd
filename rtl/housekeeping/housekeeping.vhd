@@ -668,18 +668,20 @@ begin
       );
   
       
-  --spi_capture_1 : spi_capture
-  --  generic map (
-  --    g_SUBSYSTEM_ADDR => "00001011",
-  --    g_DATA_WIDTH => g_DATA_WIDTH,
-  --    g_BUFFER_LEN => 4096 ) -- 8192 / 16384
-  --  port map (
-  --    i_spi_clk => r_internal_clk,
-  --    i_spi_mosi => r_internal_mosi,
-  --    o_spi_miso => r_capture_miso,
-  --    i_dev_select => r_subsystem_select,
-  --    i_data => i_data,
-  --    i_data_clk => i_data_clk );
+  spi_capture_1 : spi_capture
+    generic map (
+      g_SUBSYSTEM_ADDR => "00001011",
+      g_DATA_WIDTH => g_DATA_WIDTH,
+      g_BUFFER_LEN => 8192 ) -- 1024 / 2048 / 4096 / 8192 / 16384 -- note that
+                             -- this is the number of clock cycles before even
+                             -- and off are split so you'll get twice as many samples
+    port map (
+      i_spi_clk => r_internal_clk,
+      i_spi_mosi => r_internal_mosi,
+      o_spi_miso => r_capture_miso,
+      i_dev_select => r_subsystem_select,
+      i_data => i_data,
+      i_data_clk => i_data_clk );
   
   
   -- instantiate gpio subsystem
