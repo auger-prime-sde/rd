@@ -57,6 +57,7 @@ end top;
 
 
 architecture behaviour of top is
+  
   -- wires from adc driver to data streamer:
   signal w_adc_data  : std_logic_vector(4*(g_ADC_BITS+1)-1 downto 0);
   signal w_triangle_even, w_triangle_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
@@ -120,14 +121,14 @@ architecture behaviour of top is
       o_trigger      : out std_logic_vector(0 to 3));
   end component;
   
-  component triangle_source is
-    generic (g_ADC_BITS : natural := 12);
-    port (
-      i_clk : in std_logic;
-      o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
-      o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
-      );
-  end component;
+  --component triangle_source is
+  --  generic (g_ADC_BITS : natural := 12);
+  --  port (
+  --    i_clk : in std_logic;
+  --    o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
+  --    o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
+  --    );
+  --end component;
 
   component accumulator is
     generic (
@@ -396,47 +397,47 @@ begin
       o_bias_ew           => o_ew_bias_en
     );
   
---  data_streamer_1 : data_streamer
---    generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
---    port map (
---      -- the data_writer in data_streamer sends the lower bits as channel 1 and
---      -- the higher bits as channel 2 which are then interpreted as NS and EW
---      -- resp. by rd_scope in the uub. So here NS/EW appear reversed from the
---      -- way they are sent to the housekeeping above.
---
---      -- use data lines (normal operations)
---      i_adc_data(47 downto 36) => w_data_ew_even,
---      i_adc_data(35 downto 24) => w_data_ns_even,
---      i_adc_data(23 downto 12) => w_data_ew_odd,
---      i_adc_data(11 downto  0) => w_data_ns_odd,
---
---      -- uncomment this to use the accumulated data for a longer window
---      -- also use w_accumulator_clk instead of w_ddr_clk below
---      --i_adc_data(47 downto 36) => w_data_ew_even_accumulated,
---      --i_adc_data(35 downto 24) => w_data_ns_even_accumulated,
---      --i_adc_data(23 downto 12) => w_data_ew_odd_accumulated,
---      --i_adc_data(11 downto  0) => w_data_ns_odd_accumulated,
---      
---      -- uncomment these instead if you want perfect triangle waves
---      --i_adc_data(47 downto 36) => w_triangle_even,
---      --i_adc_data(35 downto 24) => w_triangle_even,
---      --i_adc_data(23 downto 12) => w_triangle_odd,
---      --i_adc_data(11 downto  0) => w_triangle_odd,
---
---      -- or zeroes:
---      --i_adc_data(47 downto 36) => (others => '0'),
---      --i_adc_data(35 downto 24) => (others => '0'),
---      --i_adc_data(23 downto 12) => (others => '0'),
---      --i_adc_data(11 downto  0) => (others => '0'),
---      -- 
---      i_clk            => w_ddr_clk,
---      --i_clk            => w_accumulator_clk,
---      i_tx_clk         => w_tx_clk,
---      i_trigger        => w_trigger(3),
---      i_trigger_even   => w_trigger(1),
---      i_start_transfer => '1',
---      i_start_offset   => start_offset(g_BUFFER_INDEXSIZE downto 0),
---      o_tx_data        => o_tx_data,
---      o_tx_clk         => o_tx_clk );
+  data_streamer_1 : data_streamer
+    generic map (g_BUFFER_INDEXSIZE => g_BUFFER_INDEXSIZE, g_ADC_BITS => g_ADC_BITS)
+    port map (
+      -- the data_writer in data_streamer sends the lower bits as channel 1 and
+      -- the higher bits as channel 2 which are then interpreted as NS and EW
+      -- resp. by rd_scope in the uub. So here NS/EW appear reversed from the
+      -- way they are sent to the housekeeping above.
+
+      -- use data lines (normal operations)
+      i_adc_data(47 downto 36) => w_data_ew_even,
+      i_adc_data(35 downto 24) => w_data_ns_even,
+      i_adc_data(23 downto 12) => w_data_ew_odd,
+      i_adc_data(11 downto  0) => w_data_ns_odd,
+
+      -- uncomment this to use the accumulated data for a longer window
+      -- also use w_accumulator_clk instead of w_ddr_clk below
+      --i_adc_data(47 downto 36) => w_data_ew_even_accumulated,
+      --i_adc_data(35 downto 24) => w_data_ns_even_accumulated,
+      --i_adc_data(23 downto 12) => w_data_ew_odd_accumulated,
+      --i_adc_data(11 downto  0) => w_data_ns_odd_accumulated,
+      
+      -- uncomment these instead if you want perfect triangle waves
+      --i_adc_data(47 downto 36) => w_triangle_even,
+      --i_adc_data(35 downto 24) => w_triangle_even,
+      --i_adc_data(23 downto 12) => w_triangle_odd,
+      --i_adc_data(11 downto  0) => w_triangle_odd,
+
+      -- or zeroes:
+      --i_adc_data(47 downto 36) => (others => '0'),
+      --i_adc_data(35 downto 24) => (others => '0'),
+      --i_adc_data(23 downto 12) => (others => '0'),
+      --i_adc_data(11 downto  0) => (others => '0'),
+      -- 
+      i_clk            => w_ddr_clk,
+      --i_clk            => w_accumulator_clk,
+      i_tx_clk         => w_tx_clk,
+      i_trigger        => w_trigger(3),
+      i_trigger_even   => w_trigger(1),
+      i_start_transfer => '1',
+      i_start_offset   => start_offset(g_BUFFER_INDEXSIZE downto 0),
+      o_tx_data        => o_tx_data,
+      o_tx_clk         => o_tx_clk );
 
 end;

@@ -131,7 +131,7 @@ data_buffer_1 : data_buffer
     o_read_data    => data_output_bus);
 
 data_writer_1 : data_writer
-  generic map (g_WORDSIZE => g_ADC_BITS, g_TARGET_PARITY => '0')
+  generic map (g_WORDSIZE => g_ADC_BITS, g_TARGET_PARITY => '1')
   port map (
     i_data         => data_output_bus,
     i_dataready    => tx_enable,

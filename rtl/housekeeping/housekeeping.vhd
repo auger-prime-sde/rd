@@ -672,7 +672,7 @@ begin
     generic map (
       g_SUBSYSTEM_ADDR => "00001011",
       g_DATA_WIDTH => g_DATA_WIDTH,
-      g_BUFFER_LEN => 8192 ) -- 1024 / 2048 / 4096 / 8192 / 16384 -- note that
+      g_BUFFER_LEN => 1024 ) -- 1024 / 2048 / 4096 / 8192 / 16384 -- note that
                              -- this is the number of clock cycles before even
                              -- and off are split so you'll get twice as many samples
     port map (
