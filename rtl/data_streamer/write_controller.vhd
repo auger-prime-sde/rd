@@ -4,7 +4,8 @@ use ieee.numeric_std.all;
 
 entity write_controller is
   generic (
-    g_ADDRESS_BITS : natural := 11
+    g_ADDRESS_BITS : natural := 11;
+    g_TRACE_LENGTH : natural := 2048 -- 2**11
   );
   port (
     -- inputs

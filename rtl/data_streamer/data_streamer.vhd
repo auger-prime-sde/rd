@@ -80,7 +80,9 @@ architecture behaviour of data_streamer is
 
   
   component write_controller
-    generic (g_ADDRESS_BITS : natural);
+    generic (
+      g_ADDRESS_BITS : natural;
+      g_TRACE_LENGTH : natural);
     port (
       i_clk          : in std_logic;
       i_trigger      : in std_logic;
@@ -142,7 +144,12 @@ data_writer_1 : data_writer
     o_clk          => o_tx_clk);
 
 write_controller_1 : write_controller
-  generic map (g_ADDRESS_BITS => g_BUFFER_INDEXSIZE+1)
+  generic map (
+    g_ADDRESS_BITS => g_BUFFER_INDEXSIZE+1, -- 4096 samples in buffer, needed
+                                            -- for the last sample if trigger
+                                            -- occurs at an odd sample number
+    g_TRACE_LENGTH => 2**(g_BUFFER_INDEXSIZE) -- still output only 2048
+    )
   port map (
     i_clk                                         => i_clk,
     i_trigger                                     => i_trigger,
