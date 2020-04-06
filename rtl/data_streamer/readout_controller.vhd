@@ -62,12 +62,12 @@ begin
           end if;
         when s_PreClk =>
           r_count <= (r_count + 1) mod c_TRANSMIT_BITS;
-          if r_count = c_EXTRA_CLK_BEFORE-2 then
+          if r_count = c_EXTRA_CLK_BEFORE-3 then
             o_tx_enable <= '1';
           end if;
-          if r_count = c_EXTRA_CLK_BEFORE-1 then
+          if r_count = c_EXTRA_CLK_BEFORE-2 then
             r_state <= s_Busy;
-            o_clk_padding <= '0';
+            o_clk_padding <= '1';
             r_Count <= 0;
             
           end if;
@@ -76,19 +76,22 @@ begin
           if r_Count = c_TRANSMIT_BITS-3 then
             r_read_addr <= std_logic_vector((unsigned(r_read_addr)+1) mod 2**g_ADDRESS_BITS);
 		  end if;
-		  if r_Count = c_TRANSMIT_BITS-1 then
-            if r_read_addr = std_logic_vector(unsigned(i_start_addr)) then
+          if r_Count = c_TRANSMIT_BITS-2 then
+            --if r_read_addr(g_ADDRESS_BITS-1 downto 1) = std_logic_vector(unsigned(i_start_addr(g_ADDRESS_BITS-1 downto 1)) + (2**(g_ADDRESS_BITS-2) )) then
+            if r_read_addr = std_logic_vector(unsigned(i_start_addr) + (2**(g_ADDRESS_BITS-1) )) then
               r_State <= s_PostClk;
               o_clk_padding <= '1';
-              o_tx_enable <= '1';
-              r_Count <= 0;
+              o_tx_enable <= '0';
             else
               o_tx_enable <= '1';
             end if;
           end if;
+		  if r_Count = c_TRANSMIT_BITS-1 then
+            r_Count <= 0;
+          end if;
         when s_PostClk =>
           r_count <= (r_count + 1) mod c_TRANSMIT_BITS;
-          if r_count = c_EXTRA_CLK_AFTER-1 then
+          if r_count = c_EXTRA_CLK_AFTER then
             o_tx_enable <= '0';
             o_arm <= '1';
             o_clk_padding <= '0';

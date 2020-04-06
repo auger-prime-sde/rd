@@ -24,7 +24,7 @@ end write_controller;
 
 architecture behavior of write_controller is
   -- Number of bytes to read before trigger: block size minus start offset
-  signal r_delay_count : natural range 0 to 2**g_ADDRESS_BITS-1;
+  --signal r_delay_count : natural range 0 to 2**g_ADDRESS_BITS-1;
   -- state machine type:
   type t_controller_state is (s_Idle, s_Armed, s_ArmReady, s_Triggered);
   -- In idle: no data is written to the buffer. This waits for an arm event
@@ -39,26 +39,37 @@ architecture behavior of write_controller is
   -- buffer. When this is done the state will change back to Idle until the
   -- data is read out.
   -- variables
-  signal r_controller_state : t_controller_state := s_Idle;
-  signal r_start_addr : natural range 0 to 2**g_ADDRESS_BITS-1 := 0;
+  signal r_controller_state : t_controller_state := s_Armed;
+  signal r_start_addr, r_end_addr : natural range 0 to 2**g_ADDRESS_BITS-1 := 0;
   signal r_count : natural range 0 to 2**g_ADDRESS_BITS-1 := 0;
   --signal test_count : std_logic_vector(11 downto 0) := (others => '0');
   signal r_arm : std_logic := '0';
+  signal r_trigger_done : std_logic := '0';
   --signal r_trigger : std_logic := '0';
+  signal test_state : integer;
   
 begin
 
-  r_delay_count <= 2**g_ADDRESS_BITS - to_integer(unsigned(i_start_offset));
-  
+  test_state <= 0 when r_controller_state = s_Idle else
+                1 when r_controller_state = s_Armed else
+                2 when r_controller_state = s_ArmReady else
+                3 when r_controller_state = s_Triggered else
+                -1;
+  --r_delay_count <= g_TRACE_LENGTH - to_integer(unsigned(i_start_offset));
+
+  o_trigger_done <= r_trigger_done;
+  o_write_en <= not r_trigger_done;
+        
   p_main : process (i_rst, i_clk) is
   begin
+    
     if i_rst = '1' then
       r_arm <= '0';
-      r_controller_state <= s_Idle;
+      r_controller_state <= s_Armed;
       r_count <= 0;
       r_start_addr <= 0;
-      o_trigger_done <= '0';
-      o_write_en <= '0'; 
+      --o_trigger_done <= '0';
+      --o_write_en <= '0'; 
     else
       
       if rising_edge(i_clk) then
@@ -72,6 +83,7 @@ begin
 
             if r_arm = '1' then
               r_Controller_State <= s_Armed;
+              r_trigger_done <= '0';
             else
               r_controller_state <= s_Idle;
             end if;
@@ -93,6 +105,7 @@ begin
 
             if i_trigger = '1' then
               r_start_addr <= (to_integer(unsigned(i_curr_addr)) - to_integer(unsigned(i_start_offset)) ) mod 2**o_start_addr'length;
+              r_end_addr <= (to_integer(unsigned(i_curr_addr)) - to_integer(unsigned(i_start_offset)) + g_TRACE_LENGTH -1) mod 2**o_start_addr'length;
               r_controller_state <= s_Triggered;
             else
               r_start_addr <= r_start_addr;
@@ -106,24 +119,20 @@ begin
             r_start_addr <= r_start_addr;
             r_count <= (r_count + 2) ;
 
-            if r_count < r_delay_count - 6 then
+            --if r_count < r_delay_count - 5 then
+            if unsigned(i_curr_addr(g_ADDRESS_BITS-1 downto 1)) = to_unsigned(r_end_addr, o_start_addr'length)(g_ADDRESS_BITS-1 downto 1) then
               -- The minus 6 compensates for the fact that:
               -- r_count starts counting after the trigger
               -- o_write_enable should be asserted low before the last sample
               -- there is a delay between going to idle and asserting
               -- write_enbale low
-              r_controller_state <= s_Triggered;
-            else
               r_controller_state <= s_Idle;
+              r_trigger_done <= '1';
+            else 
+              r_controller_state <= s_Triggered;             
             end if;
         end case;
-        if r_controller_state = s_Idle then
-          o_trigger_done <= '1';
-          o_write_en <= '0';
-        else
-          o_trigger_done <= '0';
-          o_write_en <= '1';
-        end if;  
+        
       end if;  -- if rising_edge(i_clk)
     end if;
   end process;
