@@ -19,9 +19,12 @@ end accumulator;
 architecture behave of accumulator is
   constant max_in : integer := 2**(g_WIDTH-1)-1;
   constant min_in : integer := -(2**(g_WIDTH-1));
-  constant max_sum : integer := g_LENGTH * max_in;
-  constant min_sum : integer := g_LENGTH * min_in;
-    
+  -- max sum is two times extra that because ghdl checks the range for statements that
+  -- aren't the last assignment to a signal
+  constant max_sum : integer :=  (2 + g_LENGTH) * max_in;
+  constant min_sum : integer :=  (2 + g_LENGTH) * min_in;
+
+
   signal r_count : natural range 0 to g_LENGTH-1 := 0;
   signal r_sum_even, r_sum_odd : integer range min_sum to max_sum := 0;
 
@@ -30,6 +33,7 @@ begin
 
   process(i_clk) is
   begin
+
     if rising_edge(i_clk) then
       r_count <= (r_count + 1) mod g_LENGTH;
 
