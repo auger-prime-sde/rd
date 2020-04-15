@@ -12,5 +12,6 @@ pipelines:
           - apt-get update
           - apt-get install make python3 --yes
           - make -C test all
+          - make -C test runall GHDL_RUN_OPTS=--assert-level=error
 
 

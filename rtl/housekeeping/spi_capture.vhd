@@ -26,7 +26,7 @@ architecture behave of spi_capture is
   signal ram : ram_type;
   attribute syn_ramstyle : string;
   attribute syn_ramstyle of ram : signal is "block_ram";
-  
+
   -- signals
   signal r_spi_ce       : std_logic;
   signal r_spi_clk      : std_logic;
@@ -35,11 +35,12 @@ architecture behave of spi_capture is
   signal r_read_bit   : natural range 0 to g_DATA_WIDTH-1;
   signal r_read_data  : std_logic_vector(g_DATA_WIDTH-1 downto 0);
   signal r_addr       : natural range 0 to g_BUFFER_LEN-1;
-  signal r_write_enable : std_logic;
+  signal w_write_enable : std_logic;
+  signal w_control_register_out : std_logic_vector(7 downto 0);
 
   signal t_read_bit : std_logic_vector(15 downto 0);
   signal t_addr     : std_logic_vector(15 downto 0);
-  
+
   component spi_register is
     generic (
       g_SUBSYSTEM_ADDR : std_logic_vector;
@@ -54,18 +55,17 @@ architecture behave of spi_capture is
       o_value: out std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
       );
   end component;
-  
-    
-  
+
+
+
 begin
 
   t_addr     <= std_logic_vector(to_unsigned(r_addr, 16));
   t_read_bit <= std_logic_vector(to_unsigned(r_read_bit, 16));
-  
 
   control_register : spi_register
     generic map (
-      g_SUBSYSTEM_ADDR => g_SUBSYSTEM_ADDR, -- shared with data 
+      g_SUBSYSTEM_ADDR => g_SUBSYSTEM_ADDR, -- shared with data
       g_REGISTER_WIDTH => 8) -- can't set this to 1 because that triggers a bug
     port map (
       i_hk_fast_clk => i_data_clk,
@@ -73,12 +73,12 @@ begin
       i_spi_mosi    => i_spi_mosi,
       o_spi_miso    => open,
       i_dev_select  => i_dev_select,
-      o_value(0)    => r_write_enable,
-      o_value(7 downto 1) => open
+      o_value       => w_control_register_out
       );
-      
-      
-  
+
+  -- pick first output bit as write enable line
+  w_write_enable <= w_control_register_out(0);
+
   -- silence data when not in use
   o_spi_miso <= r_spi_miso when r_spi_ce = '0' else '0';
 
@@ -102,7 +102,7 @@ begin
       -- latch old values so we can soft-detect rising and falling edges
       r_spi_clk_prev <= r_spi_clk;
 
-      if r_write_enable = '1' then
+      if w_write_enable = '1' then
         -- write part:
         r_addr <= (r_addr + 1) mod g_BUFFER_LEN;
         ram(r_addr) <= i_data;
@@ -131,6 +131,6 @@ begin
       end if;
     end if;
   end process;
-  
+
 end behave;
 

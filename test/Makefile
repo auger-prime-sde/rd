@@ -1,16 +1,21 @@
 .PHONY: clean all
+.PRECIOUS: output/work-obj93.cf output/work-obj08.cf
 
 
 print-% : ; $(info $* is a $(flavor $*) variable set to [$($*)]) @true
 
 
 testfiles := $(wildcard housekeeping/*.vhd) $(wildcard data_streamer/*.vhd)
+runfiles := $(patsubst %_tb, %.ghw, $(basename $(notdir $(testfiles))))
+
 all: $(basename $(notdir $(testfiles)))
 
+runall: $(runfiles)
 
 #GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93
-GHDL_OPTS = --workdir=output
+GHDL_OPTS = --workdir=output --std=08
 #GHDL_RUN_OPTS = --assert-level=warning --ieee-asserts=disable
+#GHDL_RUN_OPTS = --psl-report=$^.test_coverage.rpt
 
 # Rules for analysys:
 # analysis results in object  files in the work dir
@@ -30,24 +35,24 @@ output/%.o: housekeeping/%.vhd
 
 # Rules for running:
 %.ghw: %_tb
-	ghdl -r $(GHDL_OPTS) $^ --wave=$@
+	ghdl -r $(GHDL_OPTS) $^ --wave=$@ $(GHDL_RUN_OPTS)
 
 # rules for generating depfiles
 sourcefiles := $(wildcard housekeeping/*.vhd) $(wildcard data_streamer/*.vhd) $(wildcard ../rtl/housekeeping/*.vhd) $(wildcard ../rtl/data_streamer/*.vhd)
 depfiles := $(addprefix .depinfo/,$(addsuffix .d,$(basename $(notdir $(sourcefiles)))))
 
 .depinfo/%.d: ../rtl/housekeeping/%.vhd
-	python3 makedepends.py $^ $@
+	@python3 makedepends.py $^ $@
 .depinfo/%.d: ../rtl/data_streamer/%.vhd
-	python3 makedepends.py $^ $@
+	@python3 makedepends.py $^ $@
 .depinfo/%.d: data_streamer/%.vhd
-	python3 makedepends.py $^ $@
+	@python3 makedepends.py $^ $@
 .depinfo/%.d: housekeeping/%.vhd
-	python3 makedepends.py $^ $@
+	@python3 makedepends.py $^ $@
 
 $(depfiles):
 
-include $(depfiles) 
+-include $(depfiles)
 
 clean:
 	ghdl --clean
