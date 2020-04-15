@@ -156,7 +156,7 @@ begin
     
   
 
-  source : sawtooth_source
+  source : triangle_source
     port map (
       i_clk   => clk,
       o_data_even => w_triangle_even,
