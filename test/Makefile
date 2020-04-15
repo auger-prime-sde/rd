@@ -5,8 +5,11 @@ print-% : ; $(info $* is a $(flavor $*) variable set to [$($*)]) @true
 
 
 testfiles := $(wildcard housekeeping/*.vhd) $(wildcard data_streamer/*.vhd)
+runfiles := $(patsubst %_tb, %.ghw, $(basename $(notdir $(testfiles))))
+
 all: $(basename $(notdir $(testfiles)))
 
+runall: $(runfiles)
 
 #GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93
 GHDL_OPTS = --workdir=output
@@ -30,7 +33,7 @@ output/%.o: housekeeping/%.vhd
 
 # Rules for running:
 %.ghw: %_tb
-	ghdl -r $(GHDL_OPTS) $^ --wave=$@
+	ghdl -r $(GHDL_OPTS) $^ --wave=$@ $(GHDL_RUN_OPTS)
 
 # rules for generating depfiles
 sourcefiles := $(wildcard housekeeping/*.vhd) $(wildcard data_streamer/*.vhd) $(wildcard ../rtl/housekeeping/*.vhd) $(wildcard ../rtl/data_streamer/*.vhd)
