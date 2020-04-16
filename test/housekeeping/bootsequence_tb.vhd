@@ -24,7 +24,7 @@ architecture behave of bootsequence_tb is
   
   signal stop : std_logic := '0';
 
-  constant c_NUMBYTES : natural := 33;
+  constant c_NUMBYTES : natural := 36;
   type t_BYTESEQ is array(0 to c_NUMBYTES-1) of bit_vector(7 downto 0);
   constant c_BOOTSEQUENCE : t_BYTESEQ := (
     X"03", X"00", X"02",
@@ -37,7 +37,8 @@ architecture behave of bootsequence_tb is
     X"03", X"02", X"40",
     X"03", X"D5", X"18",
     X"03", X"D7", X"0C",
-    X"03", X"DB", X"20" );
+    X"03", X"DB", X"20",
+    X"08", X"04", X"00");
 
   
   component bootsequence is
@@ -100,7 +101,7 @@ begin
   -- actual test process
   p_test : process is
   begin
-    for i in 0 to 10 loop
+    for i in 0 to 11 loop
       wait until o_hk_ce = '0';
       for bit in 7 downto 0 loop
         assert o_hk_mosi = to_stdulogic(c_BOOTSEQUENCE(3*i+0)(bit)) report "bad initialization code, expected " & std_logic'image(to_stdulogic(c_BOOTSEQUENCE(3*i+0)(bit))) & " but got " & std_logic'image(o_hk_mosi);
