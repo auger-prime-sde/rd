@@ -9,7 +9,8 @@ entity i2c_wrapper is
     g_CLK_DIV : natural := 125; -- I.e. 100MHz/400khz/2
     -- divided by 2 because the i2c clock is half as fast as the internal clock
     -- used to produce it.
-    g_SEQ_DATA : t_i2c_data
+    g_SEQ_DATA : t_i2c_data;
+    g_ACK : std_logic := '0'
     );
   port (
     -- clock
@@ -42,7 +43,6 @@ architecture behaviour of i2c_wrapper is
   signal r_write_enable : std_logic;
   signal r_read_enable  : std_logic;
   signal r_dir          : std_logic;
-  signal r_ack          : std_logic;
   signal r_restart      : std_logic;
   
   signal r_write_latch  : std_logic;
@@ -91,7 +91,6 @@ architecture behaviour of i2c_wrapper is
       i_next     : in std_logic;
       o_data     : out std_logic_vector(7 downto 0);
       o_dir      : out std_logic;
-      o_ack      : out std_logic;
       o_restart  : out std_logic;
       o_valid    : out std_logic;
       o_addr     : out std_logic_vector(2 downto 0);
@@ -100,11 +99,13 @@ architecture behaviour of i2c_wrapper is
   end component;
 
   component i2c is
+    generic (
+      g_ACK : std_logic := '0'
+      );
     port(	--inputs
       i_clk      : in std_logic;
       i_data     : in std_logic_vector(7 downto 0);
       i_dir      : in std_logic;
-      i_ack      : in std_logic;
       i_restart  : in std_logic;
       i_valid    : in std_logic;
       --outputs
@@ -180,7 +181,6 @@ begin
       i_next     => r_next,
       o_data     => r_seq_data,
       o_dir      => r_dir,
-      o_ack      => r_ack,
       o_restart  => r_restart,
       o_valid    => r_seq_datavalid,
       o_addr     => r_write_addr,
@@ -188,11 +188,13 @@ begin
       );
   
   i2c_1 : i2c
+    generic map (
+      g_ACK => g_ACK
+      )
     port map (
       i_clk       => r_i2c_clk,
       i_data      => r_seq_data,
       i_dir       => r_dir,
-      i_ack       => r_ack,
       i_restart   => r_restart,
       i_valid     => r_seq_datavalid,
       o_data      => r_write_data,

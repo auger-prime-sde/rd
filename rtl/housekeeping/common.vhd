@@ -9,10 +9,9 @@ package common is
   
   type t_i2c_word is record
     data    : std_logic_vector(7 downto 0);
-    addr    : std_logic_vector(2 downto 0);
-    dir     : std_logic;
-    ack     : std_logic;
     restart : std_logic;
+    dir     : std_logic;
+    delay   : std_logic;
   end record t_i2c_word;
   
   type t_i2c_data is array(natural range <>) of t_i2c_word;

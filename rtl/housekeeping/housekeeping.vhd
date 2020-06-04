@@ -164,7 +164,8 @@ architecture behaviour of housekeeping is
     generic (
       g_SUBSYSTEM_ADDR : std_logic_vector;
       g_CLK_DIV : natural := 125; -- 400 kHz
-      g_SEQ_DATA : t_i2c_data
+      g_SEQ_DATA : t_i2c_data;
+      g_ACK : std_logic := '0'
     );
     port (
       -- clock
@@ -287,7 +288,84 @@ architecture behaviour of housekeeping is
            i_data_clk : in std_logic);
   end component;
 
+  
+  constant c_ADS1015_READSEQUENCE : t_i2c_data := (
+    -- write mux and trigger
+    (data => "10010000", restart => '1', dir => '0', delay => '0'), -- addr+out
+    (data => "00000001", restart => '0', dir => '0', delay => '0'), -- config register
+    (data => "11000011", restart => '0', dir => '0', delay => '0'), -- set mux
+    (data => "11100000", restart => '0', dir => '0', delay => '1'), -- trigger
+    -- read result
+    (data => "10010000", restart => '1', dir => '0', delay => '0'), -- addr+out
+    (data => "00000000", restart => '0', dir => '0', delay => '0'), -- readout register
+    (data => "10010001", restart => '1', dir => '0', delay => '0'), -- addr+in
+    (data => "00000000", restart => '0', dir => '1', delay => '0'), -- write to 0x00
+    (data => "00000001", restart => '0', dir => '1', delay => '0'), -- write to 0x01
+    -- write mux and trigger
+    (data => "10010000", restart => '1', dir => '0', delay => '0'), -- addr
+    (data => "00000001", restart => '0', dir => '0', delay => '0'),
+    (data => "11010011", restart => '0', dir => '0', delay => '0'),
+    (data => "11100000", restart => '0', dir => '0', delay => '1'),
+    -- read result
+    (data => "10010000", restart => '1', dir => '0', delay => '0'), -- addr
+    (data => "00000000", restart => '0', dir => '0', delay => '0'),
+    (data => "10010001", restart => '1', dir => '0', delay => '0'),
+    (data => "00000010", restart => '0', dir => '1', delay => '0'),
+    (data => "00000011", restart => '0', dir => '1', delay => '0'),
+    -- write mux and trigger:
+    (data => "10010000", restart => '1', dir => '0', delay => '0'), -- addr
+    (data => "00000001", restart => '0', dir => '0', delay => '0'),
+    (data => "11100011", restart => '0', dir => '0', delay => '0'),
+    (data => "11100000", restart => '0', dir => '0', delay => '1'),
+    -- read result
+    (data => "10010000", restart => '1', dir => '0', delay => '0'), -- addr
+    (data => "00000000", restart => '0', dir => '0', delay => '0'),
+    (data => "10010001", restart => '1', dir => '0', delay => '0'),
+    (data => "00000100", restart => '0', dir => '1', delay => '0'),
+    (data => "00000101", restart => '0', dir => '1', delay => '0'),
+    -- write mux and trigger:
+    (data => "10010000", restart => '1', dir => '0', delay => '0'), -- addr
+    (data => "00000001", restart => '0', dir => '0', delay => '0'),
+    (data => "11110011", restart => '0', dir => '0', delay => '0'),
+    (data => "11100000", restart => '0', dir => '0', delay => '1'),
+    -- read result
+    (data => "10010000", restart => '1', dir => '0', delay => '0'), -- addr
+    (data => "00000000", restart => '0', dir => '0', delay => '0'),
+    (data => "10010001", restart => '1', dir => '0', delay => '0'),
+    (data => "00000110", restart => '0', dir => '1', delay => '0'),
+    (data => "00000111", restart => '0', dir => '1', delay => '0')
+    );
+    
 
+  constant c_SI7060_READSEQUENCE : t_i2c_data := (
+    -- write address:
+    ( data => "01100010", restart => '1', dir => '0', delay => '0'),
+    -- write register (0xC4 i.e. config register)
+    ( data => "11000100", restart => '0', dir => '0', delay => '0'),
+    -- write data to reg C4 (i.e. start a one-burst conversion)
+    ( data => "00000100", restart => '0', dir => '0', delay => '0'),
+    --
+    -- write address:
+    ( data => "01100010", restart => '1', dir => '0', delay => '0'),
+    -- write register (0xC1, i.e. high word of temp):
+    ( data => "11000001", restart => '0', dir => '0', delay => '0'),
+    -- restart and write address again:
+    ( data => "01100011", restart => '1', dir => '0', delay => '0'),
+    -- read value of that reg, transmit NACK and save data at 001:
+    ( data => "00000001", restart => '0', dir => '1', delay => '0'),
+    --
+    -- write address:
+    ( data => "01100010", restart => '1', dir => '0', delay => '0'),
+    -- write register (0xC2, i.e. low word of temp):
+    ( data => "11000010", restart => '0', dir => '0', delay => '0'),
+    -- restart and write address again:
+    ( data => "01100011", restart => '1', dir => '0', delay => '0'),
+    -- read value of that reg, transmit NACK and save data at 010:
+    ( data => "00000000", restart => '0', dir => '1', delay => '0')
+    );
+
+
+  
 begin
 
   -- adc has inverted clock polarity
@@ -397,119 +475,8 @@ begin
     generic map (
       g_SUBSYSTEM_ADDR => "00000100",
       g_CLK_DIV =>  125,
-      g_SEQ_DATA => (
-        -- write mux and trigger:
-        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "11000011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "11100000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- stall 
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read result
-        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "10010001", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "000"),
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "001"),
-
-        -- write mux and trigger:
-        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "11010011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "11100000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- stall 
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read result
-        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "10010001", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "010"),
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "011"),
-
-        -- write mux and trigger:
-        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "11100011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "11100000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- stall 
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read result
-        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "10010001", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "100"),
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "101"),
-
-        -- write mux and trigger:
-        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "11110011", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "11100000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- stall 
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read result
-        (data => "10010000", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "00000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "10010001", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "110"),
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'0', addr => "111")
-        )
+      g_SEQ_DATA => c_ADS1015_READSEQUENCE,
+      g_ACK => '0'
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
@@ -550,68 +517,8 @@ begin
     generic map (
       g_SUBSYSTEM_ADDR => "00000101",
       --g_CLK_DIV => 500,
-      g_SEQ_DATA => (
-        -- write address:
-        (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- write register (0xC4 i.e. config register)
-        (data => "11000100", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- write data to reg C4 (i.e. start a one-burst conversion)
-        (data => "00000100", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        --
-        -- write address:
-        --(data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- write register (0xC0, i.e. chip id and rev):
-        --(data => "11000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- restart and write address again:
-        --(data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read value of that reg, transmit NACK and save data at 000:
-        --(data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "010"),
-        --
-        -- write address:
-        (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- write register (0xC1, i.e. high word of temp):
-        (data => "11000001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- restart and write address again:
-        (data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read value of that reg, transmit NACK and save data at 001:
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "001"),
-        --
-        -- write address:
-        (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- write register (0xC2, i.e. low word of temp):
-        (data => "11000010", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- restart and write address again:
-        (data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read value of that reg, transmit NACK and save data at 010:
-        (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "000")
-        --
-        -- write address:
-        --(data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- write register (0xC4, i.e. config register):
-        --(data => "11000100", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- restart and write address again:
-        --(data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read value of that reg, transmit NACK and save data at 011:
-        --(data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "011"),
-        --
-        -- write address:
-        --(data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- write register (0xC5, i.e. auto inc enable):
-        --(data => "11000101", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- restart and write address again:
-        --(data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read value of that reg, transmit NACK and save data at 100:
-        --(data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "100"),
-        --
-        -- write address:
-        --(data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- write register (0xC9, i.e. sleep timer):
-        --(data => "11001001", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
-        -- restart and write address again:
-        --(data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
-        -- read value of that reg, transmit NACK and save data at 101:
-        --(data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "101")
-        )
+      g_SEQ_DATA => c_SI7060_READSEQUENCE,
+      g_ACK => '1' -- this chip has it's ack values inverted, see datasheet
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
@@ -668,21 +575,21 @@ begin
       );
   
       
-  spi_capture_1 : spi_capture
-    generic map (
-      g_SUBSYSTEM_ADDR => "00001011",
-      g_DATA_WIDTH => g_DATA_WIDTH,
-      g_BUFFER_LEN => 1024 ) -- 1024 / 2048 / 4096 / 8192 / 16384 -- note that
-                             -- this is the number of clock cycles before even
-                             -- and off are split so you'll get twice as many samples
-    port map (
-      i_spi_clk => r_internal_clk,
-      i_spi_mosi => r_internal_mosi,
-      o_spi_miso => r_capture_miso,
-      i_dev_select => r_subsystem_select,
-      i_data => i_data,
-      i_data_clk => i_data_clk );
-  
+--  spi_capture_1 : spi_capture
+--    generic map (
+--      g_SUBSYSTEM_ADDR => "00001011",
+--      g_DATA_WIDTH => g_DATA_WIDTH,
+--      g_BUFFER_LEN => 8192 ) -- 1024 / 2048 / 4096 / 8192 / 16384 -- note that
+--                             -- this is the number of clock cycles before even
+--                             -- and off are split so you'll get twice as many samples
+--    port map (
+--      i_spi_clk => r_internal_clk,
+--      i_spi_mosi => r_internal_mosi,
+--      o_spi_miso => r_capture_miso,
+--      i_dev_select => r_subsystem_select,
+--      i_data => i_data,
+--      i_data_clk => i_data_clk );
+--  
   
   -- instantiate gpio subsystem
   digitalout_1 : digitaloutput

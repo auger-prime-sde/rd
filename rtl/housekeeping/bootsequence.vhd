@@ -76,6 +76,9 @@ architecture behave of bootsequence is
     -- set default start offset 1024 (0x0400)
     X"100", X"008", X"004", X"000",
     X"100" );
+
+  attribute syn_romstyle : string;
+  attribute syn_romstyle of c_BOOTSEQUENCE : signal is "logic";
   
   type t_State is (s_Initial, s_LowClk, s_HighClk, s_Done);
   signal r_State : t_State := s_Initial;

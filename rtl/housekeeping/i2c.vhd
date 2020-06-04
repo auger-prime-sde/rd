@@ -4,12 +4,14 @@ use IEEE.numeric_std.all;
 --use work.common.all;
 
 entity i2c is
+  generic (
+    g_ACK : std_logic := '0'
+    );
   port(
     -- inputs:
     i_clk      : in std_logic;
     i_data     : in std_logic_vector(7 downto 0);
     i_dir      : in std_logic; -- '0' for read, '1' for write
-    i_ack      : in std_logic; -- value of ack when dir='0', ignored when dir='1'
     i_restart  : in std_logic; -- should send Sr between previous word
     i_valid    : in std_logic; -- present data should be sent
     -- outputs:
@@ -30,7 +32,6 @@ architecture behave of i2c is
   signal r_count : natural range 0 to 8 := 0;
   signal r_data  : std_logic_vector(7 downto 0);
   signal r_dir   : std_logic;
-  signal r_ack   : std_logic;
   signal r_sda   : std_logic := '1';
   signal r_scl   : std_logic := '1';
 
@@ -59,7 +60,6 @@ begin
             -- latch the inputs
             r_data <= i_data;
             r_dir <= i_dir;
-            r_ack <= i_ack;
             -- reset counter
             r_count <= 0;
             -- create START condition
@@ -113,7 +113,7 @@ begin
             r_scl <= '0';
             -- process ack:
             if r_dir = '1' then
-              r_sda <= r_ack; -- in read mode we transmit the ack bit
+              r_sda <= g_ACK; -- in read mode we transmit the ack bit
             else
               r_sda <= '1'; -- accept ack bit
             end if;
@@ -125,7 +125,6 @@ begin
               r_state <= s_Data;
               r_data <= i_data;
               r_dir <= i_dir;
-              r_ack <= i_ack;
               r_count <= 0;
             else
               r_state <= s_Stop;
