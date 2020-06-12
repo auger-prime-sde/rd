@@ -84,6 +84,7 @@ architecture behaviour of data_streamer is
       g_ADDRESS_BITS : natural;
       g_TRACE_LENGTH : natural);
     port (
+      i_rst          : in std_logic;
       i_clk          : in std_logic;
       i_trigger      : in std_logic;
       i_curr_addr    : in std_logic_vector(g_ADDRESS_BITS-1 downto 0);
@@ -151,6 +152,7 @@ write_controller_1 : write_controller
     g_TRACE_LENGTH => 2**(g_BUFFER_INDEXSIZE) -- still output only 2048
     )
   port map (
+    i_rst                                         => '0',
     i_clk                                         => i_clk,
     i_trigger                                     => i_trigger,
     i_curr_addr(g_BUFFER_INDEXSIZE downto 1)      => write_address,

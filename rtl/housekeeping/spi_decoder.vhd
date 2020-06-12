@@ -114,7 +114,7 @@ begin
   -- bus data is stable at that time. 
   p_recv_trig : process(i_clk) is
   begin
-    if i_clk'event then
+    if rising_edge(i_clk) then
     --if rising_edge(i_clk) then
       case r_stabilizer is
         when s_Low =>
