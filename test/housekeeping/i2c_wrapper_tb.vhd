@@ -29,19 +29,20 @@ architecture behave of i2c_wrapper_tb is
                                                    
   constant c_testdata : t_i2c_data := (
     -- write address:
-    (data => "01100010", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+    (data => "01100010", restart => '1', dir => '0', delay => '0'),
     -- write register (0xC0, i.e. chip id and rev):
-    (data => "11000000", restart => '0', dir => '0', ack=>'X', addr => "XXX"),
+    (data => "11000000", restart => '0', dir => '0', delay => '0'),
     -- write address again and restart:
-    (data => "01100011", restart => '1', dir => '0', ack=>'X', addr => "XXX"),
+    (data => "01100011", restart => '1', dir => '0', delay => '0'),
     -- read value of that reg, transmit NACK and save data at 001:
-    (data => "XXXXXXXX", restart => '0', dir => '1', ack=>'1', addr => "001")  );
+    (data => "XXXXXXXX", restart => '0', dir => '1', delay => '0')  );
   
   
   component i2c_wrapper is
     generic (
        g_SUBSYSTEM_ADDR : std_logic_vector;
-       g_SEQ_DATA : t_i2c_data
+       g_SEQ_DATA : t_i2c_data;
+       g_ACK : std_logic := '0'
       );
     port (
       -- clock
@@ -55,7 +56,9 @@ architecture behave of i2c_wrapper_tb is
       i_dev_select  : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
       -- i2c interface
       io_hk_sda     : inout std_logic;
-      io_hk_scl     : inout std_logic
+      io_hk_scl     : inout std_logic;
+      -- data out
+      o_latched     : out std_logic_vector(8*8-1 downto 0)
       );
   end component;
 
@@ -73,7 +76,8 @@ begin
       o_spi_miso => o_spi_miso,
       i_dev_select => i_dev_select,
       io_hk_sda => io_hk_sda,
-      io_hk_scl => io_hk_scl
+      io_hk_scl => io_hk_scl,
+      o_latched => open
       );
 
   p_hk_clk : process is
