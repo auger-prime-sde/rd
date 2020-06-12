@@ -25,32 +25,34 @@ end data_buffer;
 architecture behavioral of data_buffer is
 	type ram_type is array (2**(g_ADDRESS_WIDTH-1)-1 downto 0) of std_logic_vector (2*g_DATA_WIDTH-1 downto 0);
 	signal ram : ram_type;
-	signal data_out_reg : std_logic_vector(g_DATA_WIDTH-1 downto 0) := (others => '0');
-	--attribute syn_ramstyle : string;
-	--attribute syn_ramstyle of ram : signal is "block_ram";
+    signal r_read_addr : integer range 2 ** (g_ADDRESS_WIDTH - 1) - 1 downto 0;
+    signal r_read_data : std_logic_vector(2 * g_DATA_WIDTH-1 downto 0);
 
 begin
 	process (i_write_clk)
 	begin
 		if rising_edge(i_write_clk) then
             if i_write_enable='1' then
-                ram(to_integer(unsigned(i_write_addr))) <= i_write_data;
+              ram(to_integer(unsigned(i_write_addr))) <= i_write_data;
 			end if;
 		end if;
 	end process;
 
+
+    r_read_addr <= to_integer(unsigned(i_read_addr(g_ADDRESS_WIDTH-1 downto 1)));
+    r_read_data <= ram(r_read_addr);
+                   
 	process (i_read_clk)
 	begin
 		if rising_edge(i_read_clk) then
             if i_read_enable='1' then
                 if i_read_addr(0) = '0' then
-                    data_out_reg <= ram(to_integer(unsigned(i_read_addr(g_ADDRESS_WIDTH-1 downto 1))))(2*g_DATA_WIDTH-1 downto g_DATA_WIDTH);
+                    o_read_data <= r_read_data(2*g_DATA_WIDTH-1 downto g_DATA_WIDTH);
                 else
-                    data_out_reg <= ram(to_integer(unsigned(i_read_addr(g_ADDRESS_WIDTH-1 downto 1))))(g_DATA_WIDTH-1 downto 0);
+                    o_read_data <= r_read_data(g_DATA_WIDTH-1 downto 0);
                 end if;  
 			end if;
 		end if;
 	end process;
 
-	o_read_data <= data_out_reg;
 end behavioral;
