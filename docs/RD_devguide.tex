@@ -16,6 +16,11 @@
 \usetikzlibrary{arrows, shapes.gates.logic.US, calc}
 %\usetikzlibrary{external} % doesn't work with tikz timing diagrams
 %\tikzexternalize % activate!
+\usetikztiminglibrary{either}
+\usetikztiminglibrary{overlays}
+\usetikztiminglibrary{advnodes}
+\usetikztiminglibrary{interval}
+
 
 \title{Auger Radio Digitizer}
 \subtitle{Software Developer's Guide}
@@ -23,6 +28,25 @@
   Sjoerd T. Timmer (s.timmer@astro.ru.nl)}
 \date{}
 
+
+\tikzset{
+  alias path picture bounding box/.code=%https://tex.stackexchange.com/q/395628
+    \pgfnodealias{#1}{path picture bounding box},
+  gap/.style={
+    circle,
+    inner sep=0pt,
+    minimum size=#1,
+    node contents={},
+    path picture={
+       \tikzset{alias path picture bounding box=@}
+       \fill [white] (@.265) to[out=40,in=220] (@.70) -- 
+                     (@.85)  to[out=220,in=40] (@.250) -- cycle;
+       \draw [very thin] (@.265) to[out=40,in=220] (@.70)
+                         (@.85)  to[out=220,in=40] (@.250);
+    }
+  },
+  gap/.default=10pt
+}
 
 \acrodef{RD}[RD]{Radio Digitizer}
 \acrodef{UUB}[UUB]{Universal Upgrade Board}
@@ -43,6 +67,8 @@
     \begin{list}{}{\leftmargin=0mm}\item[\bf\danger{}~~Warning: ]}
   {\end{list}\end{mdframed}\par}
 
+
+
 \begin{document}
 \maketitle{}
 \begin{abstract}
@@ -62,6 +88,8 @@
 
 \section{Developers Guide/Architecture}
 \subsection{General architecture}
+
+
 \subsubsection{\acs{SPI} demux}
 
 \subsubsection{Boot sequence injection}
@@ -83,7 +111,7 @@
 
 \subsubsection{Trigger-offset register (0x08)}
 
-\subsubsection{Raw data capture (0x12)}
+\subsubsection{Raw data capture (0x0B)}
 
 \begin{warning}
   This sub-system is not compiled in the default distributed firmware. It can be enabled in housekeeping.vhd.
@@ -181,13 +209,11 @@ The sub-sample trigger information (q[12] \textbf{xor} q[25] \textbf{xor} q[36])
 
 \subsubsection{Trigger injection through housekeeping \ac{SPI}}
 \begin{warning}
-  This \ac{SPI} sub-system is candidate for removal in the next release.
-  This address 0x06 may become a trigger for the \ac{I2C} readout instead.
+  In releases prior to firmware version 4 this system would trigger a readout of science data instead of housekeeping data.
 \end{warning}
 
-There is an \ac{SPI} sub-system at address 0x06 that can be used to trigger the \ac{RD} if no external trigger is present.
-This is useful for debugging.
-The inverted CE of this submodule is or'ed with the external trigger input. It is not necessary to send any data for the trigger to work.
+There is an \ac{SPI} sub-system at address 0x06 that can be used to inject extra triggers of housekeeping readout. This is useful for debugging.
+The inverted CE of this submodule is or'ed with the internal periodic trigger. It is not necessary to send any data for the trigger to work.
 \begin{center}
   \begin{tikztimingtable}[timing/wscale=1]
     clk    & HHCCCCCCCCCCCCCCCCHH \\
@@ -195,7 +221,7 @@ The inverted CE of this submodule is or'ed with the external trigger input. It i
     mosi   & UUDDDDDDDDDDDDDDDD{0x06 (internal trigger)}UU \\
     trig\_int & HHHHHHHHHHHHHHHHHLHH \\
   \end{tikztimingtable}
-  \captionof{figure}{Example transaction to inject an internal trigger.}
+  \captionof{figure}{Example transaction to inject an extra trigger.}
 \end{center}
 \begin{center}
   \begin{tikzpicture}
@@ -226,13 +252,13 @@ Figures~\ref{fig:datawriter_timing_start} and \ref{fig:datawriter_timing_end} il
     \centering
     \begin{tikztimingtable}[timing/wscale=1.2]
       i\_clk          & CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC \\
-      i\_clk\_padding & LLLHHHHHHHHUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
-      i\_dataready    & LLLLLLLLLHHUUUUUUUUUUUUUUUUUUUUUUUUHHUUUUUUUU \\
-      i\_data[23:12]  & UUUUUUUUUDD{A}UUUUUUUUUUUUUUUUUUUUUUUUDD{C}UUUUUUUU \\
-      i\_data[11:0]   & UUUUUUUUUDD{B}UUUUUUUUUUUUUUUUUUUUUUUUDD{D}UUUUUUUU \\
+      i\_clk\_padding & LLLHHHHHHHHHHUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
+      i\_dataready    & LLLLLLLLLLLHHUUUUUUUUUUUUUUUUUUUUUUUUHHUUUUUU \\
+      i\_data[23:12]  & UUUUUUUUUUUDD{A}UUUUUUUUUUUUUUUUUUUUUUUUDD{C}UUUUUU \\
+      i\_data[11:0]   & UUUUUUUUUUUDD{B}UUUUUUUUUUUUUUUUUUUUUUUUDD{D}UUUUUU \\
       o\_clk          & HHHHHCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC \\
-      o\_data[0]      & UUUUUUUUUUUDD{A[11]}DD{A[10]}DD{A[9]}DD{A[8]}DD{A[7]}DD{A[6]}DD{A[5]}DD{A[4]}DD{A[3]}DD{A[2]}DD{A[1]}DD{A[0]}DD{P(A)}DD{C[11]}DD{C[10]}DD{C[9]}DD{\ldots} \\
-      o\_data[1]      & UUUUUUUUUUUDD{B[11]}DD{B[10]}DD{B[9]}DD{B[8]}DD{B[7]}DD{B[6]}DD{B[5]}DD{B[4]}DD{B[3]}DD{B[2]}DD{B[1]}DD{B[0]}DD{P(B)}DD{D[11]}DD{D[10]}DD{D[9]}DD{\ldots} \\
+      o\_data[0]      & UUUUUUUUUUUUUDD{A[11]}DD{A[10]}DD{A[9]}DD{A[8]}DD{A[7]}DD{A[6]}DD{A[5]}DD{A[4]}DD{A[3]}DD{A[2]}DD{A[1]}DD{A[0]}DD{P(A)}DD{C[11]}DD{C[10]}DD{\ldots} \\
+      o\_data[1]      & UUUUUUUUUUUUUDD{B[11]}DD{B[10]}DD{B[9]}DD{B[8]}DD{B[7]}DD{B[6]}DD{B[5]}DD{B[4]}DD{B[3]}DD{B[2]}DD{B[1]}DD{B[0]}DD{P(B)}DD{D[11]}DD{D[10]}DD{\ldots} \\
     \end{tikztimingtable}
     \captionof{figure}{Start of data\_writer transmission.}\label{fig:datawriter_timing_start}
   \end{minipage}\vspace{\baselineskip}
@@ -240,18 +266,105 @@ Figures~\ref{fig:datawriter_timing_start} and \ref{fig:datawriter_timing_end} il
     \centering
     \begin{tikztimingtable}[timing/wscale=1.2]
       i\_clk          & HCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC \\
-      i\_clk\_padding & UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUHHHHHHHHHHLLLLL \\
-      i\_dataready    & UUUUHHUUUUUUUUUUUUUUUUUUUUUUUULLLLLLLLLLLLLLL \\
-      i\_data[23:12]  & UUUUDD{Y}UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
-      i\_data[11:0]   & UUUUDD{Z}UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
-      o\_clk          & CCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCHHHHH \\
-      o\_data[0]      & DD{\ldots}DD{W[0]}DD{P(W)}DD{Y[11]}DD{Y[10]}DD{Y[9]}DD{Y[8]}DD{Y[7]}DD{Y[6]}DD{Y[5]}DD{Y[4]}DD{Y[3]}DD{Y[2]}DD{Y[1]}DD{Y[0]}DD{P(Y)}UUUUUUUUUUUUU \\
-      o\_data[1]      & DD{\ldots}DD{X[0]}DD{P(X)}DD{Z[11]}DD{Z[10]}DD{Z[9]}DD{Z[8]}DD{Z[7]}DD{Z[6]}DD{Z[5]}DD{Z[4]}DD{Z[3]}DD{Z[2]}DD{Z[1]}DD{Z[0]}DD{P(Z)}UUUUUUUUUUUUU \\     
+      i\_clk\_padding & UUUUUUUUUUUUUUUUUUHHHHHHHHHHHHHHHHHHHHHHHHLLL \\
+      i\_dataready    & UUUUUUUUUUUUUUUUUULLLLLLLLLLLLLLLLLLLLLLLLLLL \\
+      i\_data[23:12]  & UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
+      i\_data[11:0]   & UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
+      o\_clk          & 21{LH}HHH \\
+      o\_data[0]      & DD{\ldots}DD{Y[7]}DD{Y[6]}DD{Y[5]}DD{Y[4]}DD{Y[3]}DD{Y[2]}DD{Y[1]}DD{Y[0]}DD{P(Y)}UUUUUUUUUUUUUUUUUUUUUUUUU \\
+      o\_data[1]      & DD{\ldots}DD{Z[7]}DD{Z[6]}DD{Z[5]}DD{Z[4]}DD{Z[3]}DD{Z[2]}DD{Z[1]}DD{Z[0]}DD{P(Z)}UUUUUUUUUUUUUUUUUUUUUUUUU \\
     \end{tikztimingtable}    
     \captionof{figure}{End of data\_writer transmission.}\label{fig:datawriter_timing_end}
   \end{minipage}
 \end{center}
 
+\subsubsection{Write\_controller}
+
+
+\begin{center}
+  \begin{tikzpicture}[yscale=1, timing/font=\sffamily,timing/e/background/.style={fill=lightgray}]
+    %timing/e/background/.style={fill=lightgray}
+
+    \pgfmatrix{rectangle}{center}{mymatrix}
+    {\pgfusepath{}}{\pgfpointorigin}{}
+    { %
+      \node[anchor=base east] {i\_clk}; \pgfmatrixnextcell
+      \timing {H10{C}; [draw=none] L}; \pgfmatrixnextcell
+      \timing {H7{C}; [draw=none] L}; \pgfmatrixnextcell
+      \timing {H9{C}; [draw=none] L}; \pgfmatrixnextcell
+      \timing {H7{C}; [draw=none] L}; \pgfmatrixnextcell
+      \\
+      %
+      \node[anchor=base east] {i\_arm}; \pgfmatrixnextcell
+      \timing {2L 2H 7E}; \pgfmatrixnextcell
+      \timing {8E}; \pgfmatrixnextcell
+      \timing {10E}; \pgfmatrixnextcell
+      \timing {8E}; \pgfmatrixnextcell
+      \\
+      %
+      \node[anchor=base east] {o\_write\_enable}; \pgfmatrixnextcell
+      \timing {6L 5H}; \pgfmatrixnextcell
+      \timing {8H}; \pgfmatrixnextcell
+      \timing {10H}; \pgfmatrixnextcell
+      \timing {4H 4L}; \pgfmatrixnextcell
+      \\
+      %
+      \node[anchor=base east] {i\_start\_offset}; \pgfmatrixnextcell
+      \timing {11E}; \pgfmatrixnextcell
+      \timing {8E}; \pgfmatrixnextcell
+      \timing {4E 2D{S} 4E}; \pgfmatrixnextcell
+      \timing {8E}; \pgfmatrixnextcell
+      \\
+      %
+      \node[anchor=base east] {i\_current\_addr}; \pgfmatrixnextcell
+      \timing {11E}; \pgfmatrixnextcell
+      \timing {8E}; \pgfmatrixnextcell
+      \timing {4E 2D{A} 4E}; \pgfmatrixnextcell
+      \timing {8E}; \pgfmatrixnextcell
+      \\
+      % 
+      \node[anchor=base east] {i\_trigger}; \pgfmatrixnextcell
+      \timing {11E}; \pgfmatrixnextcell
+      \timing {4E 4L}; \pgfmatrixnextcell
+      \timing {4L 2H 4E}; \pgfmatrixnextcell
+      \timing {8E}; \pgfmatrixnextcell
+      \\ 
+      %
+      \node[anchor=base east] {o\_start\_addr}; \pgfmatrixnextcell
+      \timing {11E}; \pgfmatrixnextcell
+      \timing {8E}; \pgfmatrixnextcell
+      \timing {6E 4D{A-S}}; \pgfmatrixnextcell
+      \timing {8D}; \pgfmatrixnextcell
+      \\
+      %
+      \node[anchor=base east] {o\_trigger\_done}; \pgfmatrixnextcell
+      \timing {6H 5L}; \pgfmatrixnextcell
+      \timing {8L}; \pgfmatrixnextcell
+      \timing {10L}; \pgfmatrixnextcell
+      \timing {4L 4H}; \pgfmatrixnextcell
+      \\
+    }
+        
+  \end{tikzpicture}
+  
+  \begin{tikztimingtable}[timing/wscale=1.2, timing/e/background/.style={fill=lightgray}]
+    i\_clk           & H 20{C} ; [dotted] 2E ; H12{C} \\
+    i\_arm           & 2L N(arm) 2H 7E ; [dotted]2E ; 7E \\
+    o\_write\_enable & 6L N(we) 5H ; [dotted] 2H ; 8H ; [dotted] 2H ; 10H       ; [dotted] 2H ; 4H 4L \\
+    i\_start\_offset & 11E ; [dotted] 2E ; 8E      ; [dotted] 2E ; 4E 2D{S} 4E ; [dotted] 2E ; 8E \\
+    i\_current\_addr & 11E ; [dotted] 2E ; 8E      ; [dotted] 2E ; 4E 2D{A} 4E ; [dotted] 2E ; 8E \\
+    i\_trigger       & 11E ; [dotted] 2E ; 4E ; 4L ; [dotted] 2L ; 4L 2H 4E    ; [dotted] 2E ; 8E \\
+    o\_start\_addr   & 11E ; [dotted] 2E ; 8E      ; [dotted] 2E ; 6E 4D{A-S}  ; [dotted] 2D ; 8D \\
+    \extracode
+    %\tablerules
+    %\fill[lightgray] ($(l.high)+(-2pt,-0.25pt)$) rectangle ($(r.low)+(2pt,0.25pt)$);
+    %\begin{pgfonlayer}{background}
+      %\node (wedelay) at ($(arm)!0.5!(we)$) {3 cycles};
+      %\draw [help lines] (arm.mid) |- (wedelay) -| (we.mid);
+    %\end{pgfonlayer} 
+  \end{tikztimingtable}    
+  \captionof{figure}{Write\_controller timing.}
+\end{center} 
 
 
 

@@ -44,6 +44,13 @@
     \begin{list}{}{\leftmargin=0mm}\item[\bf\danger{}~~Warning: ]}
   {\end{list}\end{mdframed}\par}
 
+\newenvironment{deprecation}
+{\par\begin{mdframed}[linewidth=1pt,linecolor=black,backgroundcolor=black!10]%
+    \begin{list}{}{\leftmargin=0mm}\item[\bf\danger{}~~Old behaviour: ]}
+  {\end{list}\end{mdframed}\par}
+
+
+
 \begin{document}
 \maketitle{}
 \begin{abstract}
@@ -138,12 +145,11 @@ Half of the 8 data signals carry the radio data traces and the other 4 are dedic
 TODO
 
 \subsection{Status LEDs}
-The LEDs are permanently on as soon as the RD is successfully booted.
 
-\begin{warning}
-  This behaviour is planned to change in the future.
-  Each channel has an LNA which is powered by a constant current driver that is inside the RD module.
-  The voltages of the two LNA constant-current drivers are polled every 5 seconds and the corresponding LEDs are updated accordingly.
+Each channel has an LNA which is powered by a constant current driver that is inside the RD module.
+The voltages of the two LNA constant-current drivers are polled every 5 seconds and the corresponding LEDs are updated accordingly. See section \ref{sec:ads1015} for more details about the conversion process.
+When the voltage is between 2.2 (V) and 2.6 (V) the LNA is considered to be in good/normal operating conditions. When the voltage is either too high or too low this indicates a fault condition in the LNA or a connection issue between the RD module and the LNA. 
+
   \begin{tabular}{l|l}
     LED & description \\\hline
     constant off & RD not powered or not booted \\
@@ -152,9 +158,32 @@ The LEDs are permanently on as soon as the RD is successfully booted.
     fast blink (3 times per second) & LNA voltage too low (antenna shorted)\\
   \end{tabular}
   
+\begin{deprecation}
+  Prior to firmware version 4 the behaviour was different:
+  the LEDs are permanently on as soon as the RD is successfully booted.
+
+  Physical modules prior to hardware version 3 do not have leds on the front panel.
+\end{deprecation}
+
+\begin{warning}
+  It is planned but not yet implemented to make the LNA current configurable, in which case the thresholds will change as well.
 \end{warning}
 
 
+\section{Channel naming}
+For historical reasons several conflicting naming conventions are used. The following table shows the matching between these conventions.
+
+\begin{center}
+\begin{tabular}{|l|l|l|l|l|l|l|}
+  \hline
+  RD channel &  Radio sensitivity & Antenna orientation & ADC channel & RD front panel & Offline channel \\
+  \hline
+  0 & from N/S & loop facing E/W & B & left & 1 \\
+  1 & from E/W & loop facing N/S & A & right & 2 \\
+  \hline
+\end{tabular}
+\end{center}
+                                    
 
 \section{Software interface}
 The Auger \ac{RD} module has two separate interfaces.
@@ -162,7 +191,7 @@ One fast interface to capture radio traces, and one slower \ac{SPI} interface fo
 
 \subsection{Radio data}
 The Auger \ac{RD} module samples 12-bit data from 2 channels at 250 Msamples/s into a circular buffer.
-It does so continuously until it sees a rising edge on the trigger input.
+It does so continuously until it sees a logic high on the trigger input.
 When the trigger is received the \ac{RD} will continue to write a configurable number of post-trigger samples to the buffer.
 The number of post-trigger samples can be configured using the housekeeping \ac{SPI} interface and defaults to 1024 at power-up.
 The total buffer always contains 2048 samples and therefore the number of pre-trigger samples equals $2048-\text{\#(pre-trigger samples)}$.
@@ -175,18 +204,19 @@ The transfer is clocked from the RD at 60 MHz. The clock is held high outside th
   The 60 MHz speed is subject to change.
   Due to the distribution of events, it is suspected that a small reduction  in transfer time could benefit the number of recorded events greatly.
 \end{warning}
-The transmission starts with a preamble consisting of 3 rising clock edges.
+The transmission starts with a preamble consisting of 4 rising clock edges.
 After the preamble, the 2048 samples are transmitted. Data for the 2 channels is separately transmitted on the 2 data lines.
 Each sample is shifted out, most significant bit first, followed by a parity bit (odd parity). Finally, 11 trailing clock cycles are transmitted.
+
 
 \begin{center}
   \begin{minipage}[b]{\textwidth}
     \centering
     %\includegraphics[width=\textwidth]{img/data-transfer-start.pdf}
     \begin{tikztimingtable}[timing/wscale=1.2]
-      clk     & HHLCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC \\ 
-      data[0] & UUUUUUUUDDDDDDDDDDDDDDDDDDDDDDDD{Sample 0 Channel 0 [11:0]}DD{parity}DDDDDDDDDDDDD{Sample 1 Channel 0 [11:0]} \\
-      data[1] & UUUUUUUUDDDDDDDDDDDDDDDDDDDDDDDD{Sample 0 Channel 1 [11:0]}DD{parity}DDDDDDDDDDDDD{Sample 1 Channel 1 [11:0]} \\
+      clk     & HHLCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC \\ 
+      data[0] & UUUUUUUUUUDDDDDDDDDDDDDDDDDDDDDDDD{Sample 0 Channel 0 [11:0]}DD{parity}DDDDDDDDDDDDD{Sample 1 Channel 0 [11:0]} \\
+      data[1] & UUUUUUUUUUDDDDDDDDDDDDDDDDDDDDDDDD{Sample 0 Channel 1 [11:0]}DD{parity}DDDDDDDDDDDDD{Sample 1 Channel 1 [11:0]} \\
     \end{tikztimingtable}
     \captionof{figure}{Start of data transfer has 3 leading clock edges. Data is stable at rising edges. Parity bit follows data.}\label{fig:datatransferstart}
   \end{minipage}\vspace{\baselineskip}
@@ -212,25 +242,30 @@ During the transmission and during the recording of the pre-trigger samples the 
 \subsection{Jitter and latency}\label{sec:latency}
 Data is transferred from an \ac{ADC} (ADS4229) to an \ac{FPGA} (Lattice ECP5 LFE5U-12F) over 12 LVDS pairs. The data transfer is \ac{DDR} which means that the even bits are transferred on the rising edges of the 250 MHz clock and the odd bits on the falling edges. 
 
-There is at most a sample jitter on the data.
+There is at most one sample jitter on the data.
 
 \begin{center}
-  \includegraphics[width=\textwidth]{img/trigger_jitter.png}
+  \includegraphics[width=0.8\textwidth]{img/trigger_jitter.png}
   \captionof{figure}{Trigger line fed back into data signal via an external probe. Note that the rising edge of the trigger is transformed into a wavelet by the analog filters on the RD. Two thousand traces are plotted over each other with high transparency.}\label{fig:trigger_jitter}
 \end{center}
 
 \begin{center}
-  \includegraphics[width=6cm]{img/trigger_hist.png}
-  \captionof{figure}{Location of the highest peak in Figure~\ref{fig:trigger_jitter}.}
+  \includegraphics[width=0.8\textwidth]{img/trigger_hist.png}
+  \captionof{figure}{Location of the highest peak in Figure~\ref{fig:trigger_jitter}.}\label{fig:trigger_location}
 \end{center}
 
 Using the trigger-offset feature of the \ac{SPI} housekeeping interface, the location of the data window relative to the trigger can be configured. By default the location is set to 1024. 
-The \ac{ADC} is also subject to 16 clock cycles latency (at 250 MHz). With the default trigger offset of 1024, all factors included, there are therefore 1040 samples before the trigger and 1008 samples after the trigger.
+The \ac{ADC} is also subject to 16 clock cycles sampling latency.
+In addition the clock propagation delay in the \ac{ADC} is typically 6.2 ns which is more than one sample at 250 MHz.
+With the default trigger offset of 1024, all factors included, there are therefore 1041 samples before the trigger and 1007 samples after the trigger.
 
 \begin{center}
   \includegraphics[width=\textwidth]{img/rd_timing_v2.pdf}
   \captionof{figure}{Timing of \ac{RD} capture.}\label{fig:rd_timing}
 \end{center}
+
+Figure~\ref{fig:rd_timing} summarizes the delays and time-offsets between trigger input and the data capture window.
+Figures~\ref{fig:trigger_jitter} and \ref{fig:trigger_location} show experimentally determined trigger location in the trace window. Note that in this setup the trigger signal was picked up with an inductive probe and fed into the analog frontends of the RD board. This incurs additional delays which explains the (~20 ns) difference between the ideal trigger location (1041) and the start of the signal in Figure~\ref{fig:trigger_location} (1046). 
 
 \begin{warning}
   In firmware versions prior to v4 the trigger was delayed by 4 samples due to clock synchonization. Including the 16 samples ADC latency, the trigger would fall on the 12th sample after the configured start offset instead of the 16th. There was also one additional sample jitter in the registration of the trigger which was removed in firmware version 4. 
@@ -266,6 +301,10 @@ An example program \texttt{rd\_housekeeping} is provided that exposes most of th
 The \ac{SPI} interface was tested upto 12 MHz. It is known that all sub-systems can also reach that speed.
 The external interface operates with CPOL=1 and CPHA=1 (spi mode 3) at all times. The ADS4229 science adc operates in mode 2 but the responsible sub-system block handles the translation. All \ac{SPI} data is transferred \ac{MSB} first. 
 
+
+\subsubsection{Housekeeping trigger}
+The internal temperature, bias voltage and bias current sensors are automatically triggered every 5 seconds.
+This updates the status leds as well as the internal registers that can be read out through the \ac{SPI} interface.
 
 \subsubsection{\ac{GPIO} (address 0x01)}
 Eight \ac{GPIO} pins are available on the \ac{RD} board. All pins are configured as outputs. The \ac{GPIO} sub-system allows writing to and reading from the output buffer. The \ac{GPIO} cannot be configured as input pins. Each transaction exists of a command byte, optionally followed by a data byte in case of a write command.
@@ -368,12 +407,12 @@ The science \ac{ADC} has a \ac{SPI} configuration interface. The ADS4229 expects
 Refer to the ADS4229 datasheet \footnote{\url{http://www.ti.com/lit/ds/symlink/ads4229.pdf}} for details on the available registers in the configuration interface.
 
 
-\subsubsection{ADS1015 current and voltage sensors (address 0x04)}
+\subsubsection{ADS1015 current and voltage sensors (address 0x04)}\label{sec:ads1015}
 The ADS1015 is a four port \ac{I2C} \ac{ADC} which is wired to measure the voltage and the current on both \ac{LNA} channels. This can be used to determine if the \ac{LNA} is properly connected and working as expected.
 
-\begin{warning}
+\begin{deprecation}
     This behaviour is not yet implemented in firmware version 3. In this version a conversion is triggered after the sample buffer write cycle is completed. 
-\end{warning}
+\end{deprecation}
 
 Periodically (every 5 seconds) the internal controller for this \ac{I2C} chip will execute a fixed sequence of \ac{I2C} commands and store the conversion result in a register. The register can be read via \ac{SPI} and contains eight bytes:
 
@@ -392,7 +431,7 @@ Periodically (every 5 seconds) the internal controller for this \ac{I2C} chip wi
     0x07 & bits [3:0]  of \acs{ADC} channel 3, followed by four zeroes \\
     \hline
   \end{tabular}
-  \captionof{table}{ADS1015 register layout}
+  \captionof{table}{ADS1015 register layout.}
 \end{center}
 
 The ADS1015 has a \ac{PGA}. All conversions are made with the $FSR=\pm4.096 V$ setting. I.e. $MSB = 2 mV$.
@@ -432,7 +471,7 @@ Periodically (every 5 seconds), the controller for this \ac{I2C} chip will execu
     0x01 & Dspsigl of Si7060 (data bits [7:0])\\
     \hline
   \end{tabular}
-  \captionof{table}{ADS1015 register layout.}
+  \captionof{table}{Si7060 register layout.}
 \end{center}
 
 
@@ -554,7 +593,7 @@ The samples from the NS and EW channel are interleaved, starting with a NS sampl
   In some cases the available memory may be reduced to 2048 or 4096 samples if other modules require more memory.
 \end{warning}
 
-\subsubsection{Boot time and boot sequence}
+\subsection{Boot time and boot sequence}
 After power is applied the \ac{FPGA} loads its configuration from the SST26VF032B \ac{SPI} flash.
 As soon as the user code is running the \ac{RD} executes a hard-coded initialization sequence on the \ac{SPI} interface, as if the \ac{UUB} had sent the following commands:
 
