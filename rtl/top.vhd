@@ -121,14 +121,24 @@ architecture behaviour of top is
       o_trigger      : out std_logic_vector(0 to 3));
   end component;
   
-  --component triangle_source is
-  --  generic (g_ADC_BITS : natural := 12);
-  --  port (
-  --    i_clk : in std_logic;
-  --    o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
-  --    o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
-  --    );
-  --end component;
+  component triangle_source is
+    generic (g_ADC_BITS : natural := 12);
+    port (
+      i_clk : in std_logic;
+      o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
+      o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
+      );
+  end component;
+
+  component test_source is
+    generic (g_ADC_BITS : natural := 12);
+    port (
+      i_clk : in std_logic;
+      o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
+      o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
+      );
+  end component;
+
 
   component accumulator is
     generic (
@@ -166,7 +176,7 @@ architecture behaviour of top is
   end component;
 
   component housekeeping
-    generic (g_DEV_SELECT_BITS : natural := 8; g_DATA_WIDTH : natural);
+    generic (g_DEV_SELECT_BITS : natural := 8; g_ADC_BITS : natural := 12);
     port (
       i_hk_fast_clk  : in   std_logic;
       i_hk_uub_clk   : in   std_logic;
@@ -183,7 +193,11 @@ architecture behaviour of top is
       o_adc_mosi     : out  std_logic;
       o_adc_ce       : out  std_logic;
       i_data_clk     : in   std_logic;
-      i_data         : in std_logic_vector(g_DATA_WIDTH-1 downto 0);
+      i_data_ns_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+      i_data_ew_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+      i_data_ns_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+      i_data_ew_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+      i_data_extra   : in std_logic_vector(3 downto 0);
       o_start_offset : out std_logic_vector(15 downto 0);
       io_ads1015_sda : inout std_logic;
       io_ads1015_scl : inout std_logic;
@@ -315,22 +329,34 @@ begin
 --      o_data_odd  => w_data_ew_odd_accumulated);
   
   
-  --source : triangle_source
-  --  port map (
-  --    i_clk   => w_ddr_clk,
-  --    o_data_even => w_triangle_even,
-  --    o_data_odd  => w_triangle_odd
-  --    );
+--  source : triangle_source
+--    port map (
+--      i_clk   => w_ddr_clk,
+--      o_data_even => w_triangle_even,
+--      o_data_odd  => w_triangle_odd
+--      );
+  source : test_source
+    port map (
+      i_clk   => w_ddr_clk,
+      o_data_even => w_triangle_even,
+      o_data_odd  => w_triangle_odd
+      );
+
+  
     
-  u1: USRMCLK port map (
-    USRMCLKI => w_flash_clk,
-    USRMCLKTS => w_flash_ce);
+  u1: USRMCLK
+    port map (
+      USRMCLKI => w_flash_clk,
+      USRMCLKTS => w_flash_ce
+      );
 
 
   housekeeping_1 : housekeeping
     generic map (
       g_DEV_SELECT_BITS => 8,
-      g_DATA_WIDTH => 4*(g_ADC_BITS+1))
+      --g_DATA_WIDTH => 4*(g_ADC_BITS+1)
+      g_ADC_BITS => g_ADC_BITS
+      )
     port map (
       i_hk_fast_clk       => w_hk_fast_clk,
       -- we temporarily silence the housekeeping lines in case the incomming
@@ -353,19 +379,19 @@ begin
       i_data_clk          => w_ddr_clk,
       --i_data_clk          => w_accumulator_clk,
       -- four trigger lines are merged into the data as the 13'th bit of each sample
-      i_data(51)          => w_trigger(3),
-      i_data(38)          => w_trigger(2),
-      i_data(25)          => w_trigger(1),
-      i_data(12)          => w_trigger(0),
+      --i_data(51)          => w_trigger(3),
+      --i_data(38)          => w_trigger(2),
+      --i_data(25)          => w_trigger(1),
+      --i_data(12)          => w_trigger(0),
 
       -- in the spi data access the highest bits are sent first and interpreted
       -- as the NS channel by the accompanying tool
       
       -- real data:
-      i_data(50 downto 39) => w_data_ns_even,
-      i_data(37 downto 26) => w_data_ew_even,
-      i_data(24 downto 13) => w_data_ns_odd,
-      i_data(11 downto  0) => w_data_ew_odd,
+      --i_data_ns_even => w_data_ns_even,
+      --i_data_ew_even => w_data_ew_even,
+      --i_data_ns_odd  => w_data_ns_odd,
+      --i_data_ew_odd  => w_data_ew_odd,
 
       -- uncomment this to use the accumulated data for a longer window
       -- also use w_accumulator_clk instead of w_ddr_clk above
@@ -375,6 +401,11 @@ begin
       --i_data(11 downto  0) => w_data_ew_odd_accumulated,
 
       -- uncomment this instead if you want perfect triangle waves:
+      i_data_ns_even => w_triangle_even,
+      i_data_ew_even => w_triangle_even,
+      i_data_ns_odd  => w_triangle_odd,
+      i_data_ew_odd  => w_triangle_odd,
+      i_data_extra   => w_trigger,
       --i_data(50 downto 39) => w_triangle_even,
       --i_data(37 downto 26) => w_triangle_even,
       --i_data(24 downto 13) => w_triangle_odd,
@@ -406,10 +437,10 @@ begin
       -- way they are sent to the housekeeping above.
 
       -- use data lines (normal operations)
-      i_adc_data(47 downto 37) => w_data_ew_even(11 downto 1),
-      i_adc_data(35 downto 25) => w_data_ns_even(11 downto 1),
-      i_adc_data(23 downto 13) => w_data_ew_odd(11 downto 1),
-      i_adc_data(11 downto  1) => w_data_ns_odd(11 downto 1),
+      i_adc_data(47 downto 36) => w_data_ew_even(11 downto 0),
+      i_adc_data(35 downto 24) => w_data_ns_even(11 downto 0),
+      i_adc_data(23 downto 12) => w_data_ew_odd(11 downto 0),
+      i_adc_data(11 downto  0) => w_data_ns_odd(11 downto 0),
 
       -- uncomment this to use the accumulated data for a longer window
       -- also use w_accumulator_clk instead of w_ddr_clk below
@@ -425,10 +456,10 @@ begin
       --i_adc_data(11 downto  1) => w_triangle_odd(11 downto 1),
 
       -- put the trigger in the LSB, also change the ranges above
-      i_adc_data(36) => w_trigger(0), -- ew even
-      i_adc_data(24) => w_trigger(1), -- ns even
-      i_adc_data(12) => w_trigger(2), -- ew odd
-      i_adc_data( 0) => w_trigger(3), -- ns odd
+      --i_adc_data(36) => w_trigger(0), -- ew even
+      --i_adc_data(24) => w_trigger(1), -- ns even
+      --i_adc_data(12) => w_trigger(2), -- ew odd
+      --i_adc_data( 0) => w_trigger(3), -- ns odd
       
 
       -- or zeroes:

@@ -125,4 +125,4 @@ IOBUF PORT "o_led_ew" IO_TYPE=LVCMOS33 OPENDRAIN=ON ;
 IOBUF PORT "o_led_ns" IO_TYPE=LVCMOS33 OPENDRAIN=ON ;
 FREQUENCY NET "housekeeping_1/ads1015_1/r_i2c_clk" 0.800000 MHz ;
 FREQUENCY NET "housekeeping_1/r_internal_clk" 20.000000 MHz ;
-FREQUENCY NET "w_accumulator_clk" 31.250000 MHz ;
+FREQUENCY NET "reveal_ist_204_N_keep_keep_2" 50.000000 MHz ;

@@ -95,10 +95,49 @@
         <Source name="rtl/data_streamer/triangle_source.vhd" type="VHDL" type_short="VHDL">
             <Options/>
         </Source>
-        <Source name="rtl/data_streamer/accumulator.vhd" type="VHDL" type_short="VHDL">
+        <Source name="rtl/data_streamer/accumulator.vhd" type="VHDL" type_short="VHDL" excluded="TRUE">
             <Options/>
         </Source>
         <Source name="rtl/data_streamer/ddr_unscrambler.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/calibration.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/input_stage.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/running_avg.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/sync_1bit.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/stretch.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/versatile_fft/trunk/single_unit/src/butterfly.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/versatile_fft/trunk/single_unit/src/fft_engine.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/versatile_fft/trunk/single_unit/src/fft_len.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/versatile_fft/trunk/single_unit/src/icpx_pkg.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/versatile_fft/trunk/single_unit/src/icpxram.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/versatile_fft/trunk/single_unit/src/dpram_inf.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/housekeeping/calibration/output_stage.vhd" type="VHDL" type_short="VHDL">
+            <Options/>
+        </Source>
+        <Source name="rtl/data_streamer/test_source.vhd" type="VHDL" type_short="VHDL">
             <Options/>
         </Source>
         <Source name="auger.lpf" type="Logic Preference" type_short="LPF">

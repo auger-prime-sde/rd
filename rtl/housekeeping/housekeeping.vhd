@@ -7,7 +7,8 @@ use work.common.all;
 entity housekeeping is
   generic (
     g_DEV_SELECT_BITS : natural :=  8;
-    g_DATA_WIDTH : natural
+    --g_DATA_WIDTH : natural
+    g_ADC_BITS : natural := 12
     );
   port (
     i_hk_fast_clk        : in  std_logic; -- 100 MHz for internal operations
@@ -30,7 +31,11 @@ entity housekeeping is
     o_adc_ce            : out std_logic;
     -- raw capture via spi:
     i_data_clk          : in std_logic;
-    i_data              : in std_logic_vector(g_DATA_WIDTH-1 downto 0);
+    i_data_ns_even      : in std_logic_vector(g_ADC_BITS-1 downto 0);
+    i_data_ew_even      : in std_logic_vector(g_ADC_BITS-1 downto 0);
+    i_data_ns_odd       : in std_logic_vector(g_ADC_BITS-1 downto 0);
+    i_data_ew_odd       : in std_logic_vector(g_ADC_BITS-1 downto 0);
+    i_data_extra        : in std_logic_vector(3 downto 0);
     -- output for trigger offset
     o_start_offset      : out std_logic_vector(15 downto 0);
     -- housekeeping adc
@@ -106,7 +111,9 @@ architecture behaviour of housekeeping is
   signal r_adc_ce     : std_logic;
   signal r_adc_miso   : std_logic;
 
-  
+  -- wires for calibration:
+  signal r_calibration_miso : std_logic := '0';
+  signal r_fft_clk : std_logic;
 
 
   component spi_demux is
@@ -288,6 +295,28 @@ architecture behaviour of housekeeping is
            i_data_clk : in std_logic);
   end component;
 
+  component calibration is
+    generic (
+      g_SUBSYSTEM_ADDR : std_logic_vector;
+      g_ADC_BITS : natural := 12;
+      LOG2_FFT_LEN : integer := 5;
+      QUIET_THRESHOLD : integer := 50 );
+    port (
+      -- clk
+      i_data_clk : in std_logic;
+      i_fft_clk  : in std_logic;
+      -- data input:
+      i_data_ns_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+      i_data_ns_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+      i_data_ew_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+      i_data_ew_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+      -- spi interface for readout:
+      i_spi_clk      : in std_logic;
+      i_dev_select   : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+      i_spi_mosi     : in std_logic;
+      o_spi_miso     : out std_logic );
+  end component;
+
   
   constant c_ADS1015_READSEQUENCE : t_i2c_data := (
     -- write mux and trigger
@@ -372,7 +401,7 @@ begin
   r_adc_clk <= not r_internal_clk;
 
   -- select the housekeeping output miso depending on the selected peripheral 
-  o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso  or r_capture_miso or r_bias_miso;
+  o_hk_uub_miso <= r_flash_miso or r_adc_miso or r_gpio_miso or r_ads1015_miso or r_si7060_miso or r_version_miso or r_offset_miso  or r_capture_miso or r_bias_miso or r_calibration_miso;
 
   --r_trigger is the combination of periodic and artificial triggers
   r_trigger <= r_periodic_trigger or r_artificial_trigger;
@@ -464,6 +493,16 @@ begin
       i_clk => i_hk_fast_clk,
       o_clk => r_reveal_clk
       );
+
+  clock_divider_fft : clock_divider
+    generic map (
+      g_MAX_COUNT => 10 -- from 100 MHz to 10 MHz
+      )
+    port map (
+      i_clk => i_hk_fast_clk,
+      o_clk => r_fft_clk
+      );
+
 
 
   -- The ADS1015 at it's maximum conversion speed (3300 SPS) takes 0.315 uS to
@@ -560,6 +599,30 @@ begin
       i_dev_select  => r_subsystem_select
       );
 
+  
+  calibration_1 : calibration
+    generic map (
+      g_SUBSYSTEM_ADDR => "00001100",
+      g_ADC_BITS => 12,
+      LOG2_FFT_LEN => 5, -- 2048 bins fft
+      QUIET_THRESHOLD => 50
+      )
+    port map (
+      i_data_clk     => i_data_clk,
+      i_fft_clk      => r_fft_clk,
+      i_data_ns_even => i_data_ns_even,--i_data(50 downto 39),
+      i_data_ns_odd  => i_data_ns_odd, --i_data(24 downto 13),
+      i_data_ew_even => i_data_ew_even,--i_data(37 downto 26),
+      i_data_ew_odd  => i_data_ew_odd, --i_data(11 downto 0),
+      i_spi_clk      => r_internal_clk,
+      i_dev_select   => r_subsystem_select,
+      i_spi_mosi     => r_internal_mosi,
+      o_spi_miso     => r_calibration_miso
+      );
+
+        
+
+  
   start_offset_register : spi_register
     generic map (
       g_SUBSYSTEM_ADDR => "00001000",
@@ -587,7 +650,11 @@ begin
 --      i_spi_mosi => r_internal_mosi,
 --      o_spi_miso => r_capture_miso,
 --      i_dev_select => r_subsystem_select,
---      i_data => i_data,
+--      i_data_ns_even => i_data_ns_even,
+--      i_data_ew_even => i_data_ew_even,
+--      i_data_ns_odd  => i_data_ns_odd,
+--      i_data_ew_odd  => i_data_ew_odd,
+--      i_data_extra   => i_data_extra,
 --      i_data_clk => i_data_clk );
 --  
   

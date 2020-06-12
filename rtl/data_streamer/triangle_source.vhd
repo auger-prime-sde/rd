@@ -6,8 +6,8 @@ entity triangle_source is
   generic (g_ADC_BITS : natural := 12);
   port (
     i_clk  : in std_logic;
-    o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
-    o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
+    o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0) := (others => '0');
+    o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0) := (others => '0')
     );
 end triangle_source;
 
