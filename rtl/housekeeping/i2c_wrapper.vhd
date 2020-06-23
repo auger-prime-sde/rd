@@ -10,6 +10,7 @@ entity i2c_wrapper is
     -- divided by 2 because the i2c clock is half as fast as the internal clock
     -- used to produce it.
     g_SEQ_DATA : t_i2c_data;
+    g_OUTPUT_WIDTH : natural;
     g_ACK : std_logic := '0'
     );
   port (
@@ -28,13 +29,12 @@ entity i2c_wrapper is
     io_hk_scl     : inout std_logic;
 
     -- parallel output of all bytes
-    o_latched     : out std_logic_vector(8*8-1 downto 0)
+    o_latched     : out std_logic_vector(2 ** g_OUTPUT_WIDTH * 8 - 1 downto 0)
     );
 end i2c_wrapper;
 
 
 architecture behaviour of i2c_wrapper is
-  signal r_read_data    : std_logic_vector(7 downto 0);
   signal r_write_data   : std_logic_vector(7 downto 0);
   signal r_seq_data     : std_logic_vector(7 downto 0);
   signal r_spi_data     : std_logic_vector(7 downto 0);
@@ -47,9 +47,13 @@ architecture behaviour of i2c_wrapper is
   
   signal r_write_latch  : std_logic;
   signal r_read_latch   : std_logic;
+  signal r_latch_buffer : std_logic;
+  signal r_read_done    : std_logic;
+  signal r_full_data         :  std_logic_vector(2**g_OUTPUT_WIDTH*8-1 downto 0);
+  signal r_byte_data    : std_logic_vector(7 downto 0);
   
-  signal r_read_addr    : std_logic_vector(2 downto 0);
-  signal r_write_addr   : std_logic_vector(2 downto 0);
+  signal r_read_addr    : std_logic_vector(7 downto 0);
+  signal r_write_addr   : std_logic_vector(7 downto 0);
   signal r_next         : std_logic;
 
   signal r_i2c_clk  : std_logic;
@@ -93,7 +97,7 @@ architecture behaviour of i2c_wrapper is
       o_dir      : out std_logic;
       o_restart  : out std_logic;
       o_valid    : out std_logic;
-      o_addr     : out std_logic_vector(2 downto 0);
+      o_addr     : out std_logic_vector(7 downto 0);
       o_done     : out std_logic
       );
   end component;
@@ -126,24 +130,24 @@ architecture behaviour of i2c_wrapper is
       i_write_enable: in  std_logic;
       i_write_addr  : in  std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
       i_write_data  : in  std_logic_vector(g_DATA_WIDTH-1 downto 0);
-      i_read_clk    : in  std_logic;
-      i_read_enable : in  std_logic;
       i_read_addr   : in  std_logic_vector(g_ADDRESS_WIDTH-1 downto 0);
-      o_read_data   : out std_logic_vector(g_DATA_WIDTH-1 downto 0);
-      i_write_latch : in std_logic;
-      i_read_latch  : in std_logic;
-      o_latched     : out std_logic_vector(2**g_ADDRESS_WIDTH*g_DATA_WIDTH-1 downto 0)
+      o_byte_data   : out std_logic_vector(7 downto 0);
+      o_full_data   : out std_logic_vector(2**g_ADDRESS_WIDTH*g_DATA_WIDTH-1 downto 0);
+      i_latch       : in std_logic
     );
   end component;
 
 
 begin
-  r_read_latch <= '1' when i_dev_select = g_SUBSYSTEM_ADDR else '0';
-  r_spi_ce <= not r_read_latch;
+  r_spi_ce <= '0' when i_dev_select = g_SUBSYSTEM_ADDR else '1';
   o_spi_miso <= not r_spi_ce and r_spi_miso;
-  r_read_addr <= r_spi_data(2 downto 0);
-  --r_read_enable <= '1' when r_recv_count = std_logic_vector(to_unsigned(0, r_recv_count'length)) else '0';
-  r_read_enable <= '1' when r_recv_count = "00000000" else '0';
+
+  r_read_latch <= not r_spi_ce; -- latch for read when ce low
+  r_write_latch <= not r_read_done; -- latch for write during write
+  -- old data is latched as long as either read or write is in progress.
+  r_latch_buffer <= '1' when r_read_latch = '1' or r_write_latch = '1' else '0';
+
+  o_latched <= r_full_data;
   
   spi_decoder_1 : spi_decoder
     generic map (
@@ -156,8 +160,8 @@ begin
       o_spi_miso   => r_spi_miso,
       i_spi_ce     => r_spi_ce,
       i_clk        => i_hk_fast_clk,
-      o_data       => r_spi_data,
-      i_data       => r_read_data,
+      o_data       => r_read_addr,
+      i_data       => r_byte_data,
       o_recv_count => r_recv_count
       );
 
@@ -184,7 +188,7 @@ begin
       o_restart  => r_restart,
       o_valid    => r_seq_datavalid,
       o_addr     => r_write_addr,
-      o_done     => r_write_latch
+      o_done     => r_read_done
       );
   
   i2c_1 : i2c
@@ -206,19 +210,16 @@ begin
       );
 
   data_buffer_1 : housekeeping_buffer
-    generic map (g_DATA_WIDTH => 8, g_ADDRESS_WIDTH => 3)
+    generic map (g_DATA_WIDTH => 8, g_ADDRESS_WIDTH => g_OUTPUT_WIDTH)
     port map (
       i_write_clk    => r_i2c_clk,
       i_write_enable => r_write_enable,
-      i_write_addr   => r_write_addr,
+      i_write_addr   => r_write_addr(g_OUTPUT_WIDTH-1 downto 0),
       i_write_data   => r_write_data,
-      i_read_clk     => i_hk_fast_clk,
-      i_read_enable  => r_read_enable,
-      i_read_addr    => r_read_addr,
-      o_read_data    => r_read_data,
-      i_write_latch  => r_write_latch,
-      i_read_latch   => r_read_latch,
-      o_latched      => o_latched
+      i_read_addr    => r_read_addr(g_OUTPUT_WIDTH-1 downto 0),
+      o_byte_data    => r_byte_data,
+      o_full_data    => r_full_data,
+      i_latch        => r_latch_buffer
       );
   
   

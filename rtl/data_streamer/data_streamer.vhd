@@ -35,6 +35,7 @@ architecture behaviour of data_streamer is
   signal write_address : std_logic_vector(g_BUFFER_INDEXSIZE-1 downto 0); 
   signal read_address : std_logic_vector(g_BUFFER_INDEXSIZE downto 0);
   signal start_address : std_logic_vector(g_BUFFER_INDEXSIZE downto 0);
+  signal curr_address : std_logic_vector(g_BUFFER_INDEXSIZE downto 0);
   signal trigger_done : std_logic;
   signal arm : std_logic;
   signal tx_enable : std_logic;
@@ -42,7 +43,7 @@ architecture behaviour of data_streamer is
   signal r_trigger_odd : std_logic;
 
   
-  component data_buffer
+  component data_buffer is
     generic (g_DATA_WIDTH, g_ADDRESS_WIDTH : natural);
     port (
       i_write_clk   : in  std_logic;
@@ -57,7 +58,7 @@ architecture behaviour of data_streamer is
   end component;
 
  
-  component simple_counter
+  component simple_counter is
     generic ( g_SIZE : natural );
     port (
       i_clk: in std_logic;
@@ -65,7 +66,7 @@ architecture behaviour of data_streamer is
     );
   end component;
 
-  component data_writer
+  component data_writer is
     generic (g_WORDSIZE: natural; g_TARGET_PARITY : std_logic := '1');
     port (
       i_data        : in std_logic_vector(2*g_WORDSIZE-1 downto 0);
@@ -79,7 +80,7 @@ architecture behaviour of data_streamer is
   end component;
 
   
-  component write_controller
+  component write_controller is
     generic (
       g_ADDRESS_BITS : natural;
       g_TRACE_LENGTH : natural);
@@ -96,7 +97,7 @@ architecture behaviour of data_streamer is
     );
   end component;
 
-  component readout_controller
+  component readout_controller is
     generic (g_ADDRESS_BITS : natural; g_WORDSIZE : natural);
     port (
       i_clk          : in std_logic;
@@ -144,6 +145,8 @@ data_writer_1 : data_writer
     o_data_2       => o_tx_data(1),
     o_clk          => o_tx_clk);
 
+
+  curr_address <= write_address & r_trigger_odd;
 write_controller_1 : write_controller
   generic map (
     g_ADDRESS_BITS => g_BUFFER_INDEXSIZE+1, -- 4096 samples in buffer, needed
@@ -155,8 +158,7 @@ write_controller_1 : write_controller
     i_rst                                         => '0',
     i_clk                                         => i_clk,
     i_trigger                                     => i_trigger,
-    i_curr_addr(g_BUFFER_INDEXSIZE downto 1)      => write_address,
-    i_curr_addr(0)                                => r_trigger_odd,
+    i_curr_addr                                   => curr_address,
     i_arm                                         => arm,
     i_start_offset                                => i_start_offset,
     o_write_en                                    => buffer_write_en,

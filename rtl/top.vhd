@@ -12,7 +12,8 @@ entity top is
     -- Number of data bits from the ADC channels
     g_ADC_BITS         : natural := 12;
     -- Number of bits in index counters (11 gives 2048 samples stored on each channel)
-    g_BUFFER_INDEXSIZE : natural := 11);
+    g_BUFFER_INDEXSIZE : natural := 11;
+    g_OUTPUT_WIDTH: natural := 1);
 
   port (
     -- signals for adc driver:
@@ -329,18 +330,18 @@ begin
 --      o_data_odd  => w_data_ew_odd_accumulated);
   
   
---  source : triangle_source
---    port map (
---      i_clk   => w_ddr_clk,
---      o_data_even => w_triangle_even,
---      o_data_odd  => w_triangle_odd
---      );
-  source : test_source
+  source : triangle_source
     port map (
       i_clk   => w_ddr_clk,
       o_data_even => w_triangle_even,
       o_data_odd  => w_triangle_odd
       );
+--  source : test_source
+--    port map (
+--      i_clk   => w_ddr_clk,
+--      o_data_even => w_triangle_even,
+--      o_data_odd  => w_triangle_odd
+--      );
 
   
     

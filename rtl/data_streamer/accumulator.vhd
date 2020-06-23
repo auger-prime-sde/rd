@@ -11,8 +11,8 @@ entity accumulator is
     i_data_even: in std_logic_vector(g_WIDTH-1 downto 0);
     i_data_odd: in std_logic_vector(g_WIDTH-1 downto 0);
     o_clk : out std_logic;
-    o_data_even: out std_logic_vector(g_WIDTH-1 downto 0);
-    o_data_odd: out std_logic_vector(g_WIDTH-1 downto 0)
+    o_data_even: out std_logic_vector(g_WIDTH-1 downto 0) := (others => '0');
+    o_data_odd: out std_logic_vector(g_WIDTH-1 downto 0) := (others => '0')
     );
 end accumulator;
 

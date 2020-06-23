@@ -16,7 +16,7 @@ entity read_sequence is
     o_dir      : out std_logic;
     o_restart  : out std_logic;
     o_valid    : out std_logic;
-    o_addr     : out std_logic_vector(2 downto 0);
+    o_addr     : out std_logic_vector(7 downto 0) := (others => '0');
     o_done     : out std_logic
     );
 end read_sequence;
@@ -52,7 +52,7 @@ architecture behave of read_sequence is
 
 begin
   test_count <= std_logic_vector(to_unsigned(r_count, test_count'length));
-  o_done <= '1'when r_state = s_Done else '0';
+  o_done <= '1'when r_state = s_Done or r_state = s_Idle else '0';
 
   process(i_clk) is
   begin
@@ -70,8 +70,8 @@ begin
           o_dir <= g_SEQ_DATA(r_count).dir;
           o_restart <= g_SEQ_DATA(r_count).restart;
         when s_Data =>
-          -- the last 3 bits of data are abused to store the target addr in case of a read
-          o_addr <= g_SEQ_DATA(r_count).data(2 downto 0);
+          -- the data lines are abused to store the target addr in case of a read
+          o_addr <= g_SEQ_DATA(r_count).data;
           if i_next = '1' then
             r_count <= r_count + 1;
             o_valid <= '0';

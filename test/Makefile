@@ -29,6 +29,9 @@ output/%.o: data_streamer/%.vhd
 output/%.o: housekeeping/%.vhd
 	ghdl -a $(GHDL_OPTS) $(firstword $^)
 
+output/lfsr.o: ../rtl/data_streamer/test_source.vhd
+	ghdl -a $(GHDL_OPTS) $(firstword $^)
+
 # Rules for elaboration:
 %: output/%.o
 	ghdl -e $(GHDL_OPTS) $@

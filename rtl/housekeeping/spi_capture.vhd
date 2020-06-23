@@ -8,7 +8,7 @@ use ieee.numeric_std.all;
 
 entity spi_capture is
   generic (g_SUBSYSTEM_ADDR : std_logic_vector;
-           g_DATA_WIDTH: natural;
+           g_ADC_BITS: natural;
            g_BUFFER_LEN : natural := 1024 ); -- actually 2048 samples because 2
                                              -- arrive at once every clk
   port ( i_spi_clk : in std_logic;
@@ -16,11 +16,16 @@ entity spi_capture is
          o_spi_miso : out std_logic;
          i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
          -- raw data
-         i_data : in std_logic_vector(g_DATA_WIDTH-1 downto 0);
+         i_data_ns_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+         i_data_ew_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+         i_data_ns_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+         i_data_ew_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+         i_data_extra   : in std_logic_vector(3 downto 0);
          i_data_clk : in std_logic);
 end spi_capture;
 
 architecture behave of spi_capture is
+  constant g_DATA_WIDTH : natural := 4 * (g_ADC_BITS + 1);
   -- ram
   type ram_type is array (g_BUFFER_LEN-1 downto 0) of std_logic_vector (g_DATA_WIDTH-1 downto 0);
   signal ram : ram_type;
@@ -33,14 +38,14 @@ architecture behave of spi_capture is
   signal r_spi_clk_prev : std_logic;
   signal r_spi_miso   : std_logic := '0';
   signal r_read_bit   : natural range 0 to g_DATA_WIDTH-1;
-  signal r_read_data  : std_logic_vector(g_DATA_WIDTH-1 downto 0);
+  signal r_read_data, r_write_data  : std_logic_vector(g_DATA_WIDTH-1 downto 0);
   signal r_addr       : natural range 0 to g_BUFFER_LEN-1;
   signal w_write_enable : std_logic;
   signal w_control_register_out : std_logic_vector(7 downto 0);
 
   signal t_read_bit : std_logic_vector(15 downto 0);
   signal t_addr     : std_logic_vector(15 downto 0);
-
+  
   component spi_register is
     generic (
       g_SUBSYSTEM_ADDR : std_logic_vector;
@@ -63,6 +68,12 @@ begin
   t_addr     <= std_logic_vector(to_unsigned(r_addr, 16));
   t_read_bit <= std_logic_vector(to_unsigned(r_read_bit, 16));
 
+  r_write_data <= i_data_extra(3) & i_data_ns_even &
+                  i_data_extra(2) & i_data_ew_even &
+                  i_data_extra(1) & i_data_ns_odd &
+                  i_data_extra(0) & i_data_ew_odd;
+  
+  
   control_register : spi_register
     generic map (
       g_SUBSYSTEM_ADDR => g_SUBSYSTEM_ADDR, -- shared with data
@@ -105,7 +116,7 @@ begin
       if w_write_enable = '1' then
         -- write part:
         r_addr <= (r_addr + 1) mod g_BUFFER_LEN;
-        ram(r_addr) <= i_data;
+        ram(r_addr) <= r_write_data;
         -- reset the read counter
         --r_read_bit <= 0;
         --r_read_data <= (others => 'X');-- just an optimization

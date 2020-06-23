@@ -28,20 +28,22 @@ architecture behave of i2c_wrapper_tb is
   signal r_test  : std_logic_vector(15 downto 0) := "1010111101101000";
                                                    
   constant c_testdata : t_i2c_data := (
-    -- write address:
     (data => "01100010", restart => '1', dir => '0', delay => '0'),
-    -- write register (0xC0, i.e. chip id and rev):
     (data => "11000000", restart => '0', dir => '0', delay => '0'),
-    -- write address again and restart:
     (data => "01100011", restart => '1', dir => '0', delay => '0'),
-    -- read value of that reg, transmit NACK and save data at 001:
-    (data => "XXXXXXXX", restart => '0', dir => '1', delay => '0')  );
-  
+    (data => "00000001", restart => '0', dir => '1', delay => '0'),
+
+    (data => "01100010", restart => '1', dir => '0', delay => '0'),
+    (data => "11000000", restart => '0', dir => '0', delay => '0'),
+    (data => "01100011", restart => '1', dir => '0', delay => '0'),
+    (data => "00000010", restart => '0', dir => '1', delay => '0')  );
+
   
   component i2c_wrapper is
     generic (
        g_SUBSYSTEM_ADDR : std_logic_vector;
        g_SEQ_DATA : t_i2c_data;
+       g_OUTPUT_WIDTH : natural;
        g_ACK : std_logic := '0'
       );
     port (
@@ -58,7 +60,7 @@ architecture behave of i2c_wrapper_tb is
       io_hk_sda     : inout std_logic;
       io_hk_scl     : inout std_logic;
       -- data out
-      o_latched     : out std_logic_vector(8*8-1 downto 0)
+      o_latched     : out std_logic_vector(2 ** g_OUTPUT_WIDTH * 8 - 1 downto 0)
       );
   end component;
 
@@ -66,7 +68,9 @@ begin
   dut : i2c_wrapper
     generic map (
       g_SUBSYSTEM_ADDR => "00000100",
-      g_SEQ_DATA => c_testdata
+      g_SEQ_DATA => c_testdata,
+      g_OUTPUT_WIDTH => 8,
+      g_ACK => '1'
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
@@ -201,7 +205,7 @@ begin
 
     i_dev_select <= "00000000";
 
-    wait for 10 us;
+    wait for 100 us;
     
     stop <= '1';
     wait;

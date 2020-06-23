@@ -17,7 +17,7 @@ architecture behave of spi_capture_tb is
 
   component spi_capture is
     generic (g_SUBSYSTEM_ADDR : std_logic_vector;
-             g_DATA_WIDTH: natural;
+             g_ADC_BITS: natural;
              g_BUFFER_LEN : natural := 1024 ); -- actually 2048 samples because 2
                                                -- arrive at once every clk
     port ( i_spi_clk : in std_logic;
@@ -25,7 +25,11 @@ architecture behave of spi_capture_tb is
            o_spi_miso : out std_logic;
            i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
            -- raw data
-           i_data : in std_logic_vector(g_DATA_WIDTH-1 downto 0);
+           i_data_ns_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+           i_data_ew_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+           i_data_ns_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+           i_data_ew_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+           i_data_extra   : in std_logic_vector(3 downto 0);
            i_data_clk : in std_logic);
   end component;
 
@@ -34,14 +38,18 @@ begin
   dut : spi_capture
     generic map (
       g_SUBSYSTEM_ADDR => "00010010",
-      g_DATA_WIDTH     => 12,
+      g_ADC_BITS       => 12,
       g_BUFFER_LEN     => 16)
     port map (
       i_spi_clk        => spi_clk,
       i_spi_mosi       => '0',
       o_spi_miso       => open,
       i_dev_select     => dev,
-      i_data           => data,
+      i_data_ns_even   => data,
+      i_data_ew_even   => data,
+      i_data_ns_odd    => data,
+      i_data_ew_odd    => data,
+      i_data_extra     => data(3 downto 0),
       i_data_clk       => data_clk);
 
   p_data: process is

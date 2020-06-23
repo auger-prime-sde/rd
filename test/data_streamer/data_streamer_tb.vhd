@@ -13,7 +13,7 @@ architecture behave of data_streamer_tb is
 
   -- things that are generics in the real instance
   constant g_ADC_BITS : integer := 12;
-  constant g_BUFFER_INDEXSIZE : integer := 11;
+  constant g_BUFFER_INDEXSIZE : integer := 5;
 
   -- clocks and stop signal
   signal  clk, tx_clk, acc_clk, stop : std_logic := '0';
@@ -28,7 +28,7 @@ architecture behave of data_streamer_tb is
 
   signal trigger, trigger_even : std_logic := '0';
 
-  component data_streamer
+  component data_streamer is
     generic (
     -- Number of data bits from the ADC channels
     g_ADC_BITS : natural := 12;
@@ -107,25 +107,25 @@ begin
 
     trigger_even <= '0';
 
-    l1 : for i in 1 to 2000 loop
+    l1 : for i in 1 to 2 ** g_BUFFER_INDEXSIZE + 100 loop
       wait for clk_period;
-      report "initial delay " & integer'image(i);
+      --report "initial delay " & integer'image(i);
     end loop;
     
     -- pulse trigger
-    report "TRIGGER";
+    --report "TRIGGER";
     trigger <= '1';
     wait for 10 * clk_period;
     trigger <= '0';
     
     -- wait for result
-    l2 : for i in 1 to 2048 loop
+    l2 : for i in 1 to 2 ** g_BUFFER_INDEXSIZE loop
       wait for clk_period;
-      report "continued capture " & integer'image(i);
+      --report "continued capture " & integer'image(i);
     end loop;
-    l3 : for i in 1 to 2048 loop
+    l3 : for i in 1 to 2 ** g_BUFFER_INDEXSIZE loop
       wait for 13 * tx_clk_period;
-      report "transfer " & integer'image(i);
+      --report "transfer " & integer'image(i);
     end loop;
     
 
@@ -216,7 +216,7 @@ begin
       i_trigger        => trigger,
       i_trigger_even   => trigger_even,
       i_start_transfer => '1',
-      i_start_offset   => std_logic_vector(to_unsigned(1024, g_BUFFER_INDEXSIZE+1)),
+      i_start_offset   => std_logic_vector(to_unsigned(2 ** (g_BUFFER_INDEXSIZE-1), g_BUFFER_INDEXSIZE+1)),
       o_tx_data        => open,
       o_tx_clk         => open );
 

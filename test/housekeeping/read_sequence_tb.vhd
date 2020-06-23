@@ -29,27 +29,36 @@ architecture behavior of read_sequence_tb is
       o_dir      : out std_logic;
       o_restart  : out std_logic;
       o_valid    : out std_logic;
-      o_addr     : out std_logic_vector(2 downto 0);
+      o_addr     : out std_logic_vector(7 downto 0);
       o_done     : out std_logic
       );
   end component;
+--
+--  constant TESTDATA : t_i2c_data := (
+--    (data => "00000001", restart => '0', dir => '0', delay => '0'),-- select config register
+--    (data => "10000101", restart => '0', dir => '0', delay => '0'),-- trigger conversion
+--    (data => "10000000", restart => '0', dir => '0', delay => '0'),-- keep rest at default
+--    (data => "00000000", restart => '1', dir => '0', delay => '0'),-- select conversion register
+--    (data => "00000000", restart => '1', dir => '1', delay => '0'),
+--    (data => "00000001", restart => '0', dir => '1', delay => '0'),
+--    (data => "00000001", restart => '0', dir => '0', delay => '0'),-- select config register
+--    (data => "10000101", restart => '0', dir => '0', delay => '0'),-- trigger conversion
+--    (data => "10000000", restart => '0', dir => '0', delay => '0'),-- keep rest at default
+--    (data => "00000000", restart => '1', dir => '0', delay => '0'),-- select conversion register
+--    (data => "00000010", restart => '1', dir => '1', delay => '0'),
+--    (data => "00000011", restart => '0', dir => '1', delay => '0')    );
 
+  constant TESTDATA : t_i2c_data := (
+    (data => "00000001", restart => '0', dir => '0', delay => '0'),
+    (data => "00000001", restart => '0', dir => '0', delay => '0')
+    );
+
+  
 begin
 
   dut : read_sequence
     generic map (
-      g_SEQ_DATA => ((data => "00000001", restart => '0', dir => '0', delay => '0'),-- select config register
-                     (data => "10000101", restart => '0', dir => '0', delay => '0'),-- trigger conversion
-                     (data => "10000000", restart => '0', dir => '0', delay => '0'),-- keep rest at default
-                     (data => "00000000", restart => '1', dir => '0', delay => '0'),-- select conversion register
-                     (data => "XXXXXXXX", restart => '1', dir => '1', delay => '0'),
-                     (data => "XXXXXXXX", restart => '0', dir => '1', delay => '0'),
-                     (data => "00000001", restart => '0', dir => '0', delay => '0'),-- select config register
-                     (data => "10000101", restart => '0', dir => '0', delay => '0'),-- trigger conversion
-                     (data => "10000000", restart => '0', dir => '0', delay => '0'),-- keep rest at default
-                     (data => "00000000", restart => '1', dir => '0', delay => '0'),-- select conversion register
-                     (data => "XXXXXXXX", restart => '1', dir => '1', delay => '0'),
-                     (data => "XXXXXXXX", restart => '0', dir => '1', delay => '0'))
+      g_SEQ_DATA => TESTDATA
       )
     port map (
       i_clk     => clk,
@@ -58,7 +67,9 @@ begin
       o_data    => open,
       o_dir     => open,
       o_restart => open,
-      o_valid   => open
+      o_valid   => open,
+      o_addr    => open,
+      o_done    => open
       );
 
   p_clk : process is

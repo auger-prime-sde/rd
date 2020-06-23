@@ -15,7 +15,7 @@ entity readout_controller is
     o_arm          : out std_logic := '0';
     -- interface to data buffer:
     o_read_enable  : out std_logic := '1';
-    o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0);
+    o_read_addr    : out std_logic_vector(g_ADDRESS_BITS-1 downto 0) := (others => '0');
     o_clk_padding  : out std_logic := '0';
     -- interface to transmit
     o_tx_enable    : out std_logic := '0';
@@ -33,7 +33,7 @@ architecture behave of readout_controller is
   type t_State is (s_Initial, s_Idle, s_PreClk, s_Busy, s_PostClk, s_Arm);
   -- variables:
   signal r_State : t_State := s_Idle;
-  signal r_read_addr : std_logic_vector(g_ADDRESS_BITS-1 downto 0);
+  signal r_read_addr : std_logic_vector(g_ADDRESS_BITS-1 downto 0) := (others => '0');
   signal r_Count : natural  range 0 to c_TRANSMIT_BITS-1 := 0;
   signal r_trigger_done : std_logic := '0';
   signal r_tx_start : std_logic := '0';

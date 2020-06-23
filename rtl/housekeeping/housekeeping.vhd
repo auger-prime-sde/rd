@@ -172,6 +172,7 @@ architecture behaviour of housekeeping is
       g_SUBSYSTEM_ADDR : std_logic_vector;
       g_CLK_DIV : natural := 125; -- 400 kHz
       g_SEQ_DATA : t_i2c_data;
+      g_OUTPUT_WIDTH : natural;
       g_ACK : std_logic := '0'
     );
     port (
@@ -190,7 +191,7 @@ architecture behaviour of housekeeping is
       io_hk_scl     : inout std_logic;
 
       -- parellel out
-      o_latched     : out std_logic_vector(63 downto 0)
+      o_latched     : out std_logic_vector(2 ** g_OUTPUT_WIDTH * 8 - 1 downto 0)
       );
   end component;
 
@@ -284,14 +285,18 @@ architecture behaviour of housekeeping is
 
   component spi_capture is
     generic (g_SUBSYSTEM_ADDR : std_logic_vector;
-             g_DATA_WIDTH: natural;
+             g_ADC_BITS: natural;
              g_BUFFER_LEN: natural );
     port ( i_spi_clk : in std_logic;
            i_spi_mosi : in std_logic;
            o_spi_miso : out std_logic;
            i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
            -- raw data
-           i_data : in std_logic_vector(g_DATA_WIDTH-1 downto 0);
+           i_data_ns_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+           i_data_ew_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
+           i_data_ns_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+           i_data_ew_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
+           i_data_extra   : in std_logic_vector(3 downto 0);
            i_data_clk : in std_logic);
   end component;
 
@@ -515,6 +520,7 @@ begin
       g_SUBSYSTEM_ADDR => "00000100",
       g_CLK_DIV =>  125,
       g_SEQ_DATA => c_ADS1015_READSEQUENCE,
+      g_OUTPUT_WIDTH => 3,
       g_ACK => '0'
       )
     port map (
@@ -557,6 +563,7 @@ begin
       g_SUBSYSTEM_ADDR => "00000101",
       --g_CLK_DIV => 500,
       g_SEQ_DATA => c_SI7060_READSEQUENCE,
+      g_OUTPUT_WIDTH => 1,
       g_ACK => '1' -- this chip has it's ack values inverted, see datasheet
       )
     port map (
@@ -638,24 +645,24 @@ begin
       );
   
       
---  spi_capture_1 : spi_capture
---    generic map (
---      g_SUBSYSTEM_ADDR => "00001011",
---      g_DATA_WIDTH => g_DATA_WIDTH,
---      g_BUFFER_LEN => 8192 ) -- 1024 / 2048 / 4096 / 8192 / 16384 -- note that
+  spi_capture_1 : spi_capture
+    generic map (
+      g_SUBSYSTEM_ADDR => "00001011",
+      g_ADC_BITS => g_ADC_BITS,
+      g_BUFFER_LEN => 1024 ) -- 1024 / 2048 / 4096 / 8192 / 16384 -- note that
 --                             -- this is the number of clock cycles before even
---                             -- and off are split so you'll get twice as many samples
---    port map (
---      i_spi_clk => r_internal_clk,
---      i_spi_mosi => r_internal_mosi,
---      o_spi_miso => r_capture_miso,
---      i_dev_select => r_subsystem_select,
---      i_data_ns_even => i_data_ns_even,
---      i_data_ew_even => i_data_ew_even,
---      i_data_ns_odd  => i_data_ns_odd,
---      i_data_ew_odd  => i_data_ew_odd,
---      i_data_extra   => i_data_extra,
---      i_data_clk => i_data_clk );
+--                             -- and odd are split so you'll get twice as many samples
+    port map (
+      i_spi_clk => r_internal_clk,
+      i_spi_mosi => r_internal_mosi,
+      o_spi_miso => r_capture_miso,
+      i_dev_select => r_subsystem_select,
+      i_data_ns_even => i_data_ns_even,
+      i_data_ew_even => i_data_ew_even,
+      i_data_ns_odd  => i_data_ns_odd,
+      i_data_ew_odd  => i_data_ew_odd,
+      i_data_extra   => i_data_extra,
+      i_data_clk => i_data_clk );
 --  
   
   -- instantiate gpio subsystem
