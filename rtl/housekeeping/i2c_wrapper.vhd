@@ -47,7 +47,7 @@ architecture behaviour of i2c_wrapper is
   
   signal r_write_latch  : std_logic;
   signal r_read_latch   : std_logic;
-  signal r_latch_buffer : std_logic;
+  signal r_latch_buffer : std_logic := '0';
   signal r_read_done    : std_logic;
   signal r_full_data         :  std_logic_vector(2**g_OUTPUT_WIDTH*8-1 downto 0);
   signal r_byte_data    : std_logic_vector(7 downto 0);
@@ -145,7 +145,24 @@ begin
   r_read_latch <= not r_spi_ce; -- latch for read when ce low
   r_write_latch <= not r_read_done; -- latch for write during write
   -- old data is latched as long as either read or write is in progress.
-  r_latch_buffer <= '1' when r_read_latch = '1' or r_write_latch = '1' else '0';
+  --r_latch_buffer <= '1' when r_read_latch = '1' or r_write_latch = '1' else '0';
+
+  p_latch : process(r_i2c_clk) is
+  begin
+    if rising_edge(r_i2c_clk) then
+      if r_latch_buffer = '0' then
+        -- start latching when write is first enabled
+        if r_write_enable = '1' then
+          r_latch_buffer <= '1';
+        end if;
+      else
+        -- stop latching when read_done is received
+        if r_read_done = '1' then
+          r_latch_buffer <= '0';
+        end if;
+      end if;
+    end if;
+  end process;
 
   o_latched <= r_full_data;
   

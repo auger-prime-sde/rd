@@ -31,7 +31,7 @@ architecture behave of i2c_wrapper_tb is
     (data => "01100010", restart => '1', dir => '0', delay => '0'),
     (data => "11000000", restart => '0', dir => '0', delay => '0'),
     (data => "01100011", restart => '1', dir => '0', delay => '0'),
-    (data => "00000001", restart => '0', dir => '1', delay => '0'),
+    (data => "00000001", restart => '0', dir => '1', delay => '1'),
 
     (data => "01100010", restart => '1', dir => '0', delay => '0'),
     (data => "11000000", restart => '0', dir => '0', delay => '0'),
@@ -69,7 +69,7 @@ begin
     generic map (
       g_SUBSYSTEM_ADDR => "00000100",
       g_SEQ_DATA => c_testdata,
-      g_OUTPUT_WIDTH => 8,
+      g_OUTPUT_WIDTH => 2,
       g_ACK => '1'
       )
     port map (
@@ -178,7 +178,7 @@ begin
 
     
     -- wait some time
-    wait for 50 us;
+    wait for 250 us;
     
 
 

@@ -52,14 +52,16 @@ architecture behave of read_sequence is
 
 begin
   test_count <= std_logic_vector(to_unsigned(r_count, test_count'length));
-  o_done <= '1'when r_state = s_Done or r_state = s_Idle else '0';
+  --o_done <= '1' when r_state = s_Done else '0';
 
   process(i_clk) is
   begin
     if rising_edge(i_clk) then
       case r_state is
         when s_Idle =>
+          o_done <= '1';
           if i_trig = '1' then
+            o_done <= '0';
             r_state <= s_Load;
             r_count <= 0;
           end if;
