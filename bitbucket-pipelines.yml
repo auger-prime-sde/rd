@@ -3,15 +3,14 @@
 # Only use spaces to indent your .yml configuration.
 # -----
 # You can specify a custom docker image from Docker Hub as your build environment.
-image: ghdl/ghdl:ubuntu18-mcode
+image: ghdl/synth:formal
 
 pipelines:
   default:
     - step:
         script:
-          - apt-get update
-          - apt-get install make python3 --yes
           - make -C test all
           - make -C test runall GHDL_RUN_OPTS=--assert-level=error
+          - cd test && sby --yosys "yosys -mghdl" formal/write_controller.sby
 
 
