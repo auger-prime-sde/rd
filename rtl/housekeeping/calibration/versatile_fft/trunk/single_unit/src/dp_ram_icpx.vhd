@@ -58,7 +58,7 @@ architecture rtl of dp_ram_icpx is
   signal s_data_b : std_logic_vector(ICPX_BV_LEN-1 downto 0);
   signal s_q_b    : std_logic_vector(ICPX_BV_LEN-1 downto 0);
 
-  component dp_ram_scl
+  component dp_ram_scl is
     generic (
       DATA_WIDTH : integer;
       ADDR_WIDTH : integer);

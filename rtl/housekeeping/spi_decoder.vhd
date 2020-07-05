@@ -40,7 +40,8 @@ entity spi_decoder is
     -- that should work); or 2) set g_OUTPUT_BITS to 8 and delay the
     -- writing of the last 8 bits until the first 8 have been written.
     g_INPUT_BITS : natural := 32;
-    g_OUTPUT_BITS : natural := 32
+    g_OUTPUT_BITS : natural := 32;
+    g_DEFAULT : std_logic_vector(g_INPUT_BITS-1 downto 0) := (others => '0')
     );
   port (
     -- SPI interface:
@@ -50,7 +51,7 @@ entity spi_decoder is
     i_spi_ce     : in  std_logic;
     -- parallel interface to subsystem:
     i_clk        : in std_logic;
-    o_data       : out std_logic_vector(g_INPUT_BITS-1 downto 0) := (others => '0');
+    o_data       : out std_logic_vector(g_INPUT_BITS-1 downto 0) := g_DEFAULT;--(others => '0');
     i_data       : in std_logic_vector(g_OUTPUT_BITS-1 downto 0);
     o_recv_count : out std_logic_vector(g_INPUT_BITS-1 downto 0) := (others => '0')
     );

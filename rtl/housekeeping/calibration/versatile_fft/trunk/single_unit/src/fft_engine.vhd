@@ -75,7 +75,7 @@ architecture fft_engine_beh of fft_engine is
     step_out          => 0,
     stage_out_started => '0',
     mem_switch        => '0',
-    ready             => '0',
+    ready             => '1',
     busy              => '0',
     tf                => icpx_zero,
     latency_cnt       => 0
@@ -158,7 +158,7 @@ architecture fft_engine_beh of fft_engine is
   end n2k;
 
   -- Type used to store twiddle factors
-  type T_TF_TABLE is array (0 to FFT_LEN/2-1) of icpx_number;
+  type T_TF_TABLE is array (0 to FFT_LEN/2-1) of std_logic_vector(2*ICPX_WIDTH-1 downto 0);
 
   -- Function initializing the twiddle factor memory
   -- (during synthesis it is evaluated only during compilation!!!)
@@ -169,13 +169,13 @@ architecture fft_engine_beh of fft_engine is
   begin  -- i1st
     for i in 0 to FFT_LEN/2-1 loop
       x      := -real(i)*MATH_PI*2.0/(2.0 ** LOG2_FFT_LEN);
-      res(i) := cplx2icpx(complex'(cos(x), sin(x)));
+      res(i) := icpx2stlv(cplx2icpx(complex'(cos(x), sin(x))));
     end loop;  -- i
     return res;
   end tf_table_init;
 
   -- Twiddle factors ROM memory
-  constant tf_table : T_TF_TABLE := tf_table_init;
+  signal tf_table : T_TF_TABLE := tf_table_init;
 
 --constant tf_table : T_TF_TABLE := (
 --e => to_signed(1024, 12), Im => to_signed(0, 12)),
@@ -213,7 +213,7 @@ architecture fft_engine_beh of fft_engine is
   end tf_select;
 
 
-  component dp_ram_icpx
+  component dp_ram_icpx is
     generic (
       ADDR_WIDTH : integer);
     port (
@@ -228,7 +228,7 @@ architecture fft_engine_beh of fft_engine is
       q_b    : out icpx_number);
   end component;
 
-  component butterfly
+  component butterfly is
     port (
       din0  : in  icpx_number;
       din1  : in  icpx_number;
@@ -423,7 +423,7 @@ begin  -- fft_engine_beh
         -- so we need to output the twiddle factor also the next clock
         -- Twiddle factor
         -- Selection of the twiddle factor 
-        r_i.tf <= tf_table(tf_select(r_o.step_in, r_o.stage));  -- to be corrected!
+        r_i.tf <= stlv2icpx(tf_table(tf_select(r_o.step_in, r_o.stage)));  -- to be corrected!
         -- Increase number of step in the current stage
         if r_o.step_in < FFT_LEN/2-1 then
           r_i.step_in <= r_o.step_in+1;

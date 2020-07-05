@@ -302,14 +302,16 @@ architecture behaviour of housekeeping is
 
   component calibration is
     generic (
-      g_SUBSYSTEM_ADDR : std_logic_vector;
+      g_CONTROL_SUBSYSTEM_ADDR : std_logic_vector;
+      g_READOUT_SUBSYSTEM_ADDR : std_logic_vector;
       g_ADC_BITS : natural := 12;
-      LOG2_FFT_LEN : integer := 5;
+      LOG2_FFT_LEN : integer := 10;
       QUIET_THRESHOLD : integer := 50 );
     port (
       -- clk
-      i_data_clk : in std_logic;
-      i_fft_clk  : in std_logic;
+      i_data_clk    : in std_logic;
+      i_fft_clk     : in std_logic;
+      i_hk_fast_clk : in std_logic;
       -- data input:
       i_data_ns_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
       i_data_ns_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
@@ -317,7 +319,7 @@ architecture behaviour of housekeeping is
       i_data_ew_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
       -- spi interface for readout:
       i_spi_clk      : in std_logic;
-      i_dev_select   : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+      i_dev_select   : in std_logic_vector(g_CONTROL_SUBSYSTEM_ADDR'length-1 downto 0);
       i_spi_mosi     : in std_logic;
       o_spi_miso     : out std_logic );
   end component;
@@ -609,14 +611,16 @@ begin
   
   calibration_1 : calibration
     generic map (
-      g_SUBSYSTEM_ADDR => "00001100",
+      g_CONTROL_SUBSYSTEM_ADDR => "00001100",
+      g_READOUT_SUBSYSTEM_ADDR => "00001101",
       g_ADC_BITS => 12,
-      LOG2_FFT_LEN => 5, -- 2048 bins fft
+      LOG2_FFT_LEN => 10, -- 1024 bins complex fft on 2048 reals.
       QUIET_THRESHOLD => 50
       )
     port map (
       i_data_clk     => i_data_clk,
       i_fft_clk      => r_fft_clk,
+      i_hk_fast_clk  => i_hk_fast_clk,
       i_data_ns_even => i_data_ns_even,--i_data(50 downto 39),
       i_data_ns_odd  => i_data_ns_odd, --i_data(24 downto 13),
       i_data_ew_even => i_data_ew_even,--i_data(37 downto 26),

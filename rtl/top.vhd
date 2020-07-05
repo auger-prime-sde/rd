@@ -61,7 +61,9 @@ architecture behaviour of top is
   
   -- wires from adc driver to data streamer:
   signal w_adc_data  : std_logic_vector(4*(g_ADC_BITS+1)-1 downto 0);
-  signal w_triangle_even, w_triangle_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
+  --signal w_triangle_even, w_triangle_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
+  signal w_sinus_ns_even, w_sinus_ns_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
+  signal w_sinus_ew_even, w_sinus_ew_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
 
   signal
     w_data_ns_even,
@@ -139,6 +141,20 @@ architecture behaviour of top is
       o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
       );
   end component;
+
+  component sinus_source is
+    generic (
+      g_ADC_BITS  : natural := 12;
+      g_PERIOD_A  : natural := 25;
+      g_PERIOD_B  : natural := 3;
+      g_AMPLITUDE : real := 0.2    );
+    port (
+      i_clk : in std_logic;
+      o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
+      o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
+      );
+  end component;
+
 
 
   component accumulator is
@@ -330,18 +346,44 @@ begin
 --      o_data_odd  => w_data_ew_odd_accumulated);
   
   
-  source : triangle_source
-    port map (
-      i_clk   => w_ddr_clk,
-      o_data_even => w_triangle_even,
-      o_data_odd  => w_triangle_odd
-      );
+--  source : triangle_source
+--    port map (
+--      i_clk   => w_ddr_clk,
+--      o_data_even => w_triangle_even,
+--      o_data_odd  => w_triangle_odd
+--      );
+
 --  source : test_source
 --    port map (
 --      i_clk   => w_ddr_clk,
 --      o_data_even => w_triangle_even,
 --      o_data_odd  => w_triangle_odd
 --      );
+
+  source_10Mhz : sinus_source
+    generic map (
+      g_PERIOD_A  => 25,
+      g_PERIOD_B  => 1,
+      g_AMPLITUDE => 0.2
+      )
+    port map (
+      i_clk => w_ddr_clk,
+      o_data_even => w_sinus_ns_even,
+      o_data_odd  => w_sinus_ns_odd
+      );
+  
+  source_30Mhz : sinus_source
+    generic map (
+      g_PERIOD_A  => 25,
+      g_PERIOD_B  => 3,
+      g_AMPLITUDE => 0.3
+      )
+    port map (
+      i_clk => w_ddr_clk,
+      o_data_even => w_sinus_ew_even,
+      o_data_odd  => w_sinus_ew_odd
+      );
+
 
   
     
@@ -402,10 +444,10 @@ begin
       --i_data(11 downto  0) => w_data_ew_odd_accumulated,
 
       -- uncomment this instead if you want perfect triangle waves:
-      i_data_ns_even => w_triangle_even,
-      i_data_ew_even => w_triangle_even,
-      i_data_ns_odd  => w_triangle_odd,
-      i_data_ew_odd  => w_triangle_odd,
+      i_data_ns_even => w_sinus_ns_even,
+      i_data_ew_even => w_sinus_ew_even,
+      i_data_ns_odd  => w_sinus_ns_even,
+      i_data_ew_odd  => w_sinus_ew_odd ,
       i_data_extra   => w_trigger,
       --i_data(50 downto 39) => w_triangle_even,
       --i_data(37 downto 26) => w_triangle_even,

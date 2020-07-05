@@ -49,7 +49,8 @@ architecture behave of spi_capture is
   component spi_register is
     generic (
       g_SUBSYSTEM_ADDR : std_logic_vector;
-      g_REGISTER_WIDTH : natural := 8
+      g_REGISTER_WIDTH : natural := 8;
+      g_DEFAULT : std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
       );
     port (
       i_hk_fast_clk : in std_logic;
@@ -57,7 +58,9 @@ architecture behave of spi_capture is
       i_spi_mosi : in std_logic;
       o_spi_miso : out std_logic;
       i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
-      o_value: out std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
+      i_set : in  std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
+      i_clr : in  std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
+      o_data: out std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
       );
   end component;
 
@@ -77,14 +80,18 @@ begin
   control_register : spi_register
     generic map (
       g_SUBSYSTEM_ADDR => g_SUBSYSTEM_ADDR, -- shared with data
-      g_REGISTER_WIDTH => 8) -- can't set this to 1 because that triggers a bug
+      g_REGISTER_WIDTH => 8, -- can't set this to 1 because that triggers a bug
+      g_DEFAULT => std_logic_vector(to_unsigned(0, 8))) -- start in writing mode
+      -- TODO: I changed the above default from 1 to 0, check that it still works
     port map (
       i_hk_fast_clk => i_data_clk,
       i_spi_clk     => i_spi_clk,
       i_spi_mosi    => i_spi_mosi,
       o_spi_miso    => open,
       i_dev_select  => i_dev_select,
-      o_value       => w_control_register_out
+      i_set         => (others => '0'),
+      i_clr         => (others => '0'),
+      o_data        => w_control_register_out
       );
 
   -- pick first output bit as write enable line

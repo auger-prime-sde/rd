@@ -33,6 +33,7 @@ architecture rtl of dp_ram_scl is
   -- Shared memory
   type mem_type is array ((2**ADDR_WIDTH)-1 downto 0) of std_logic_vector(DATA_WIDTH-1 downto 0);
   shared variable mem : mem_type;
+  --signal mem : mem_type;
 begin
 
 -- Port A

@@ -6,7 +6,8 @@ use work.common.all;
 entity spi_register is
   generic (
     g_SUBSYSTEM_ADDR : std_logic_vector;
-    g_REGISTER_WIDTH : natural := 8
+    g_REGISTER_WIDTH : natural := 8;
+    g_DEFAULT : std_logic_vector(g_REGISTER_WIDTH-1 downto 0) := (others => '0')
     );
   port (
     i_hk_fast_clk : in std_logic;
@@ -14,7 +15,10 @@ entity spi_register is
     i_spi_mosi : in std_logic;
     o_spi_miso : out std_logic;
     i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
-    o_value: out std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
+    -- all bits can be individually overridden using the set/clear inputs
+    i_set  : in std_logic_vector(g_REGISTER_WIDTH-1 downto 0); 
+    i_clr  : in std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
+    o_data : out std_logic_vector(g_REGISTER_WIDTH-1 downto 0) := g_DEFAULT
     );
 end spi_register;
 
@@ -22,17 +26,19 @@ end spi_register;
 
 
 architecture behave of spi_register is
-  signal r_data : std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
+  signal r_data : std_logic_vector(g_REGISTER_WIDTH-1 downto 0) := g_DEFAULT;
   signal w_data : std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
   signal r_recv_count : std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
   signal r_spi_miso : std_logic;
   signal r_spi_ce : std_logic;
+  signal r_spi_ce_prev : std_logic;
   
     
   component spi_decoder is
     generic (
       g_INPUT_BITS  : natural := 32;
-      g_OUTPUT_BITS : natural := 32 );
+      g_OUTPUT_BITS : natural := 32;
+      g_DEFAULT : std_logic_vector(g_OUTPUT_BITS-1 downto 0));
     port (
       i_spi_clk    : in  std_logic;
       i_spi_mosi   : in  std_logic;
@@ -50,12 +56,13 @@ begin
   -- gate miso on ce line for good measure
   o_spi_miso <= not r_spi_ce and r_spi_miso;
   -- assign  output
-  o_value <= w_data;
+  o_data <= r_data;
   
   spi_decoder_1 : spi_decoder
     generic map (
       g_INPUT_BITS => g_REGISTER_WIDTH,
-      g_OUTPUT_BITS => g_REGISTER_WIDTH
+      g_OUTPUT_BITS => g_REGISTER_WIDTH,
+      g_DEFAULT => g_DEFAULT
       )
     port map (
       i_spi_clk => i_spi_clk,
@@ -71,8 +78,11 @@ begin
   process(i_hk_fast_clk) is
   begin
     if rising_edge(i_hk_fast_clk) then
-      if r_recv_count = std_logic_vector(to_unsigned(0, r_recv_count'length)) then
-        r_data <= w_data;
+      r_spi_ce_prev <= r_spi_ce;
+      if r_spi_ce = '1' and r_spi_ce_prev = '0' then
+        r_data <= (w_data or i_set) and (not i_clr);
+      else
+        r_data <= (r_data or i_set) and (not i_clr);
       end if;
     end if;
   end process;

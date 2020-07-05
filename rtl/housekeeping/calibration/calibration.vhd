@@ -9,15 +9,17 @@ use work.icpx.all;
 
 entity calibration is
   generic (
-    g_SUBSYSTEM_ADDR : std_logic_vector;
+    g_CONTROL_SUBSYSTEM_ADDR : std_logic_vector;
+    g_READOUT_SUBSYSTEM_ADDR : std_logic_vector;
     g_ADC_BITS : natural := 12;
     LOG2_FFT_LEN : integer := 11;
     QUIET_THRESHOLD : integer := 50
     );
   port (
     -- clk
-    i_data_clk : in std_logic;
-    i_fft_clk  : in std_logic;
+    i_data_clk    : in std_logic;
+    i_fft_clk     : in std_logic;
+    i_hk_fast_clk : in std_logic;
     -- data input:
     i_data_ns_even : in std_logic_vector(g_ADC_BITS-1 downto 0);
     i_data_ns_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
@@ -25,7 +27,7 @@ entity calibration is
     i_data_ew_odd  : in std_logic_vector(g_ADC_BITS-1 downto 0);
     -- spi interface for readout:
     i_spi_clk     : in std_logic;
-    i_dev_select  : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+    i_dev_select  : in std_logic_vector(g_CONTROL_SUBSYSTEM_ADDR'length-1 downto 0);
     i_spi_mosi    : in std_logic;
     o_spi_miso    : out std_logic
     );
@@ -51,7 +53,7 @@ architecture behave of calibration is
   end component;
   
   
-  component input_stage
+  component input_stage is
     generic (
       g_ADC_BITS : natural := 12;
       LOG2_FFT_LEN : integer := 11;
@@ -67,9 +69,10 @@ architecture behave of calibration is
       o_valid   : out std_logic;
       o_addr    : out std_logic_vector(LOG2_FFT_LEN-1 downto 0);
       o_start   : out std_logic;
-      o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
-      o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0);
-      i_rearm   : in std_logic
+      o_data_even : out std_logic_vector(ICPX_WIDTH-1 downto 0);
+      o_data_odd  : out std_logic_vector(ICPX_WIDTH-1 downto 0);
+      i_rearm   : in std_logic;
+      o_channel : out std_logic
       );
   end component;
 
@@ -110,7 +113,7 @@ architecture behave of calibration is
       clk       : in  std_logic);
   end component;
   
-  component output_stage
+  component output_stage is
     generic (
       g_WIDTH : natural;
       LOG2_FFT_LEN : integer := 11
@@ -118,15 +121,45 @@ architecture behave of calibration is
     port (
       i_clk : in std_logic;
       i_fft_ready : in std_logic;
+      i_channel : in std_logic;
       i_data_re : in std_logic_vector(g_WIDTH-1 downto 0);
       i_data_im : in std_logic_vector(g_WIDTH-1 downto 0);
       o_addr : out std_logic_vector(LOG2_FFT_LEN-1 downto 0);
-      o_rearm : out std_logic
+      o_rearm : out std_logic;
+      i_req_break : in std_logic;
+      i_req_clear : in std_logic;
+      i_buffer_select : in std_logic;
+      o_busy  : out std_logic;
+      -- spi port
+      i_hk_fast_clk : in std_logic;
+      i_spi_clk : in std_logic;
+      i_spi_ce  : in std_logic;
+      o_spi_mosi : out std_logic
       );
   end component;
 
+  component spi_register is
+    generic (
+      g_SUBSYSTEM_ADDR : std_logic_vector;
+      g_REGISTER_WIDTH : natural := 8;
+      g_DEFAULT : std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
+      );
+    port (
+      i_hk_fast_clk : in std_logic;
+      i_spi_clk : in std_logic;
+      i_spi_mosi : in std_logic;
+      o_spi_miso : out std_logic;
+      i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+      i_set : in std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
+      i_clr : in std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
+      o_data: out std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
+      );
+  end component;
+
+  signal r_channel : std_logic;
+  
   signal fft_in, fft_out : icpx_number;
-  signal fft_in_re, fft_in_im : std_logic_vector(g_ADC_BITS-1 downto 0);
+  signal fft_in_re, fft_in_im : std_logic_vector(ICPX_WIDTH-1 downto 0);
   signal fft_out_re, fft_out_im : std_logic_vector(ICPX_WIDTH-1 downto 0);
   --signal fft_out_re, fft_out_im : std_logic_vector(15 downto 0);
 
@@ -142,8 +175,10 @@ architecture behave of calibration is
   signal r_addr, r_addr_rev, r_addr_out, r_addr_out_rev : std_logic_vector(LOG2_FFT_LEN-1 downto 0);
   signal addr, addr_out : integer;
   signal r_rearm : std_logic;
-  signal r_miso : std_logic;
-  signal r_ce : std_logic;
+  signal r_control_miso, r_readout_miso : std_logic;
+  signal r_control_reg : std_logic_vector(7 downto 0);
+  signal r_output_stage_busy : std_logic;
+  signal r_readout_ce : std_logic;
 begin
 
 --  addr_counter : simple_counter
@@ -161,7 +196,7 @@ begin
     generic map (
       g_ADC_BITS => g_ADC_BITS,
       LOG2_FFT_LEN => LOG2_FFT_LEN,
-      QUIET_THRESHOLD => 50
+      QUIET_THRESHOLD => 500
       )
     port map (
       i_data_clk => i_data_clk,
@@ -175,7 +210,8 @@ begin
       o_start => fft_start,
       o_data_even => fft_in_re,
       o_data_odd => fft_in_im,
-      i_rearm => r_rearm
+      i_rearm => r_rearm,
+      o_channel => r_channel
       );
 
   outp : output_stage
@@ -186,10 +222,19 @@ begin
     port map (
       i_clk => i_fft_clk,
       i_fft_ready => fft_ready,
+      i_channel => r_channel,
       i_data_re => fft_out_re,
       i_data_im => fft_out_im,
       o_addr => r_addr_out,
-      o_rearm => r_rearm
+      o_rearm => r_rearm,
+      i_req_break => r_control_reg(0),
+      i_req_clear => r_control_reg(1),
+      i_buffer_select => r_control_reg(2),
+      o_busy => r_output_stage_busy,
+      i_hk_fast_clk => i_hk_fast_clk,
+      i_spi_clk => i_spi_clk,
+      i_spi_ce => r_readout_ce,
+      o_spi_mosi => r_readout_miso
       );
 --
   enable_not <= not input_valid;
@@ -205,6 +250,27 @@ begin
     r_addr_out_rev(i) <=  r_addr_out(LOG2_FFT_LEN-i-1);
     r_addr_rev(i)     <=  r_addr(LOG2_FFT_LEN-i-1);
   end generate;
+
+
+  control_reg : spi_register
+    generic map (
+      g_SUBSYSTEM_ADDR => g_CONTROL_SUBSYSTEM_ADDR,
+      g_REGISTER_WIDTH => 8,
+      g_DEFAULT => (others => '0')
+      )
+    port map (
+      i_hk_fast_clk => i_hk_fast_clk,
+      i_spi_clk => i_spi_clk,
+      i_spi_mosi => i_spi_mosi,
+      o_spi_miso => r_control_miso,
+      i_dev_select => i_dev_select,
+      i_set(7)  => r_output_stage_busy,
+      i_set(6 downto 0) => (others => '0'),
+      i_clr(7)  => not r_output_stage_busy,
+      i_clr(6 downto 0) => (others => '0'),
+      o_data => r_control_reg
+      );
+        
   
 --multi_unit_fft : fft_engine
 --  generic map (
@@ -239,34 +305,35 @@ begin
       clk       => i_fft_clk
       );
 
-  r_miso <= fft_out_re(0) xor
-            fft_out_re(1) xor
-            fft_out_re(2) xor
-            fft_out_re(3) xor
-            fft_out_re(4) xor
-            fft_out_re(5) xor
-            fft_out_re(6) xor
-            fft_out_re(7) xor
-            fft_out_re(8) xor
-            fft_out_re(9) xor
-            fft_out_re(10) xor
-            fft_out_re(11) xor
-            fft_out_im(0) xor
-            fft_out_im(1) xor
-            fft_out_im(2) xor
-            fft_out_im(3) xor
-            fft_out_im(4) xor
-            fft_out_im(5) xor
-            fft_out_im(6) xor
-            fft_out_im(7) xor
-            fft_out_im(8) xor
-            fft_out_im(9) xor
-            fft_out_im(10) xor
-            fft_out_im(11);
-            
-  r_ce <= '0' when i_dev_select = g_SUBSYSTEM_ADDR else '1';
+--  r_miso <= fft_out_re(0) xor
+--            fft_out_re(1) xor
+--            fft_out_re(2) xor
+--            fft_out_re(3) xor
+--            fft_out_re(4) xor
+--            fft_out_re(5) xor
+--            fft_out_re(6) xor
+--            fft_out_re(7) xor
+--            fft_out_re(8) xor
+--            fft_out_re(9) xor
+--            fft_out_re(10) xor
+--            fft_out_re(11) xor
+--            fft_out_im(0) xor
+--            fft_out_im(1) xor
+--            fft_out_im(2) xor
+--            fft_out_im(3) xor
+--            fft_out_im(4) xor
+--            fft_out_im(5) xor
+--            fft_out_im(6) xor
+--            fft_out_im(7) xor
+--            fft_out_im(8) xor
+--            fft_out_im(9) xor
+--            fft_out_im(10) xor
+--            fft_out_im(11);
+--            
 
-  o_spi_miso <= r_miso when r_ce = '0' else '0';
+  r_readout_ce <= '0' when i_dev_select = g_READOUT_SUBSYSTEM_ADDR else '1';
+  o_spi_miso <= r_control_miso when i_dev_select = g_CONTROL_SUBSYSTEM_ADDR else
+                r_readout_miso when i_dev_select = g_READOUT_SUBSYSTEM_ADDR else '0';
   
 
 -- 32 EBR blocks available in ECP5
