@@ -1,0 +1,20 @@
+[tasks]
+bmc
+cover
+
+[options]
+depth 40
+bmc: mode bmc
+cover: mode cover
+
+[engines]
+smtbmc z3
+
+[script]
+ghdl write_controller.vhd -e write_controller
+ghdl --std=08 -fpsl write_controller_properties.vhd -e write_controller_formal
+prep -auto-top
+
+[files]
+../rtl/data_streamer/write_controller.vhd
+formal/write_controller_properties.vhd
