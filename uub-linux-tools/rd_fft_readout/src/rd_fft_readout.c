@@ -103,12 +103,12 @@ static void transfer(int fd, uint8_t const *tx, uint8_t const *rx, size_t len)
 			tr.tx_buf = 0;
 	}
 
+	if (verbose && tx != NULL)
+		hex_dump(tx, len, 32, "TX");
+
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 	if (ret < 1)
 		pabort("can't send spi message");
-
-	if (verbose && tx != NULL)
-		hex_dump(tx, len, 32, "TX");
 
 	if (verbose && rx != NULL)
 		hex_dump(rx, len, 32, "RX");
@@ -304,6 +304,7 @@ int main(int argc, char *argv[])
 		int x2 = buf[1 + start_byte + 1];
 		int x3 = buf[1 + start_byte + 2];
 		int shift = (i + 1) * bin_width % 8;
+		shift = (8 - shift) % 8;
 		int mask  = (1 << bin_width) - 1;
 		int s = (((x1 << 16) + (x2 << 8) + x3) >> shift) & mask;
 		samples_ns[i] = s;
@@ -331,6 +332,7 @@ int main(int argc, char *argv[])
 		int x2 = buf[1 + start_byte + 1];
 		int x3 = buf[1 + start_byte + 2];
 		int shift = (i + 1) * bin_width % 8;
+		shift = (8 - shift) % 8;
 		int mask  = (1 << bin_width) - 1;
 		int s = (((x1 << 16) + (x2 << 8) + x3) >> shift) & mask;
 		samples_ew[i] = s;

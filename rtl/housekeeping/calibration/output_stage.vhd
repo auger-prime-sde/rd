@@ -62,7 +62,18 @@ architecture behave of output_stage is
 
   -- TODO: prevent overflow and set a warning
   type t_ram is array (FFT_LEN - 1 downto 0) of std_logic_vector(g_SUM_WIDTH - 1 downto 0);
-  signal power_ns, power_ew: t_ram;
+  
+  function zeros
+    return t_ram is
+    variable res : t_ram;
+  begin
+    for i in 0 to FFT_LEN - 1 loop
+      res(i) := (others => '0');
+    end loop;
+    return res;
+  end function zeros;
+
+  signal power_ns, power_ew: t_ram := zeros;
 
   signal r_fft_count : natural range 0 to g_MAX_FFTS := 0;
   signal r_old_sum : unsigned(g_SUM_WIDTH-1 downto 0);
@@ -161,6 +172,16 @@ begin
   r_power_write_enable_ew <= '1' when (r_state = s_Process and i_channel = '1') or r_state = s_Clear else '0';
 
   
+  r_old_sum <= unsigned(r_power_ns_read_data) when i_channel = '0' else unsigned(r_power_ew_read_data);
+
+--  if i_channel = '0' then
+    r_power_ns_write_data <= (others => '0') when r_state = s_Clear else std_logic_vector(to_unsigned(to_integer(r_pow.Re) + to_integer(r_old_sum), g_SUM_WIDTH));
+--  else
+    r_power_ew_write_data <= (others => '0') when r_state = s_Clear else std_logic_vector(to_unsigned(to_integer(r_pow.Re) + to_integer(r_old_sum), g_SUM_WIDTH));
+--  end if;
+
+          
+  
   p_write : process(i_clk) is
   begin
     if rising_edge(i_clk) then
@@ -202,33 +223,22 @@ begin
           if i_fft_ready = '1' and r_fft_ready = '0' then
             r_state <= s_Preload;
             r_count <= 1;
+            r_power_read_addr <= 0;
           end if;
 
           
         when s_Preload =>
           -- capture Z[k] 
           r_preload <= (Re => signed(i_data_re), Im => signed(i_data_im), Ov => '0');
+          
           -- also remember the old sum
-          if i_channel = '0' then
-            --r_old_sum <= unsigned(power_ns((r_count - 1) mod FFT_LEN));
-            r_old_sum <= unsigned(r_power_ns_read_data);
-          else
-            r_old_sum <= unsigned(r_power_ew_read_data);
-            --r_old_sum <= unsigned(power_ew((r_count - 1) mod FFT_LEN));
-          end if;
           
           r_state <= s_Process;
         when s_Process =>
+          r_power_read_addr <= r_count;
           -- store the new sum
           -- TODO: I think this can be simplified by having a single write data:
-          if i_channel = '0' then
-            r_power_ns_write_data <= std_logic_vector(to_unsigned(to_integer(r_pow.Re) + to_integer(r_old_sum), g_SUM_WIDTH));
-            --power_ns((r_count - 1) mod FFT_LEN) <= std_logic_vector(to_unsigned(to_integer(r_pow.Re) + to_integer(r_old_sum), g_SUM_WIDTH));
-          else
-            r_power_ew_write_data <= std_logic_vector(to_unsigned(to_integer(r_pow.Re) + to_integer(r_old_sum), g_SUM_WIDTH));
-            --power_ew((r_count - 1) mod FFT_LEN) <= std_logic_vector(to_unsigned(to_integer(r_pow.Re) + to_integer(r_old_sum), g_SUM_WIDTH));
-          end if;
-          
+                    
           -- use Z*[N/2-k] and fudge factor to compute Xk and consequently r_pow
 
           -- advance count
@@ -258,7 +268,9 @@ begin
             r_state <= s_Preload;
           end if;
 
-        -- In readout we pause the fft's and enable reading via spi
+          -- In readout we pause the fft's and enable reading via spi
+          -- TODO: After readout an extra rearm pulse occurs, that makes the
+          -- input stage flip channel select
         when s_Readout =>
           -- on falling CE rewind
           if i_spi_ce = '0' and r_spi_ce_prev = '1' then
@@ -305,8 +317,8 @@ begin
         when s_Clear =>
           r_fft_count <= 0;
           --power_ns((r_count - 1) mod FFT_LEN) <= (others => '0');
-          r_power_ns_write_data <= (others => '0');
-          r_power_ew_write_data <= (others => '0');
+          --r_power_ns_write_data <= (others => '0');
+          --r_power_ew_write_data <= (others => '0');
           --power_ew((r_count - 1) mod FFT_LEN) <= (others => '0');
           if r_count = FFT_LEN - 1 then
             -- rewind counter and go to readout for good measure (in case req

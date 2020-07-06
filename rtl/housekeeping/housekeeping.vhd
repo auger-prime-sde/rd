@@ -259,7 +259,8 @@ architecture behaviour of housekeeping is
   component spi_register is
     generic (
       g_SUBSYSTEM_ADDR : std_logic_vector;
-      g_REGISTER_WIDTH : natural := 8
+      g_REGISTER_WIDTH : natural := 8;
+      g_DEFAULT : std_logic_vector(g_REGISTER_WIDTH-1 downto 0) := (others => '0')
       );
     port (
       i_hk_fast_clk : in std_logic;
@@ -267,10 +268,13 @@ architecture behaviour of housekeeping is
       i_spi_mosi : in std_logic;
       o_spi_miso : out std_logic;
       i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
-      o_value: out std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
+      -- all bits can be individually overridden using the set/clear inputs
+      i_set  : in std_logic_vector(g_REGISTER_WIDTH-1 downto 0); 
+      i_clr  : in std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
+      o_data : out std_logic_vector(g_REGISTER_WIDTH-1 downto 0) := g_DEFAULT
       );
   end component;
-      
+  
   component periodic_trigger is
     generic (
       g_PERIOD : natural;
@@ -637,7 +641,8 @@ begin
   start_offset_register : spi_register
     generic map (
       g_SUBSYSTEM_ADDR => "00001000",
-      g_REGISTER_WIDTH => 16
+      g_REGISTER_WIDTH => 16,
+      g_DEFAULT        => std_logic_vector(to_unsigned(1024, 16))
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
@@ -645,7 +650,9 @@ begin
       i_spi_mosi    => r_internal_mosi,
       o_spi_miso    => r_offset_miso,
       i_dev_select  => r_subsystem_select,
-      o_value       => o_start_offset
+      i_set         => (others => '0'),
+      i_clr         => (others => '0'),
+      o_data        => o_start_offset
       );
   
       

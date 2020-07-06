@@ -26,7 +26,7 @@ architecture behave of calibration_tb is
       g_CONTROL_SUBSYSTEM_ADDR : std_logic_vector;
       g_READOUT_SUBSYSTEM_ADDR : std_logic_vector;
       g_ADC_BITS : natural := 12;
-      LOG2_FFT_LEN : integer := 11;
+      LOG2_FFT_LEN : integer := 10;
       QUIET_THRESHOLD : integer := 50
       );
     port (
@@ -69,6 +69,20 @@ architecture behave of calibration_tb is
       );
   end component;
 
+  component sinus_source is
+    generic (
+      g_ADC_BITS  : natural := 12;
+      g_PERIOD_A  : natural := 25;
+      g_PERIOD_B  : natural := 3;
+      g_AMPLITUDE : real := 0.2    );
+    port (
+      i_clk : in std_logic;
+      o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
+      o_data_odd  : out std_logic_vector(g_ADC_BITS-1 downto 0)
+      );
+  end component;
+
+
   
     
   --------------------------------
@@ -107,27 +121,54 @@ begin
       o_spi_miso       => miso
       );
 
-  sin_ns : sin_source
+--  sin_ns : sin_source
+--    generic map (
+--      g_FREQ_SIG  => 10.0e6,
+--      g_AMPLITUDE => 0.3
+--      )
+--    port map (
+--      i_clk  => data_clk,
+--      o_data_even => data_ns_even,
+--      o_data_odd  => data_ns_odd
+--      );
+--  
+--  sin_ew : sin_source
+--    generic map (
+--      g_FREQ_SIG  => 22.0e6,
+--      g_AMPLITUDE => 0.02
+--      )
+--    port map (
+--      i_clk  => data_clk,
+--      o_data_even => data_ew_even,
+--      o_data_odd  => data_ew_odd
+--      );
+
+  source_10Mhz : sinus_source
     generic map (
-      g_FREQ_SIG  => 10.0e6,
-      g_AMPLITUDE => 0.3
+      g_PERIOD_A  => 25,
+      g_PERIOD_B  => 1,
+      g_AMPLITUDE => 0.1
       )
     port map (
-      i_clk  => data_clk,
+      i_clk => data_clk,
       o_data_even => data_ns_even,
       o_data_odd  => data_ns_odd
       );
+
+
   
-  sin_ew : sin_source
+  source_30Mhz : sinus_source
     generic map (
-      g_FREQ_SIG  => 22.0e6,
-      g_AMPLITUDE => 0.2
+      g_PERIOD_A  => 25,
+      g_PERIOD_B  => 3,
+      g_AMPLITUDE => 0.1
       )
     port map (
-      i_clk  => data_clk,
+      i_clk => data_clk,
       o_data_even => data_ew_even,
       o_data_odd  => data_ew_odd
       );
+
 
 --  triangle_ns : triangle_source
 --    port map (

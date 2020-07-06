@@ -3,7 +3,7 @@ import numpy as np
 from math import floor, sqrt
 from pprint import pprint
 
-LOG_FFT_LEN = 5
+LOG_FFT_LEN = 10
 ICPX_WIDTH = 18
 FFT_LEN = 2 ** LOG_FFT_LEN
 scale = 2 ** (ICPX_WIDTH - 2) / FFT_LEN * 2

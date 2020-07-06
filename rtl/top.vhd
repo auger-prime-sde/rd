@@ -364,7 +364,7 @@ begin
     generic map (
       g_PERIOD_A  => 25,
       g_PERIOD_B  => 1,
-      g_AMPLITUDE => 0.2
+      g_AMPLITUDE => 0.1
       )
     port map (
       i_clk => w_ddr_clk,
@@ -376,7 +376,7 @@ begin
     generic map (
       g_PERIOD_A  => 25,
       g_PERIOD_B  => 3,
-      g_AMPLITUDE => 0.3
+      g_AMPLITUDE => 0.1
       )
     port map (
       i_clk => w_ddr_clk,
@@ -446,7 +446,7 @@ begin
       -- uncomment this instead if you want perfect triangle waves:
       i_data_ns_even => w_sinus_ns_even,
       i_data_ew_even => w_sinus_ew_even,
-      i_data_ns_odd  => w_sinus_ns_even,
+      i_data_ns_odd  => w_sinus_ns_odd,
       i_data_ew_odd  => w_sinus_ew_odd ,
       i_data_extra   => w_trigger,
       --i_data(50 downto 39) => w_triangle_even,

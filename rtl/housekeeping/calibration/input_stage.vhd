@@ -51,12 +51,14 @@ architecture behave of input_stage is
   
   --
   signal r_input_select : std_logic := '0';
-  signal w_over_thres, w_over_thres_ns, w_over_thres_ew, w_over_thres_ns_stretch, w_over_thres_ew_stretch : std_logic;
+  signal w_over_thres : std_logic := '1';
+  signal w_over_thres_ns, w_over_thres_ew, w_over_thres_ns_stretch, w_over_thres_ew_stretch : std_logic;
 
   
   -- write controller
-  type t_write_state is (s_Write_Busy, s_Write_Idle);
-  signal r_write_state : t_write_state := s_Write_Busy;
+  -- The initial state is only needed for sim
+  type t_write_state is (s_Write_initial, s_Write_Busy, s_Write_Idle);
+  signal r_write_state : t_write_state := s_write_initial;
   --signal r_write_addr : std_logic_vector(LOG2_FFT_LEN - 1 downto 0) := (others => '0');
   signal r_write_addr : integer range 0 to 2 ** LOG2_FFT_LEN - 1 := 0;
 
@@ -271,6 +273,8 @@ begin
   begin
     if rising_edge(i_data_clk) then
       case r_write_state is
+        when s_write_initial =>
+          r_write_state <= s_Write_Busy;
         when s_Write_Busy =>
           buffer_full <= '0';
           if w_over_thres = '1' then
