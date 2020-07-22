@@ -26,7 +26,7 @@ architecture behave of calibration_tb is
       g_CONTROL_SUBSYSTEM_ADDR : std_logic_vector;
       g_READOUT_SUBSYSTEM_ADDR : std_logic_vector;
       g_ADC_BITS : natural := 12;
-      LOG2_FFT_LEN : integer := 10;
+      LOG2_FFT_LEN : integer := 5;
       QUIET_THRESHOLD : integer := 50
       );
     port (
@@ -105,7 +105,7 @@ begin
     generic map (
       g_CONTROL_SUBSYSTEM_ADDR => "00001100",
       g_READOUT_SUBSYSTEM_ADDR => "00001101",
-      LOG2_FFT_LEN         => 9
+      LOG2_FFT_LEN         => 5
       )
     port map (
       i_data_clk       => data_clk,
@@ -214,7 +214,7 @@ begin
   p_main : process is
   begin
     -- give it some time
-    for i in 1 to 400 loop
+    for i in 1 to 100 loop
       wait for 1 us;
       report "initial iteration " & integer'image(i);
     end loop;
