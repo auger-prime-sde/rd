@@ -14,7 +14,7 @@ all: $(basename $(notdir $(testfiles)))
 runall: $(runfiles)
 
 #GHDL_OPTS = --ieee=synopsys -fexplicit -Plattice/ecp5u/v93
-GHDL_OPTS = --workdir=output --std=08 -fsynopsys
+GHDL_OPTS = --workdir=output --std=08 -fsynopsys -frelaxed
 #GHDL_RUN_OPTS = --assert-level=warning --ieee-asserts=disable
 #GHDL_RUN_OPTS = --psl-report=$^.test_coverage.rpt
 
