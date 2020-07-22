@@ -30,6 +30,7 @@ static uint16_t delay = 0;
 static int verbose;
 static int transfer_size;
 static bool suppress_write = false;
+static bool do_print_samples = false;
 
 //#define CHUNKSIZE 2048
 #define CHUNKSIZE 988
@@ -101,12 +102,13 @@ static void transfer(int fd, uint8_t const *tx, uint8_t const *rx, size_t len)
 			tr.tx_buf = 0;
 	}
 
+	if (verbose && tx != NULL)
+			hex_dump(tx, len, 32, "TX");
+
 	ret = ioctl(fd, SPI_IOC_MESSAGE(1), &tr);
 	if (ret < 1)
 		pabort("can't send spi message");
 
-	if (verbose && tx != NULL)
-		hex_dump(tx, len, 32, "TX");
 
 	if (verbose && rx != NULL)
 		hex_dump(rx, len, 32, "RX");
@@ -128,7 +130,8 @@ static void print_usage(const char *prog)
 	     "  -v --verbose  Verbose (show tx buffer)\n"
 	     "  -N --no-cs    no chip select\n"
 	     "  -S --size     transfer size\n"
-	     "  -n --no-write suppress spi transactions that force a write period\n");
+	     "  -n --no-write suppress spi transactions that force a write period\n"
+		 "  -P --do-print also print the sample values as ascii to stdout\n");
 	exit(1);
 }
 
@@ -150,11 +153,12 @@ static void parse_opts(int argc, char *argv[])
 			{ "verbose", 0, 0, 'v' },
 			{ "size",    1, 0, 'S' },
 			{ "no-write",0, 0, 'n' },
+			{ "do-print",0, 0, 'P' },
 			{ NULL, 0, 0, 0 },
 		};
 		int c;
 
-		c = getopt_long(argc, argv, "D:s:d:b:o:HOLC3NvS:n",
+		c = getopt_long(argc, argv, "D:s:d:b:o:HOLC3NvS:nP",
 				lopts, NULL);
 
 		if (c == -1)
@@ -202,6 +206,9 @@ static void parse_opts(int argc, char *argv[])
 			break;
 		case 'n':
 			suppress_write = true;
+			break;
+		case 'P':
+			do_print_samples = true;
 			break;
 		default:
 			print_usage(argv[0]);
@@ -284,7 +291,8 @@ int main(int argc, char *argv[])
 		buf[1] = 0x01;
 		transfer(fd, buf, NULL, 2);
 
-		// sleep() not needed because transactions should take more than enough time to fill our buffer
+		// not strictly needed because transactions should take more than enough time to fill our buffer
+		 usleep(1000); // sleep at least 8.192 us (time to fill the buffer)
 
 		// disable writing to spi capture buffer
 		buf[0] = 0x0B; // command to active spi readout
@@ -299,7 +307,7 @@ int main(int argc, char *argv[])
 	for (i=0; i<num_transfers; i++) {
 		int chunksize = CHUNKSIZE;
 		if (transfer_size - i * CHUNKSIZE < chunksize) chunksize = transfer_size - i * CHUNKSIZE;
-		printf("Transferring chunk %d of %d bytes\n", i, chunksize);
+		printf("Transferring chunk %d of %d: %d bytes\n", i, num_transfers, chunksize);
 
 		memset(buf, 0, CHUNKSIZE + 1);
 		buf[0] = 0x0B;
@@ -308,6 +316,39 @@ int main(int argc, char *argv[])
 		int ret = write(out_fd, buf + 1, chunksize);
 		if (ret != chunksize)
 			pabort("not all bytes written to output file");
+
+		// unpack the tightly packed 13 bit samples into integers
+		int samples_in_chunk = chunksize * 8 / 13;
+		// the shifts are a bit hard to calculate, but fortunately they repeat every 8 samples
+		int shifts[8] = {11, 6, 9, 4, 7, 10, 5, 8};
+		int * samples = malloc(samples_in_chunk * sizeof(int));
+		int j;
+		for (j=0; j<samples_in_chunk; j++) {
+			int start_bit  = 13 * j;
+			int start_byte = start_bit / 8;
+			int x1 = buf[1 + start_byte + 0];
+			int x2 = buf[1 + start_byte + 1];
+			int x3 = buf[1 + start_byte + 2];
+			int shift = shifts[j % 8];
+			int mask  = 0x0FFF;
+			int s = (((x1 << 16) + (x2 << 8) + x3) >> shift) & mask;
+			samples[j] = s;
+			//printf("decoding bytes %d-%d");
+		}
+
+		// print
+		if (do_print_samples) {
+			printf("    NS     EW\n");
+			for (j=0; j<samples_in_chunk; j++) {
+				int s = samples[j] > 2047 ? samples[j] - 4096 : samples[j];
+				if (j%2 == 0) {
+					printf("%6d", s);
+				} else {
+					printf(" %6d\n", s);
+				}
+
+			}
+		}
 	}
 
 	close(out_fd);

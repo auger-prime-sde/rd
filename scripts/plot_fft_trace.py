@@ -90,10 +90,19 @@ ax.plot(xf, ypow_ew, label='fft from raw (EW)')
 ##
 # Second, the new pre-processed fft
 ##
+MAX_FFTS = 10
 fft_ns, fft_ew = get_fft()
+N = 2 * len(fft_ns)
+
+fft_ns = N * fft_ns # normalize
+fft_ns = fft_ns / MAX_FFTS # do the actual average
+#fft_ns = fft_ns / (2 ** 16) # 16 fractional bits were used
+
+fft_ew = N * fft_ew # normalize
+fft_ew = fft_ew / MAX_FFTS # do the actual average
+#fft_ew = fft_ew / (2 ** 16) # 16 fractional bits were used
 
 # compute the coherent propagation gain of the embedded window
-N = 2 * len(fft_ns)
 w = np.zeros((N), dtype='float')
 
 for n in np.arange(0, N):
@@ -108,8 +117,8 @@ CPG = np.sum(w)/N
 CPGdB = -20*np.log10(CPG)
 
 
-fft_ns = 10 * np.log10(fft_ns/100) -CPGdB
-fft_ew = 10 * np.log10(fft_ew/100) -CPGdB
+fft_ns = 10 * np.log10(fft_ns * 2 ** 18) - MAX_FFTS * CPGdB
+fft_ew = 10 * np.log10(fft_ew * 2 ** 18) - MAX_FFTS * CPGdB
 ax.plot(xf, fft_ns, label='RD fft (NS) 100-avg')
 ax.plot(xf, fft_ew, label='RD fft (EW) 100-avg')
 

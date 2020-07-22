@@ -59,6 +59,8 @@ end spi_decoder;
 
 architecture behave of spi_decoder is
 
+  signal r_spi_clk : std_logic;
+  
   signal r_read_count   : natural range 0 to g_INPUT_BITS-1 := g_INPUT_BITS-1;
   signal r_write_count  : natural range 0 to g_OUTPUT_BITS-1 := g_OUTPUT_BITS-1;
 
@@ -73,39 +75,44 @@ begin
   r_write_count_test <= std_logic_vector(to_unsigned(r_write_count, g_OUTPUT_BITS));
   
   
-  p_read : process(i_spi_clk) is
+  p_read : process(i_clk) is
   begin
 
-    if rising_edge(i_spi_clk) then
-      if i_spi_ce = '0' then
-        o_data(r_read_count) <= i_spi_mosi;
-        if r_read_count = 0 then
-          r_read_count <= g_INPUT_BITS-1;
+    if rising_edge(i_clk) then
+      r_spi_clk <= i_spi_clk;
+      if i_spi_clk = '1' and r_spi_clk = '0' then -- rising edge
+        if i_spi_ce = '0' then
+          o_data(r_read_count) <= i_spi_mosi;
+          if r_read_count = 0 then
+            r_read_count <= g_INPUT_BITS-1;
+          else
+            r_read_count <= r_read_count - 1;
+          end if;
         else
-          r_read_count <= r_read_count - 1;
+          -- TODO: this reset should not be necessary: investigate at which point
+          -- this gets shifted to a bad value if if that is problematic
+          r_read_count <= g_INPUT_BITS-1;
         end if;
-      else
-        -- TODO: this reset should not be necessary: investigate at which point
-        -- this gets shifted to a bad value if if that is problematic
-        r_read_count <= g_INPUT_BITS-1;
-      end if;
-    end if; -- rising_edge(i_spi_clk)
+      end if; -- rising_edge(i_spi_clk)
+    end if; -- rising edge i_clk
   end process;
 
-  p_write : process(i_spi_clk) is
+  p_write : process(i_clk) is
   begin
-    if falling_edge(i_spi_clk) then
-      if i_spi_ce = '0' then
-        o_spi_miso <= i_data(r_write_count);
-        if r_write_count = 0 then
-          r_write_count <= g_OUTPUT_BITS-1;
+    if rising_edge(i_clk) then
+      if i_spi_clk = '0' and r_spi_clk = '1' then
+        if i_spi_ce = '0' then
+          o_spi_miso <= i_data(r_write_count);
+          if r_write_count = 0 then
+            r_write_count <= g_OUTPUT_BITS-1;
+          else
+            r_write_count <= r_write_count - 1;
+          end if;
         else
-          r_write_count <= r_write_count - 1;
+          r_write_count <= g_OUTPUT_BITS-1;
         end if;
-      else
-        r_write_count <= g_OUTPUT_BITS-1;
-      end if;
-    end if; -- falling_edge(i_spi_clk)
+      end if; -- falling_edge(i_spi_clk)
+    end if; -- rising_edge i_clk
   end process;
   
 

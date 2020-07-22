@@ -74,7 +74,7 @@ architecture behave of calibration_tb is
       g_ADC_BITS  : natural := 12;
       g_PERIOD_A  : natural := 25;
       g_PERIOD_B  : natural := 3;
-      g_AMPLITUDE : real := 0.2    );
+      g_AMPLITUDE : real := 0.1    );
     port (
       i_clk : in std_logic;
       o_data_even : out std_logic_vector(g_ADC_BITS-1 downto 0);
@@ -105,7 +105,7 @@ begin
     generic map (
       g_CONTROL_SUBSYSTEM_ADDR => "00001100",
       g_READOUT_SUBSYSTEM_ADDR => "00001101",
-      LOG2_FFT_LEN         => 5
+      LOG2_FFT_LEN         => 9
       )
     port map (
       i_data_clk       => data_clk,
@@ -184,6 +184,7 @@ begin
     if stop = '1' then
       wait;
     else
+      --report "clock tick";
       data_clk <= not data_clk;
       wait for clk_period_data / 2;
     end if;
@@ -213,8 +214,13 @@ begin
   p_main : process is
   begin
     -- give it some time
-    wait for 100 us;
-
+    for i in 1 to 400 loop
+      wait for 1 us;
+      report "initial iteration " & integer'image(i);
+    end loop;
+    
+    report "initial wait over";
+    
     -- spi transaction to request a readout
     dev_select <= "00001100";
     wait for clk_period_spi / 2;

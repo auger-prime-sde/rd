@@ -39,6 +39,12 @@ end input_stage;
 
 architecture behave of input_stage is
 
+  -- The FFT uses ICPX_WIDTH, so to get maximum precision we represent the
+  -- window using ICPX_WIDTH - 12 so that the result is ICPX_WIDTH wide.
+  --constant WINDOW_BITS : natural := ICPX_WIDTH - g_ADC_BITS;
+  constant WINDOW_BITS : natural := 32;
+  
+
   attribute syn_ramstyle : string;
   attribute syn_ramstyle of behave : architecture is "block_ram";
   attribute syn_romstyle : string;
@@ -68,8 +74,8 @@ architecture behave of input_stage is
   signal r_read_data_even, r_read_data_odd : std_logic_vector(g_ADC_BITS-1 downto 0);
   signal r_read_addr : integer range 0 to 2 ** LOG2_FFT_LEN - 1 := 0;
 
-  signal r_window : std_logic_vector(2 * ICPX_WIDTH - 1 downto 0);
-  signal r_window_even, r_window_odd : signed(ICPX_WIDTH-1 downto 0);
+  signal r_window : std_logic_vector(2 * WINDOW_BITS - 1 downto 0);
+  signal r_window_even, r_window_odd : signed(WINDOW_BITS - 1 downto 0);
   
   --signal r_rdaddress : std_logic_vector(10 downto 0);
   --signal r_wrAddress : std_logic_vector( 9 downto 0);
@@ -91,13 +97,12 @@ architecture behave of input_stage is
   -- twice because we abuse a 1024 bin complex FFT to compute a 2048 bin real fft.
   -- TODO: check that it's symmetrical and ditch half of this buffer
 
-  
-  type t_window is array (0 to FFT_LEN / 2 - 1) of std_logic_vector(2 * ICPX_WIDTH - 1 downto 0);
+  type t_window is array (0 to FFT_LEN / 2 - 1) of std_logic_vector(2 * WINDOW_BITS - 1 downto 0);
   function window_gen
     return t_window is
     variable x_even, x_odd : real;
     variable w_even, w_odd : real;
-    variable v_even, v_odd : std_logic_vector(ICPX_WIDTH - 1 downto 0);
+    variable v_even, v_odd : std_logic_vector(WINDOW_BITS - 1 downto 0);
     variable res : t_window;
   begin  -- function window_gen
     for i in 0 to FFT_LEN / 2 - 1 loop
@@ -119,8 +124,9 @@ architecture behave of input_stage is
               + 0.00001388721735 * cos( 6.0 * x_odd );
       -- the window function is <1 everywhere so we use all bits except the
       -- sign bit for the factional part, hence ICPX_WIDTH - 1
-      v_even := std_logic_vector(to_signed(integer(w_even * 2.0 ** (ICPX_WIDTH-1)), ICPX_WIDTH));
-      v_odd  := std_logic_vector(to_signed(integer(w_odd  * 2.0 ** (ICPX_WIDTH-1)), ICPX_WIDTH));
+      -- updated: changed that back to ICPX_WIDTH-2 
+      v_even := std_logic_vector(to_signed(integer(w_even * 2.0 ** (WINDOW_BITS-2)), WINDOW_BITS));
+      v_odd  := std_logic_vector(to_signed(integer(w_odd  * 2.0 ** (WINDOW_BITS-2)), WINDOW_BITS));
       res(i) := v_even & v_odd;
     end loop;  -- i
     return res;
@@ -128,7 +134,35 @@ architecture behave of input_stage is
   -- Window function ROM memory
   signal window_function : t_window := window_gen;
 
+  -- pre-computed table is needed for WINDOW_WIDTH > 32
+  -- compute, e.g., using python:
+  -- import numpy as np
+  -- WINDOW_BITS = 36
+  -- FFT_LEN = 1024 # number of reals, number of complex is half of that
+  -- i = np.arange(FFT_LEN)
+  -- x = i * np.pi * 2. / (FFT_LEN-1)
+  -- w = 0.27105140069342
+  --   - 0.43329793923448 * np.cos(       x )
+  --   + 0.21812299954311 * np.cos( 2.0 * x )
+  --   - 0.06592544638803 * np.cos( 3.0 * x )
+  --   + 0.01081174209837 * np.cos( 4.0 * x )
+  --   - 0.00077658482522 * np.cos( 5.0 * x )
+  --   + 0.00001388721735 * np.cos( 6.0 * x )
+  -- n = w * 2 ** (WINDOW_BITS - 2)
+  -- r = n.round().astype('int')
+  -- from functools import partial
+  -- binary = np.vectorize(partial(np.binary_repr, width=WINDOW_BITS))
+  -- b = binary(r)
+  -- for e,o in b.reshape((FFT_LEN//2,2)):
+  --      print('"{}{}",'.format(e,o))
 
+  
+--  signal window_function : t_window := (
+
+--);
+
+  
+  signal data_with_window_even, data_with_window_odd :std_logic_vector(g_ADC_BITS + WINDOW_BITS - 1 downto 0);
   
   component running_avg is
     generic (
@@ -185,7 +219,7 @@ begin
   running_avg_ew : running_avg
     generic map (
       g_ADC_BITS => g_ADC_BITS,
-      g_AVG_NUM_BITS => 8
+      g_AVG_NUM_BITS => 10
       )
     port map (
       i_clk       => i_data_clk,
@@ -312,18 +346,29 @@ begin
   --r_window_odd     <= signed(window_function(2*r_read_addr + 1));
 
   r_window <= window_function(r_read_addr);
-  r_window_even    <= signed(r_window(2 * ICPX_WIDTH - 1 downto ICPX_WIDTH));
-  r_window_odd     <= signed(r_window(     ICPX_WIDTH - 1 downto          0));
+  r_window_even    <= signed(r_window(2 * WINDOW_BITS - 1 downto WINDOW_BITS));
+  r_window_odd     <= signed(r_window(    WINDOW_BITS - 1 downto           0));
 
+  data_with_window_even <= std_logic_vector((signed(r_read_data_even) * r_window_even));
+  data_with_window_odd  <= std_logic_vector((signed(r_read_data_odd ) * r_window_odd ));
 
   
   p_read : process (i_fft_clk) is -- 100 MHz
   begin
     if rising_edge(i_fft_clk) then
-      
+
+      -- TODO: I think we should shift our selection one to the right here so
+      -- as to discard 11 fractional bits and the duplicated sign bit. 
       o_addr <= std_logic_vector(to_unsigned(r_read_addr, o_addr'length));
-      o_data_even <= std_logic_vector(to_signed(to_integer(signed(r_read_data_even)) * to_integer(signed(r_window_even)), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-1 downto g_ADC_BITS));
-      o_data_odd  <= std_logic_vector(to_signed(to_integer(signed(r_read_data_odd )) * to_integer(signed(r_window_odd )), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-1 downto g_ADC_BITS));
+      --o_data_even <= std_logic_vector(to_signed(to_integer(signed(r_read_data_even)) * to_integer(signed(r_window_even)), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-1 downto g_ADC_BITS));
+      --o_data_odd  <= std_logic_vector(to_signed(to_integer(signed(r_read_data_odd )) * to_integer(signed(r_window_odd )), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-1 downto g_ADC_BITS));
+      --o_data_even <= std_logic_vector(to_signed(to_integer(signed(r_read_data_even)) * to_integer(signed(r_window_even)), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-2 downto g_ADC_BITS-1));
+      --o_data_odd  <= std_logic_vector(to_signed(to_integer(signed(r_read_data_odd )) * to_integer(signed(r_window_odd )), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-2 downto g_ADC_BITS-1));
+      --o_data_even <= std_logic_vector(signed(r_read_data_even) * r_window_even);
+      --o_data_odd  <= std_logic_vector(signed(r_read_data_odd ) * r_window_odd );
+      
+      o_data_even <= data_with_window_even(g_ADC_BITS+WINDOW_BITS-2 downto g_ADC_BITS+WINDOW_BITS-ICPX_WIDTH+1-2);
+      o_data_odd  <= data_with_window_odd (g_ADC_BITS+WINDOW_BITS-2 downto g_ADC_BITS+WINDOW_BITS-ICPX_WIDTH+1-2);
       
       case r_read_state is
         when s_Read_Idle =>

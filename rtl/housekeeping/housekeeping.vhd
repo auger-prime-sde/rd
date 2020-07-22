@@ -290,8 +290,9 @@ architecture behaviour of housekeeping is
   component spi_capture is
     generic (g_SUBSYSTEM_ADDR : std_logic_vector;
              g_ADC_BITS: natural;
-             g_BUFFER_LEN: natural );
-    port ( i_spi_clk : in std_logic;
+             g_BUFFER_ADDR_BITS: natural );
+    port ( i_hk_clk   : in std_logic;
+           i_spi_clk : in std_logic;
            i_spi_mosi : in std_logic;
            o_spi_miso : out std_logic;
            i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
@@ -618,7 +619,7 @@ begin
       g_CONTROL_SUBSYSTEM_ADDR => "00001100",
       g_READOUT_SUBSYSTEM_ADDR => "00001101",
       g_ADC_BITS => 12,
-      LOG2_FFT_LEN => 10, -- 1024 bins complex fft on 2048 reals.
+      LOG2_FFT_LEN => 9, -- 1024 bins complex fft on 2048 reals.
       QUIET_THRESHOLD => 50
       )
     port map (
@@ -656,25 +657,26 @@ begin
       );
   
       
-  spi_capture_1 : spi_capture
-    generic map (
-      g_SUBSYSTEM_ADDR => "00001011",
-      g_ADC_BITS => g_ADC_BITS,
-      g_BUFFER_LEN => 1024 ) -- 1024 / 2048 / 4096 / 8192 / 16384 -- note that
+--  spi_capture_1 : spi_capture
+--    generic map (
+--      g_SUBSYSTEM_ADDR => "00001011",
+--      g_ADC_BITS => g_ADC_BITS,
+--      g_BUFFER_ADDR_BITS => 10 ) -- 1024 / 2048 / 4096 / 8192 / 16384 -- note that
 --                             -- this is the number of clock cycles before even
 --                             -- and odd are split so you'll get twice as many samples
-    port map (
-      i_spi_clk => r_internal_clk,
-      i_spi_mosi => r_internal_mosi,
-      o_spi_miso => r_capture_miso,
-      i_dev_select => r_subsystem_select,
-      i_data_ns_even => i_data_ns_even,
-      i_data_ew_even => i_data_ew_even,
-      i_data_ns_odd  => i_data_ns_odd,
-      i_data_ew_odd  => i_data_ew_odd,
-      i_data_extra   => i_data_extra,
-      i_data_clk => i_data_clk );
---  
+--    port map (
+--      i_hk_clk => i_hk_fast_clk,
+--      i_spi_clk => r_internal_clk,
+--      i_spi_mosi => r_internal_mosi,
+--      o_spi_miso => r_capture_miso,
+--      i_dev_select => r_subsystem_select,
+--      i_data_ns_even => i_data_ns_even,
+--      i_data_ew_even => i_data_ew_even,
+--      i_data_ns_odd  => i_data_ns_odd,
+--      i_data_ew_odd  => i_data_ew_odd,
+--      i_data_extra   => i_data_extra,
+--      i_data_clk => i_data_clk );
+  
   
   -- instantiate gpio subsystem
   digitalout_1 : digitaloutput

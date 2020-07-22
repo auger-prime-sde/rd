@@ -61,7 +61,7 @@ architecture behaviour of top is
   
   -- wires from adc driver to data streamer:
   signal w_adc_data  : std_logic_vector(4*(g_ADC_BITS+1)-1 downto 0);
-  --signal w_triangle_even, w_triangle_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
+  signal w_triangle_even, w_triangle_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
   signal w_sinus_ns_even, w_sinus_ns_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
   signal w_sinus_ew_even, w_sinus_ew_odd  : std_logic_vector(g_ADC_BITS-1 downto 0);
 
@@ -376,7 +376,7 @@ begin
     generic map (
       g_PERIOD_A  => 25,
       g_PERIOD_B  => 3,
-      g_AMPLITUDE => 0.1
+      g_AMPLITUDE => 1.99
       )
     port map (
       i_clk => w_ddr_clk,
@@ -431,10 +431,10 @@ begin
       -- as the NS channel by the accompanying tool
       
       -- real data:
-      --i_data_ns_even => w_data_ns_even,
-      --i_data_ew_even => w_data_ew_even,
-      --i_data_ns_odd  => w_data_ns_odd,
-      --i_data_ew_odd  => w_data_ew_odd,
+      i_data_ns_even => w_data_ns_even,
+      i_data_ew_even => w_data_ew_even,
+      i_data_ns_odd  => w_data_ns_odd,
+      i_data_ew_odd  => w_data_ew_odd,
 
       -- uncomment this to use the accumulated data for a longer window
       -- also use w_accumulator_clk instead of w_ddr_clk above
@@ -444,15 +444,15 @@ begin
       --i_data(11 downto  0) => w_data_ew_odd_accumulated,
 
       -- uncomment this instead if you want perfect triangle waves:
-      i_data_ns_even => w_sinus_ns_even,
-      i_data_ew_even => w_sinus_ew_even,
-      i_data_ns_odd  => w_sinus_ns_odd,
-      i_data_ew_odd  => w_sinus_ew_odd ,
+      --i_data_ns_even => w_sinus_ns_even,
+      --i_data_ew_even => w_sinus_ew_even,
+      --i_data_ns_odd  => w_sinus_ns_odd,
+      --i_data_ew_odd  => w_sinus_ew_odd ,
       i_data_extra   => w_trigger,
-      --i_data(50 downto 39) => w_triangle_even,
-      --i_data(37 downto 26) => w_triangle_even,
-      --i_data(24 downto 13) => w_triangle_odd,
-      --i_data(11 downto  0) => w_triangle_odd,
+      --i_data_ns_even => w_triangle_even,
+      --i_data_ew_even => w_triangle_even,
+      --i_data_ns_odd  => w_triangle_odd,
+      --i_data_ew_odd  => w_triangle_odd,
 
       -- or zeroes:
       --i_data(50 downto 39) => (others => '0'),
@@ -480,11 +480,17 @@ begin
       -- way they are sent to the housekeeping above.
 
       -- use data lines (normal operations)
-      i_adc_data(47 downto 36) => w_data_ew_even(11 downto 0),
-      i_adc_data(35 downto 24) => w_data_ns_even(11 downto 0),
-      i_adc_data(23 downto 12) => w_data_ew_odd(11 downto 0),
-      i_adc_data(11 downto  0) => w_data_ns_odd(11 downto 0),
+      --i_adc_data(47 downto 36) => w_data_ew_even(11 downto 0),
+      --i_adc_data(35 downto 24) => w_data_ns_even(11 downto 0),
+      --i_adc_data(23 downto 12) => w_data_ew_odd(11 downto 0),
+      --i_adc_data(11 downto  0) => w_data_ns_odd(11 downto 0),
 
+      -- use the data lines with fake sinuses
+      i_adc_data(47 downto 36) => w_sinus_ew_even,
+      i_adc_data(35 downto 24) => w_sinus_ns_even,
+      i_adc_data(23 downto 12) => w_sinus_ew_odd,
+      i_adc_data(11 downto  0) => w_sinus_ns_odd,
+      
       -- uncomment this to use the accumulated data for a longer window
       -- also use w_accumulator_clk instead of w_ddr_clk below
       --i_adc_data(47 downto 36) => w_data_ew_even_accumulated,

@@ -4,7 +4,10 @@ import matplotlib.pyplot as plt
 import pandas as pd
 plt.ion()
 
-with open('/home/themba/temp/rd_metadata_2020-06-02 10:57:41.txt') as f:
+filename = '/home/themba/temp/rd_metadata_2020-06-02 10:57:41.txt'
+filename = "rd_metadata_2.txt"
+
+with open(filename) as f:
     lines = np.array(f.readlines())
 #with open('rd_metadata_lab.txt') as f:
 #    lines = np.array(f.readlines())

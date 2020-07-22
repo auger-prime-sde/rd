@@ -37,14 +37,21 @@ architecture behave of status_led is
       
 begin
   
-  slow_blinker : clock_divider
-    generic map ( g_MAX_COUNT => c_SLOW_PERIOD)
-    port map (  i_clk => i_clk,
-                o_clk => r_slow_blink  );
+--  slow_blinker : clock_divider
+--    generic map ( g_MAX_COUNT => c_SLOW_PERIOD)
+--    port map (  i_clk => i_clk,
+--                o_clk => r_slow_blink  );
   fast_blinker : clock_divider
     generic map ( g_MAX_COUNT => c_FAST_PERIOD)
     port map (  i_clk => i_clk,
                 o_clk => r_fast_blink  );
+  slow_blinker : clock_divider
+    generic map ( g_MAX_COUNT => c_SLOW_PERIOD / c_FAST_PERIOD)
+    port map ( i_clk => r_fast_blink,
+               o_clk => r_slow_blink );
+      
+      
+
   
   
   r_voltage <= to_integer(unsigned(i_data(23 downto 16) & i_data(31 downto 28)));

@@ -170,13 +170,39 @@ architecture fft_engine_beh of fft_engine is
     for i in 0 to FFT_LEN/2-1 loop
       x      := -real(i)*MATH_PI*2.0/(2.0 ** LOG2_FFT_LEN);
       res(i) := icpx2stlv(cplx2icpx(complex'(cos(x), sin(x))));
+      -- Themba:TODO: I think cos and sin are redundant and  can be
+      -- computed from a single table...
     end loop;  -- i
     return res;
   end tf_table_init;
 
+  signal tf_table : t_tf_table := tf_table_init;
   -- Twiddle factors ROM memory
-  signal tf_table : T_TF_TABLE := tf_table_init;
+  --signal tf_table : T_TF_TABLE := tf_table_init;
 
+  -- pre-computed table is needed for ICPX_WIDTH > 32
+  -- compute, e.g., using python:
+  -- import numpy as np
+  -- ICPX_WIDTH = 36
+  -- LOG2_FFT_LEN = 9
+  -- FFT_LEN = 2 ** LOG2_FFT_LEN
+  -- i = np.arange(FFT_LEN//2)
+  -- x = - i * np.pi * 2. / (2. ** LOG2_FFT_LEN)
+  -- r = np.cos(x) + 1j * np.sin(x)
+  -- n = r * 2 ** (ICPX_WIDTH - 2)
+  -- re = n.real.round().astype('int')
+  -- im = n.imag.round().astype('int')
+  -- from functools import partial
+  -- binary = np.vectorize(partial(np.binary_repr, width=ICPX_WIDTH))
+  -- bin_re = binary(re)
+  -- bin_im = binary(im)
+  -- for r,i in zip(bin_re, bin_im):
+  --      print('"{}{}",'.format(r,i))
+  
+  --signal tf_table : t_tf_table := (
+    
+--);
+  
 --constant tf_table : T_TF_TABLE := (
 --e => to_signed(1024, 12), Im => to_signed(0, 12)),
 --e => to_signed(1004, 12), Im => to_signed(-200, 12)),

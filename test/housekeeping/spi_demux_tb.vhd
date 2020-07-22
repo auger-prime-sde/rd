@@ -6,8 +6,8 @@ entity spi_demux_tb is
 end spi_demux_tb;
 
 architecture behave of spi_demux_tb is
-  constant clk_period : time := 20 ns;
-  constant hk_clk_period : time := 9 ns; -- more than twice as fast
+  constant clk_period : time := 100 ns; -- 10 MHz housekeeping clk
+  constant hk_clk_period : time := 10 ns; -- 100 MHz more than twice as fast
 
   signal stop : std_logic := '0';
   signal i_spi_clk  : std_logic := '1';

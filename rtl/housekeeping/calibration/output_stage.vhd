@@ -34,8 +34,7 @@ entity output_stage is
   generic (
     g_WIDTH : natural;
     g_SUM_WIDTH : natural := 18;
-    LOG2_FFT_LEN : integer := 11;
-    g_MAX_FFTS : natural := 1000
+    LOG2_FFT_LEN : integer := 11
     );
   port (
     i_clk : in std_logic;
@@ -53,7 +52,9 @@ entity output_stage is
     i_hk_fast_clk : in std_logic;
     i_spi_clk : in std_logic;
     i_spi_ce  : in std_logic;
-    o_spi_mosi : out std_logic
+    o_spi_miso : out std_logic;
+    i_max_ffts : in std_logic_vector(31 downto 0);
+    o_num_ffts : out std_logic_vector(31 downto 0)
     );
 end output_stage;
 
@@ -75,7 +76,7 @@ architecture behave of output_stage is
 
   signal power_ns, power_ew: t_ram := zeros;
 
-  signal r_fft_count : natural range 0 to g_MAX_FFTS := 0;
+  signal r_fft_count : natural := 0;-- range 0 to 2 ** 32 - 1 := 0;
   signal r_old_sum : unsigned(g_SUM_WIDTH-1 downto 0);
 
   type t_state is (s_Idle, s_Preload, s_Process, s_Readout, s_Clear);
@@ -87,7 +88,8 @@ architecture behave of output_stage is
   --signal sample_count : integer range 0 to LOG2_FFT_LEN-1 := 0;
   --signal bit_count    : integer range 0 to 31 := 0;
 
-  signal r_preload, r_load, r_fudge_factor, r_Xk, r_pow : compl;
+  signal r_preload, r_load, r_fudge_factor, r_Xk : compl;
+  signal r_pow : unsigned(g_SUM_WIDTH-1 downto 0);
   signal r_fudge_factor_icpx : icpx_number;
   signal r_load_star, r_Xk_sum, r_Xk_diff, r_Xk_diff2 ,r_Xk_left, r_Xk_right : compl;
   signal r_fft_ready : std_logic := '1';
@@ -131,8 +133,10 @@ architecture behave of output_stage is
 
   signal r_fudge_load : std_logic_vector(2 * ICPX_WIDTH-1 downto 0);
 
+  --signal test_power : integer range 0 to 2 ** (ICPX_WIDTH-1) - 1;
 begin
-
+  --test_power <= to_integer(r_pow.Re);
+    
   o_busy <= '0' when r_state = s_Readout else '1';
     
   -- set output address to fft
@@ -156,7 +160,7 @@ begin
   r_Xk_right <= compl_mul(r_fudge_factor, r_Xk_diff2);
   r_Xk <= compl_add ( r_Xk_left, r_Xk_right );
 
-  r_pow <= compl_power(r_Xk);
+  r_pow <= resize(compl_power(r_Xk), g_SUM_WIDTH);
   
   r_power_ns_read_data <= power_ns(r_power_read_addr);
   r_power_ew_read_data <= power_ew(r_power_read_addr);
@@ -175,16 +179,18 @@ begin
   r_old_sum <= unsigned(r_power_ns_read_data) when i_channel = '0' else unsigned(r_power_ew_read_data);
 
 --  if i_channel = '0' then
-    r_power_ns_write_data <= (others => '0') when r_state = s_Clear else std_logic_vector(to_unsigned(to_integer(r_pow.Re) + to_integer(r_old_sum), g_SUM_WIDTH));
+    r_power_ns_write_data <= (others => '0') when r_state = s_Clear else std_logic_vector(resize(r_pow + r_old_sum, g_SUM_WIDTH));
 --  else
-    r_power_ew_write_data <= (others => '0') when r_state = s_Clear else std_logic_vector(to_unsigned(to_integer(r_pow.Re) + to_integer(r_old_sum), g_SUM_WIDTH));
+    r_power_ew_write_data <= (others => '0') when r_state = s_Clear else std_logic_vector(resize(r_pow + r_old_sum, g_SUM_WIDTH));
 --  end if;
 
           
+  o_num_ffts <= std_logic_vector(to_unsigned(r_fft_count, 32));
   
   p_write : process(i_clk) is
   begin
     if rising_edge(i_clk) then
+      
       r_fft_ready <= i_fft_ready;
       r_spi_clk_prev <= i_spi_clk;
       r_spi_ce_prev  <= i_spi_ce;
@@ -203,7 +209,10 @@ begin
       --r_fudge_factor <= (Re => fudge_factors((FFT_LEN+r_count-1) mod FFT_LEN).Re, Im => fudge_factors((FFT_LEN+r_count-1) mod FFT_LEN).Im, Ov => '0');
       
       r_fudge_load <= fudge_factors((r_count-1)mod FFT_LEN);
-  
+
+      -- capture Z[k] 
+      r_preload <= (Re => signed(i_data_re), Im => signed(i_data_im), Ov => '0');
+          
       
       case r_state is
 
@@ -253,7 +262,7 @@ begin
             r_fft_count <= r_fft_count + 1;
             
             -- handle break request, also break when max fft's have been averaged
-            if r_fft_count = g_MAX_FFTS - 1 or i_req_break = '1' then
+            if r_fft_count = to_integer(unsigned(i_max_ffts)) - 1 or i_req_break = '1' then
               r_state <= s_Readout;
               r_count <= 1; -- should be surperfluous
 
@@ -278,14 +287,13 @@ begin
             r_bitcount <= 0;
           end if;
 
-          -- TODO: implement reading the ew sums: idea 
           -- write a bit on the falling spi clock edge
           if i_spi_clk = '0' and r_spi_clk_prev = '1' then
             -- output bit
             if i_buffer_select = '0' then
-              o_spi_mosi <= r_power_ns_read_data(17-r_bitcount);
+              o_spi_miso <= r_power_ns_read_data(g_SUM_WIDTH-1-r_bitcount);
             else
-              o_spi_mosi <= r_power_ew_read_data(17-r_bitcount);
+              o_spi_miso <= r_power_ew_read_data(g_SUM_WIDTH-1-r_bitcount);
             end if;
             
             
@@ -307,7 +315,7 @@ begin
             r_count <= 0;
             
           -- if there is room, continue when not on break  
-          elsif i_req_break = '0' and r_fft_count < g_MAX_FFTS then
+          elsif i_req_break = '0' and r_fft_count < to_integer(unsigned(i_max_ffts)) then
             o_rearm <= '1';
             r_state <= s_Idle;
           end if;

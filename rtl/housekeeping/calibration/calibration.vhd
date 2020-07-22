@@ -76,26 +76,18 @@ architecture behave of calibration is
       );
   end component;
 
+  component sync_1bit is
+    generic (
+      g_NUM_STAGES : natural := 3
+      );
+    port (
+      i_clk : in std_logic;
+      i_data : in std_logic;
+      o_data : out std_logic
+      );
+  end component;
+
    
-  
---component fft_engine 
---  generic (
---    LOG2_FFT_LEN : integer := 4
---    );
---  port (
---    -- System interface
---    rst_n     : in  std_logic;
---    clk       : in  std_logic;
---    -- Input memory interface
---    din       : in  icpx_number;        -- data input
---    valid     : out std_logic;
---    saddr     : out unsigned(LOG2_FFT_LEN-2 downto 0);
---    saddr_rev : out unsigned(LOG2_FFT_LEN-2 downto 0);
---    sout0     : out icpx_number;        -- spectrum output
---    sout1     : out icpx_number         -- spectrum output
---    );
---end component;
---
   component fft_engine is
     generic (
       LOG2_FFT_LEN : integer := 8 );
@@ -116,6 +108,7 @@ architecture behave of calibration is
   component output_stage is
     generic (
       g_WIDTH : natural;
+      g_SUM_WIDTH : natural := 18;
       LOG2_FFT_LEN : integer := 11
       );
     port (
@@ -134,7 +127,9 @@ architecture behave of calibration is
       i_hk_fast_clk : in std_logic;
       i_spi_clk : in std_logic;
       i_spi_ce  : in std_logic;
-      o_spi_mosi : out std_logic
+      o_spi_miso : out std_logic;
+      i_max_ffts : in std_logic_vector(31 downto 0);
+      o_num_ffts : out std_logic_vector(31 downto 0)
       );
   end component;
 
@@ -142,7 +137,7 @@ architecture behave of calibration is
     generic (
       g_SUBSYSTEM_ADDR : std_logic_vector;
       g_REGISTER_WIDTH : natural := 8;
-      g_DEFAULT : std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
+      g_DEFAULT : std_logic_vector(g_REGISTER_WIDTH-1 downto 0) := (others => '0')
       );
     port (
       i_hk_fast_clk : in std_logic;
@@ -152,7 +147,7 @@ architecture behave of calibration is
       i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
       i_set : in std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
       i_clr : in std_logic_vector(g_REGISTER_WIDTH-1 downto 0);
-      o_data: out std_logic_vector(g_REGISTER_WIDTH-1 downto 0)
+      o_data: out std_logic_vector(g_REGISTER_WIDTH-1 downto 0) := g_DEFAULT
       );
   end component;
 
@@ -174,11 +169,12 @@ architecture behave of calibration is
 
   signal r_addr, r_addr_rev, r_addr_out, r_addr_out_rev : std_logic_vector(LOG2_FFT_LEN-1 downto 0);
   signal addr, addr_out : integer;
-  signal r_rearm : std_logic;
+  signal r_rearm, r_rearm_sync : std_logic;
   signal r_control_miso, r_readout_miso : std_logic;
-  signal r_control_reg : std_logic_vector(7 downto 0);
+  signal r_control_reg : std_logic_vector(71 downto 0);
   signal r_output_stage_busy : std_logic;
   signal r_readout_ce : std_logic;
+  signal r_fft_count, not_fft_count : std_logic_vector(31 downto 0);
 begin
 
 --  addr_counter : simple_counter
@@ -189,14 +185,22 @@ begin
 --      i_clk => i_hk_clk,
 --      o_count => r_addr
 --      );
---      
+--
+
+  rearm_syn : sync_1bit
+    port map (
+      i_clk  => i_data_clk,
+      i_data => r_rearm,
+      o_data => r_rearm_sync
+      );
+  
 
   
   inp : input_stage
     generic map (
       g_ADC_BITS => g_ADC_BITS,
       LOG2_FFT_LEN => LOG2_FFT_LEN,
-      QUIET_THRESHOLD => 500
+      QUIET_THRESHOLD => 2047
       )
     port map (
       i_data_clk => i_data_clk,
@@ -210,13 +214,14 @@ begin
       o_start => fft_start,
       o_data_even => fft_in_re,
       o_data_odd => fft_in_im,
-      i_rearm => r_rearm,
+      i_rearm => r_rearm_sync,
       o_channel => r_channel
       );
 
   outp : output_stage
     generic map (
       g_WIDTH => ICPX_WIDTH,
+      g_SUM_WIDTH => 2 * ICPX_WIDTH,
       LOG2_FFT_LEN => LOG2_FFT_LEN
       )
     port map (
@@ -234,9 +239,11 @@ begin
       i_hk_fast_clk => i_hk_fast_clk,
       i_spi_clk => i_spi_clk,
       i_spi_ce => r_readout_ce,
-      o_spi_mosi => r_readout_miso
+      o_spi_miso => r_readout_miso,
+      i_max_ffts => r_control_reg(39 downto 8),
+      o_num_ffts => r_fft_count
       );
---
+
   enable_not <= not input_valid;
   fft_out_re <= std_logic_vector(fft_out.Re);
   fft_out_im <= std_logic_vector(fft_out.Im);
@@ -252,41 +259,37 @@ begin
   end generate;
 
 
+  
+  not_fft_count <= not r_fft_count;-- needed because ghdl doesn't support
+                                   -- vector-not in map
   control_reg : spi_register
     generic map (
       g_SUBSYSTEM_ADDR => g_CONTROL_SUBSYSTEM_ADDR,
-      g_REGISTER_WIDTH => 8,
-      g_DEFAULT => (others => '0')
+      g_REGISTER_WIDTH => 72,
+      g_DEFAULT => std_logic_vector(to_unsigned(0, 32)) -- fft count
+                 & std_logic_vector(to_unsigned(1, 32)) -- fft max
+                 & std_logic_vector(to_unsigned(0, 8))  -- control reg
       )
     port map (
-      i_hk_fast_clk => i_hk_fast_clk,
-      i_spi_clk => i_spi_clk,
-      i_spi_mosi => i_spi_mosi,
-      o_spi_miso => r_control_miso,
-      i_dev_select => i_dev_select,
-      i_set(7)  => r_output_stage_busy,
-      i_set(6 downto 0) => (others => '0'),
-      i_clr(7)  => not r_output_stage_busy,
-      i_clr(6 downto 0) => (others => '0'),
-      o_data => r_control_reg
+      i_hk_fast_clk       => i_hk_fast_clk,
+      i_spi_clk           => i_spi_clk,
+      i_spi_mosi          => i_spi_mosi,
+      o_spi_miso          => r_control_miso,
+      i_dev_select        => i_dev_select,
+      -- set the '1' bits in R/O registers
+      i_set(71 downto 40) => r_fft_count,
+      i_set(39 downto 8)  => (others=>'0'),
+      i_set(7)            => r_output_stage_busy,
+      i_set(6 downto 0)   => (others=>'0'),
+      -- clear the '0' bits in R/O registers
+      i_clr(71 downto 40) => not_fft_count,
+      i_clr(39 downto 8)  => (others=>'0'),
+      i_clr(7)            => not r_output_stage_busy,
+      i_clr(6 downto 0)   => (others=>'0'),
+      o_data              => r_control_reg
       );
         
   
---multi_unit_fft : fft_engine
---  generic map (
---    LOG2_FFT_LEN => LOG2_FFT_LEN
---    )
---  port map (
---    rst_n => enable_not,
---    clk   => i_hk_clk,
---    din   => fft_in,
---    valid => fft_out_valid,
---    saddr => fft_out_addr,
---    saddr_rev => fft_out_rev_addr,
---    sout0 => fft_out,
---    sout1 => stub
---    );
-
   single_unit_fft : fft_engine
     generic map (
       LOG2_FFT_LEN => LOG2_FFT_LEN
@@ -305,47 +308,10 @@ begin
       clk       => i_fft_clk
       );
 
---  r_miso <= fft_out_re(0) xor
---            fft_out_re(1) xor
---            fft_out_re(2) xor
---            fft_out_re(3) xor
---            fft_out_re(4) xor
---            fft_out_re(5) xor
---            fft_out_re(6) xor
---            fft_out_re(7) xor
---            fft_out_re(8) xor
---            fft_out_re(9) xor
---            fft_out_re(10) xor
---            fft_out_re(11) xor
---            fft_out_im(0) xor
---            fft_out_im(1) xor
---            fft_out_im(2) xor
---            fft_out_im(3) xor
---            fft_out_im(4) xor
---            fft_out_im(5) xor
---            fft_out_im(6) xor
---            fft_out_im(7) xor
---            fft_out_im(8) xor
---            fft_out_im(9) xor
---            fft_out_im(10) xor
---            fft_out_im(11);
---            
 
   r_readout_ce <= '0' when i_dev_select = g_READOUT_SUBSYSTEM_ADDR else '1';
   o_spi_miso <= r_control_miso when i_dev_select = g_CONTROL_SUBSYSTEM_ADDR else
                 r_readout_miso when i_dev_select = g_READOUT_SUBSYSTEM_ADDR else '0';
-  
-
--- 32 EBR blocks available in ECP5
--- 11 in use by other systems, 21 free to use for calibration
--- both streaming and block fft require pre-buffering because 250MHz is too fast
--- both streaming and block fft require post-buffer for summing
--- FFT size | prebuf | postbuf | streaming fft | block fft
--- 2048     |      6 |       6 | 7 + 24 = 31   | 8
--- 1024     |      3 |       3 | 7 + 22 = 29   | 
---  512     |      2 |       2 | 7 + 20 = 27   | 
---  256     |      2 |       2 | 7 + 18 = 25   | 
--- Tomas: 1k FFT good enough, 512 is border line
   
 end behave;      
     

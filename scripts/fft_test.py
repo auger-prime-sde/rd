@@ -21,7 +21,7 @@ cplx_round = np.vectorize(lambda x: round(x.real) + 1j * round(x.imag))
 ## generate sine wave
 ## apply window
 ## rounding to ints
-DATA_LEN = 64
+DATA_LEN = 2048
 FFT_LEN  = DATA_LEN // 2
 
 xs = np.arange(DATA_LEN)

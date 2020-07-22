@@ -29,7 +29,7 @@ use ieee.math_complex.all;
 
 package icpx is
   
-  constant ICPX_WIDTH : integer := 18;
+  constant ICPX_WIDTH : integer := 32;
   constant ICPX_INTBITS : integer := 1;
 
   -- constant defining the size of std_logic_vector
@@ -48,6 +48,7 @@ package icpx is
     Ov : std_logic;
   end record;
 
+  
    
   
   -- conversion functions
@@ -84,7 +85,8 @@ package icpx is
 
   function compl_power (
     constant din: compl)
-    return compl;
+    --return unsigned(2*ICPX_WIDTH-1 downto 0);
+    return unsigned;
 
   function compl_conjugate (
     constant din: compl)
@@ -128,8 +130,8 @@ package body icpx is
     variable res : compl;
     variable re, im : signed(ICPX_WIDTH downto 0); -- 1 extra
   begin
-    re := to_signed(to_integer(din1.Re) + to_integer(din2.Re), ICPX_WIDTH+1);
-    im := to_signed(to_integer(din1.Im) + to_integer(din2.Im), ICPX_WIDTH+1);
+    re := resize(din1.Re, ICPX_WIDTH+1) + resize(din2.Re, ICPX_WIDTH+1);
+    im := resize(din1.Im, ICPX_WIDTH+1) + resize(din2.Im, ICPX_WIDTH+1);
     res.Re := resize(re, ICPX_WIDTH);
     res.Im := resize(im, ICPX_WIDTH);
     -- detect overflow when 2 MSB not equal or input was overflowed
@@ -168,17 +170,19 @@ package body icpx is
 
   function compl_power (
     constant din : compl)
-    return compl is
-    variable res : compl;
-    variable re : signed(2*ICPX_WIDTH downto 0);
+    --return unsigned(2*ICPX_WIDTH-1 downto 0) is
+    return unsigned is
+    variable res : unsigned(2*ICPX_WIDTH-1 downto 0);
   begin
-    re := to_signed(to_integer(din.Re) * to_integer(din.Re) + to_integer(din.Im) * to_integer(din.Im), 2 * ICPX_WIDTH + 1);
-    res.Re := re(2 * ICPX_WIDTH - ICPX_INTBITS -1 -1 downto ICPX_WIDTH - ICPX_INTBITS -1);
-    res.Im := to_signed(0, ICPX_WIDTH);
-    res.Ov := din.Ov;
-    for i in 0 to ICPX_INTBITS loop
-      res.Ov := '1' when res.Ov = '1' or re(2 * ICPX_WIDTH - 1) /= re(2 * ICPX_WIDTH - 1 - i) else '0';
-    end loop;
+    res := unsigned(din.Re * din.Re) + unsigned(din.Im * din.Im);
+--    re := to_signed(to_integer(din.Re) * to_integer(din.Re) + to_integer(din.Im) * to_integer(din.Im), 2 * ICPX_WIDTH + 1);
+--    res.Re := re(2 * ICPX_WIDTH - ICPX_INTBITS -1 -1 downto ICPX_WIDTH - ICPX_INTBITS -1);
+--    res.Im := to_signed(0, ICPX_WIDTH);
+--    res.Ov := din.Ov;
+--    for i in 0 to ICPX_INTBITS loop
+--      res.Ov := '1' when res.Ov = '1' or re(2 * ICPX_WIDTH - 1) /= re(2 * ICPX_WIDTH - 1 - i) else '0';
+--    end loop;
+    --return res(2 * ICPX_WIDTH - 1 downto 0);-- cut the upper msb after addition
     return res;
   end compl_power;
   
@@ -187,13 +191,15 @@ package body icpx is
     return compl is
     variable res : compl;
     variable im : signed(ICPX_WIDTH-1 downto 0);
+    constant max_negative : std_logic_vector(ICPX_WIDTH-1 downto 0) := (ICPX_WIDTH-1 => '1', others => '0');
   begin
     im := - din.Im;-- to_signed(-to_integer(din.Im), ICPX_WIDTH);
     res.Re := din.Re;
     res.Im := im;
     -- negation can overflow because the negative range is one item longer than
     -- the positive range
-    res.Ov := '1' when din.Ov = '1' or im = to_signed(- 2 ** (ICPX_WIDTH-1), ICPX_WIDTH) else '0';
+    --res.Ov := '1' when din.Ov = '1' or im = to_signed(- 2 ** (ICPX_WIDTH-1), ICPX_WIDTH) else '0';
+    res.Ov := '1' when din.Ov = '1' or std_logic_vector(im) = max_negative else '0';
     return res;
   end compl_conjugate;
   
