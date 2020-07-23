@@ -310,8 +310,7 @@ architecture behaviour of housekeeping is
       g_CONTROL_SUBSYSTEM_ADDR : std_logic_vector;
       g_READOUT_SUBSYSTEM_ADDR : std_logic_vector;
       g_ADC_BITS : natural := 12;
-      LOG2_FFT_LEN : integer := 10;
-      QUIET_THRESHOLD : integer := 50 );
+      LOG2_FFT_LEN : integer := 10 );
     port (
       -- clk
       i_data_clk    : in std_logic;
@@ -619,8 +618,7 @@ begin
       g_CONTROL_SUBSYSTEM_ADDR => "00001100",
       g_READOUT_SUBSYSTEM_ADDR => "00001101",
       g_ADC_BITS => 12,
-      LOG2_FFT_LEN => 9, -- 1024 bins complex fft on 2048 reals.
-      QUIET_THRESHOLD => 50
+      LOG2_FFT_LEN => 9 -- 1024 bins complex fft on 2048 reals.
       )
     port map (
       i_data_clk     => i_data_clk,

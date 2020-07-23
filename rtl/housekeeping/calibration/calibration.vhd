@@ -12,8 +12,7 @@ entity calibration is
     g_CONTROL_SUBSYSTEM_ADDR : std_logic_vector;
     g_READOUT_SUBSYSTEM_ADDR : std_logic_vector;
     g_ADC_BITS : natural := 12;
-    LOG2_FFT_LEN : integer := 11;
-    QUIET_THRESHOLD : integer := 50
+    LOG2_FFT_LEN : integer := 11
     );
   port (
     -- clk
@@ -56,8 +55,7 @@ architecture behave of calibration is
   component input_stage is
     generic (
       g_ADC_BITS : natural := 12;
-      LOG2_FFT_LEN : integer := 11;
-      QUIET_THRESHOLD : integer := 50
+      LOG2_FFT_LEN : integer := 11
       );
     port (
       i_data_clk : in std_logic;
@@ -72,7 +70,9 @@ architecture behave of calibration is
       o_data_even : out std_logic_vector(ICPX_WIDTH-1 downto 0);
       o_data_odd  : out std_logic_vector(ICPX_WIDTH-1 downto 0);
       i_rearm   : in std_logic;
-      o_channel : out std_logic
+      o_channel : out std_logic;
+      i_quiet_thres : in std_logic_vector(15 downto 0);
+      i_quiet_stretch : in std_logic_vector(15 downto 0)
       );
   end component;
 
@@ -129,7 +129,8 @@ architecture behave of calibration is
       i_spi_ce  : in std_logic;
       o_spi_miso : out std_logic;
       i_max_ffts : in std_logic_vector(31 downto 0);
-      o_num_ffts : out std_logic_vector(31 downto 0)
+      o_num_ffts : out std_logic_vector(31 downto 0);
+      i_read_start_addr : in std_logic_vector(15 downto 0)
       );
   end component;
 
@@ -171,7 +172,7 @@ architecture behave of calibration is
   signal addr, addr_out : integer;
   signal r_rearm, r_rearm_sync : std_logic;
   signal r_control_miso, r_readout_miso : std_logic;
-  signal r_control_reg : std_logic_vector(71 downto 0);
+  signal r_control_reg : std_logic_vector(16 + 16 + 32 + 32 + 16 + 8 -1 downto 0);
   signal r_output_stage_busy : std_logic;
   signal r_readout_ce : std_logic;
   signal r_fft_count, not_fft_count : std_logic_vector(31 downto 0);
@@ -199,8 +200,7 @@ begin
   inp : input_stage
     generic map (
       g_ADC_BITS => g_ADC_BITS,
-      LOG2_FFT_LEN => LOG2_FFT_LEN,
-      QUIET_THRESHOLD => 2047
+      LOG2_FFT_LEN => LOG2_FFT_LEN
       )
     port map (
       i_data_clk => i_data_clk,
@@ -215,7 +215,9 @@ begin
       o_data_even => fft_in_re,
       o_data_odd => fft_in_im,
       i_rearm => r_rearm_sync,
-      o_channel => r_channel
+      o_channel => r_channel,
+      i_quiet_thres => r_control_reg(119 downto 104),
+      i_quiet_stretch => r_control_reg(103 downto 88)
       );
 
   outp : output_stage
@@ -240,8 +242,9 @@ begin
       i_spi_clk => i_spi_clk,
       i_spi_ce => r_readout_ce,
       o_spi_miso => r_readout_miso,
-      i_max_ffts => r_control_reg(39 downto 8),
-      o_num_ffts => r_fft_count
+      i_max_ffts => r_control_reg(55 downto 24),
+      o_num_ffts => r_fft_count,
+      i_read_start_addr => r_control_reg(23 downto 8)
       );
 
   enable_not <= not input_valid;
@@ -265,10 +268,13 @@ begin
   control_reg : spi_register
     generic map (
       g_SUBSYSTEM_ADDR => g_CONTROL_SUBSYSTEM_ADDR,
-      g_REGISTER_WIDTH => 72,
-      g_DEFAULT => std_logic_vector(to_unsigned(0, 32)) -- fft count
-                 & std_logic_vector(to_unsigned(1, 32)) -- fft max
-                 & std_logic_vector(to_unsigned(0, 8))  -- control reg
+      g_REGISTER_WIDTH => 16 + 16 + 32 + 32 + 16 + 8,
+      g_DEFAULT => std_logic_vector(to_unsigned( 7, 16)) -- quiet thres
+                 & std_logic_vector(to_unsigned(10, 16)) -- quiet stretch
+                 & std_logic_vector(to_unsigned( 0, 32)) -- fft count
+                 & std_logic_vector(to_unsigned( 1, 32)) -- fft max
+                 & std_logic_vector(to_unsigned( 0, 16)) -- start read offset
+                 & std_logic_vector(to_unsigned( 0,  8)) -- control reg
       )
     port map (
       i_hk_fast_clk       => i_hk_fast_clk,
@@ -277,13 +283,17 @@ begin
       o_spi_miso          => r_control_miso,
       i_dev_select        => i_dev_select,
       -- set the '1' bits in R/O registers
-      i_set(71 downto 40) => r_fft_count,
-      i_set(39 downto 8)  => (others=>'0'),
+      i_set(119 downto 104) => (others => '0'),
+      i_set(103 downto 88) => (others => '0'),
+      i_set(87 downto 56) => r_fft_count,
+      i_set(55 downto 8)  => (others=>'0'),
       i_set(7)            => r_output_stage_busy,
       i_set(6 downto 0)   => (others=>'0'),
       -- clear the '0' bits in R/O registers
-      i_clr(71 downto 40) => not_fft_count,
-      i_clr(39 downto 8)  => (others=>'0'),
+      i_clr(119 downto 104) => (others => '0'),
+      i_clr(103 downto 88) => (others => '0'),
+      i_clr(87 downto 56) => not_fft_count,
+      i_clr(55 downto 8)  => (others=>'0'),
       i_clr(7)            => not r_output_stage_busy,
       i_clr(6 downto 0)   => (others=>'0'),
       o_data              => r_control_reg

@@ -54,7 +54,8 @@ entity output_stage is
     i_spi_ce  : in std_logic;
     o_spi_miso : out std_logic;
     i_max_ffts : in std_logic_vector(31 downto 0);
-    o_num_ffts : out std_logic_vector(31 downto 0)
+    o_num_ffts : out std_logic_vector(31 downto 0);
+    i_read_start_addr : in std_logic_vector(15 downto 0)
     );
 end output_stage;
 
@@ -283,12 +284,12 @@ begin
         when s_Readout =>
           -- on falling CE rewind
           if i_spi_ce = '0' and r_spi_ce_prev = '1' then
-            r_power_read_addr <= 0;
+            r_power_read_addr <= to_integer(unsigned(i_read_start_addr));
             r_bitcount <= 0;
           end if;
 
           -- write a bit on the falling spi clock edge
-          if i_spi_clk = '0' and r_spi_clk_prev = '1' then
+          if i_spi_ce = '0' and i_spi_clk = '0' and r_spi_clk_prev = '1' then
             -- output bit
             if i_buffer_select = '0' then
               o_spi_miso <= r_power_ns_read_data(g_SUM_WIDTH-1-r_bitcount);

@@ -22,7 +22,7 @@
 #include <linux/types.h>
 #include <linux/spi/spidev.h>
 
-
+#define MIN(A,B) ((A)<(B)?(A):(B))
 
 static void pabort(const char *s)
 {
@@ -40,9 +40,40 @@ static int verbose;
 static int num_bins  = 1024;
 static int bin_width = 18;
 static bool print_samples = false;
-static bool write_decoded = false;
-static bool set_averages = false;
-static uint32_t averages = 2 * 1;
+
+static bool set_max   = false;
+static bool set_thres = false;
+
+static uint16_t quiet_thres = 7;
+static uint16_t quiet_stretch = 0;
+static uint32_t fft_count = 0;
+static uint32_t max_fft = 2 * 1;
+static uint16_t read_offset = 0;
+static uint8_t  status_reg = 0x00;
+
+#define STATUS_MASK 0b10000000
+#define REQ_PAUSE  (1 << 0)
+#define REQ_CLEAR  (1 << 1)
+#define READ_NS    (0 << 2)
+#define READ_EW    (1 << 2)
+#define FFT_BUSY   (1 << 7)
+
+#define SUBSYSTEM_ADDR_CONTROL 0x0C
+#define SUBSYSTEM_ADDR_READOUT 0x0D
+
+
+//
+//struct control_reg_t {
+//	uint16_t quiet_thres;
+//	uint16_t quiet_stretch;
+//	uint32_t fft_count;
+//	uint32_t fft_max;
+//	uint16_t read_offset;
+//	uint8_t  ctrl;
+//};
+//
+//struct control_reg_t control_reg;
+//uint8_t * control_bytes;
 
 static void hex_dump(const void *src, size_t length, size_t line_size,
 		     char *prefix)
@@ -133,8 +164,8 @@ static void print_usage(const char *prog)
 	     "  -S --size     number of bins to read\n"
 		 "  -W --width    number of bits per bin\n"
 	     "  -P --print    print decoded samples to stdout\n"
-		 "  -e --decode   write decoded samples as txt instead of binary(not supported for -W above 64)\n"
-		 "  -a --set-avg  after the readout, set the number of fft's to collect");
+		 "  -m --set-max  after the readout, set the number of fft's to collect\n"
+		 "  -t --set-thres set the threshold for quiet region selection\n");
 	exit(1);
 }
 
@@ -157,13 +188,13 @@ static void parse_opts(int argc, char *argv[])
 			{ "fft size",    1, 0, 'S' },
 			{ "fft width",    1, 0, 'W' },
 			{ "print",0, 0, 'P' },
-			{ "decode",0, 0, 'e' },
-			{"set-avg", 1, 0, 'a'},
+			{"set-max", 1, 0, 'm'},
+			{"set-thres", 1, 0, 't'},
 			{ NULL, 0, 0, 0 },
 		};
 		int c;
 
-		c = getopt_long(argc, argv, "D:s:d:b:o:HOLC3NvS:W:na:",
+		c = getopt_long(argc, argv, "D:s:d:b:o:HOLC3NvS:W:Pm:t:",
 				lopts, NULL);
 
 		if (c == -1)
@@ -215,12 +246,13 @@ static void parse_opts(int argc, char *argv[])
 		case 'P':
 			print_samples = true;
 			break;
-		case 'e':
-			write_decoded = true;
+		case 'm':
+			max_fft = atoi(optarg);
+			set_max = true;
 			break;
-		case 'a':
-			averages = atoi(optarg);
-			set_averages = true;
+		case 't':
+			quiet_thres = atoi(optarg);
+			set_thres = true;
 			break;
 		default:
 			print_usage(argv[0]);
@@ -235,6 +267,53 @@ static void parse_opts(int argc, char *argv[])
 	}
 }
 
+void update_control_register(int fd) {
+	// alocate buffer
+	uint8_t * buf = (uint8_t*)malloc(16);
+
+	// populate buffer
+	buf[ 0] = SUBSYSTEM_ADDR_CONTROL;        // select fft control registers
+	buf[ 1] = (quiet_thres >> 8) & 0xFF;
+	buf[ 2] = (quiet_thres >> 0) & 0xFF;
+	buf[ 3] = (quiet_stretch >> 8) & 0xFF;
+	buf[ 4] = (quiet_stretch >> 0) & 0xFF;
+	buf[ 5] = 0; // read only anyway
+	buf[ 6] = 0; // read only anyway
+	buf[ 7] = 0; // read only anyway
+	buf[ 8] = 0; // read only anyway
+	buf[ 9] = (max_fft >> 24) & 0xFF;
+	buf[10] = (max_fft >> 16) & 0xFF;
+	buf[11] = (max_fft >>  8) & 0xFF;
+	buf[12] = (max_fft >>  0) & 0xFF;
+	buf[13] = (read_offset >> 8) & 0xFF;
+	buf[14] = (read_offset >> 0) & 0xFF;
+	buf[15] = status_reg;
+
+	// Do the actual transfer
+	transfer(fd, buf, buf, 16);
+
+	// capture the old averages number if we are not going to overwrite it
+	if (!set_max) {
+		max_fft = (buf[9] << 24) | (buf[10] << 16) | (buf[11] << 8) | buf[12];
+	}
+	// capture the old averages number if we are not going to overwrite it
+	if (!set_thres) {
+		quiet_thres = (buf[1] << 8) | buf[2];
+	}
+	// capture the fft_count
+	fft_count = (buf[5] << 24) | (buf[6] << 16) | (buf[7] << 8) | buf[8];
+
+	// quiet stretch is not implemented on the fpga and likely to change meaning
+	// so we do nothing with it
+
+	// capture busy bit
+	status_reg = (status_reg & ~STATUS_MASK) | (buf[15] & STATUS_MASK);
+
+	// should take effect almost immediately
+	// TODO: calculate worst possible delay
+
+	free(buf);
+}
 
 void decode_samples(uint8_t * buf, uint64_t * samples) {
 	int i;
@@ -269,6 +348,29 @@ void decode_samples(uint8_t * buf, uint64_t * samples) {
 	}
 }
 
+
+void read_samples(int fd, uint8_t* target_buffer, int offset, int count, int which_buffer) {
+	// calculate how many bytes to transfer since they are tightly packed in the spi transaction
+	uint numbytes = 1 + bin_width * count / 8; // one extra for the address
+
+	// select channel and set read start offset
+	status_reg = REQ_PAUSE | which_buffer;
+	read_offset = offset;
+	update_control_register(fd);
+
+	// create a transfer buffer
+	uint8_t * buf = (uint8_t*) malloc(numbytes);
+	memset(buf, 0, numbytes); // not required but nice for debug
+	buf[0] = SUBSYSTEM_ADDR_READOUT;
+
+		// do the data transfer
+	transfer(fd, buf, buf, numbytes);
+
+	// store the result
+	memcpy(target_buffer + offset * bin_width / 8, buf + 1, numbytes - 1);
+}
+
+
 int main(int argc, char *argv[])
 {
 	printf("This is rd_fft_readout\n(c)Radboud Radio Lab\nAuthor: Sjoerd T. Timmer (s.timmer@astro.ru.nl)\n");
@@ -279,8 +381,12 @@ int main(int argc, char *argv[])
 
 	parse_opts(argc, argv);
 
-	if (write_decoded && bin_width > 64) {
+	if (print_samples && bin_width > 64) {
 		pabort("Cannot decode integer larger than 64 bits");
+	}
+
+	if (num_bins % 8 != 0) {
+		printf("fft size not a multiple of 8. This case was not anticipated and is likely to cause issues.\n");
 	}
 
 	fd = open(device, O_RDWR);
@@ -323,87 +429,49 @@ int main(int argc, char *argv[])
 	printf("spi mode: 0x%x\n", mode);
 	printf("bits per word: %d\n", bits);
 	printf("max speed: %d Hz (%d KHz)\n", speed, speed/1000);
+	printf("number of fft bins to download: %d\n", num_bins);
+	printf("bits per fft bin: %d\n", bin_width);
 
-
-	int out_fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
-	if (out_fd < 0)
-		pabort("could not open output file");
-
-
-	// calculate how many bytes to transfer since they are tightly packed in the spi transaction
-	uint numbytes = 1 + bin_width * num_bins / 8; // one extra for the address
-	uint8_t * buf = (uint8_t*)malloc(1 + numbytes);
-	if (verbose)
-		printf("%d fft bins of %d bits requires %d bytes\n", num_bins, bin_width, numbytes);
-
-	// disable writing to spi capture buffer
-	buf[0] = 0x0C; // select fft control reg
-	buf[5] = 0x00;
-	buf[6] = 0x00;
-	buf[7] = 0x00;
-	buf[8] = 0x00;
-	buf[9] = 0b00000001; // request pause and select NS buffer
-	transfer(fd, buf, buf, 10);
-
-	// capture the old averages number if we are not going to overwrite it
-	if (!set_averages) {
-		averages = (buf[5] << 24) | (buf[6] << 16) | (buf[7] << 8) | buf[8];
-		printf("keeping old averages value of %d\n", averages);
-	} else {
-		printf("setting new averages value to %d\n", averages);
+	int out_fd;
+	if (output_file) {
+		out_fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+		if (out_fd < 0)
+			pabort("could not open output file");
 	}
 
-	// should take effect almost immediately
-	// TODO: calculate worst possible delay
+	// request the fft engine to pause making more fft during readout
+	status_reg = REQ_PAUSE;
+	update_control_register(fd);
 
-	// get the fft
-	buf[0] = 0x0D; // select fft readout subsystem
-	// remainder of buffer is don't care
-	transfer(fd, buf, buf, numbytes);
+	// in order to decode them we need to store all samples as raw binary first because we are going to get them as chunks
+	uint8_t * raw_data_ns = (uint8_t *) malloc(bin_width * num_bins / 8);
+	uint8_t * raw_data_ew = (uint8_t *) malloc(bin_width * num_bins / 8);
 
-	// unpack the tightly packed 18 bit samples into integers
-	uint64_t * samples_ns;
-	if (write_decoded) {
-		samples_ns = malloc(num_bins * sizeof(uint64_t));
-		decode_samples(buf+1, samples_ns);
-		// actual writing happens later in this case
-	} else if (output_file) {
-		int ret = write(out_fd, buf + 1, numbytes-1);
-		if (ret != numbytes-1)
-			pabort("not all bytes written to output file");
+	// 8 samples always aligns with bytes
+	// we can get 4095 bytes at most in one transaction
+	// so we need the largest multiple of 8 that still fits
+	int max_samples = 8 * (4095 / bin_width);
+	printf("max_samples: %d\n", max_samples);
+	int chan = 0;
+	for (chan=0; chan < 2; chan++) {
+		int offset = 0;
+		while (offset < num_bins) {
+			int count  = MIN(max_samples, num_bins - offset);
+			printf("reading %d samples at offset %d from channel %d\n", count, offset, chan);
+			if (chan == 0)
+				read_samples(fd, raw_data_ns, offset, count, READ_NS);
+			else
+				read_samples(fd, raw_data_ew, offset, count, READ_EW);
+			offset += count;
+		}
 	}
 
-	// Select the EW channel, do not yet continue writing
-	buf[0] = 0x0C; // select fft control reg
-	buf[5] = 0x00;
-	buf[6] = 0x00;
-	buf[7] = 0x00;
-	buf[8] = 0x00;
-	buf[9] = 0b00000101; // request pause and select EW buffer
-	transfer(fd, buf, buf, 10);
-
-	// should take effect almost immediately
-	// TODO: calculate worst possible delay
-
-	// get the fft
-	memset(buf, 0, numbytes);
-	buf[0] = 0x0D; // select fft readout subsystem
-	// remainder of buffer is don't care
-	transfer(fd, buf, buf, numbytes);
-
-	// unpack the tightly packed 18 bit samples into integers
-	uint64_t * samples_ew;
-	if (write_decoded) {
-		samples_ew = malloc(num_bins * sizeof(uint64_t));
-		decode_samples(buf+1, samples_ew);
-	} else if (output_file) {
-		int ret = write(out_fd, buf + 1, numbytes-1);
-		if (ret != numbytes-1)
-			pabort("not all bytes written to output file");
-	}
-
-	// print
+	// unpack the tightly packed bit samples into integers
 	if (print_samples) {
+		uint64_t * samples_ns = malloc(num_bins * sizeof(uint64_t));
+		uint64_t * samples_ew = malloc(num_bins * sizeof(uint64_t));
+		decode_samples(raw_data_ns, samples_ns);
+		decode_samples(raw_data_ew, samples_ew);
 		printf("              NS     EW\n");
 		int i;
 		for (i=0; i<num_bins; i++) {
@@ -411,47 +479,27 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	// clear the fft buffer
-	// disable writing to spi capture buffer
-	buf[0] = 0x0C; // select fft control reg
-	buf[5] = 0x00;
-	buf[6] = 0x00;
-	buf[7] = 0x00;
-	buf[8] = 0x00;
-	buf[9] = 0x03; // request clear
-	transfer(fd, buf, buf, 10);
-
-	// continue with taking fft's
-	// disable writing to spi capture buffer
-	buf[0] = 0x0C; // select fft control reg
-
-	// set the averages number which is either what it was before or the new value
-	buf[5] = (averages >> 24) & 0xFF;
-	buf[6] = (averages >> 16) & 0xFF;
-	buf[7] = (averages >>  8) & 0XFF;
-	buf[8] = (averages      ) & 0xFF;
-
-	buf[9] = 0x00; // clear all requests -> continue
-	transfer(fd, buf, buf, 10);
-
-
-
-	// todo: also read the number of fft's taken, need implementation on the fpga
-
-
-
-	// write result
-	if (output_file && write_decoded) {
-		FILE * f = fopen(output_file, "w");
-		int i;
-		for (i=0; i< num_bins; i++) {
-			fprintf(f, "%llu %llu\n", samples_ns[i], samples_ew[i]);
-		}
-		fclose(f);
+	// write to file
+	if (output_file) {
+		int numbytes = bin_width * num_bins / 8;
+		int ret;
+		ret = write(out_fd, raw_data_ns, numbytes);
+		if (ret != numbytes)
+			pabort("not all bytes written to output file");
+		ret = write(out_fd, raw_data_ew, numbytes);
+		if (ret != numbytes)
+			pabort("not all bytes written to output file");
+		close(out_fd);
 	}
 
+	// clear the fft buffer
+	// disable writing to spi capture buffer
+	status_reg = REQ_PAUSE | REQ_CLEAR; // NS and EW are cleared together
+	update_control_register(fd);
 
-
+	// unpause fft engine
+	status_reg = 0x00;
+	update_control_register(fd);
 
 	close(fd);
 

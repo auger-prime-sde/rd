@@ -16,8 +16,7 @@ use work.icpx.all;
 entity input_stage is
     generic (
       g_ADC_BITS : natural := 12;
-      LOG2_FFT_LEN : integer := 11;
-      QUIET_THRESHOLD : integer := 50
+      LOG2_FFT_LEN : integer := 11
       );
     port (
       i_data_clk : in std_logic;
@@ -32,16 +31,17 @@ entity input_stage is
       o_data_even : out std_logic_vector(ICPX_WIDTH-1 downto 0);
       o_data_odd  : out std_logic_vector(ICPX_WIDTH-1 downto 0);
       i_rearm     : in std_logic;
-      o_channel   : out std_logic
+      o_channel   : out std_logic;
+      i_quiet_thres : in std_logic_vector(15 downto 0);
+      i_quiet_stretch : in std_logic_vector(15 downto 0)
       );
 end input_stage;
 
+-- TODO: quiet stretch should also be applied at the end of the window to wait
+-- before starting the fft. This is much less likely to cause issues though. 
 
 architecture behave of input_stage is
 
-  -- The FFT uses ICPX_WIDTH, so to get maximum precision we represent the
-  -- window using ICPX_WIDTH - 12 so that the result is ICPX_WIDTH wide.
-  --constant WINDOW_BITS : natural := ICPX_WIDTH - g_ADC_BITS;
   constant WINDOW_BITS : natural := 32;
   
 
@@ -60,6 +60,7 @@ architecture behave of input_stage is
   signal w_over_thres : std_logic := '1';
   signal w_over_thres_ns, w_over_thres_ew, w_over_thres_ns_stretch, w_over_thres_ew_stretch : std_logic;
 
+  signal r_quiet_threshold : integer range 0 to 2**16-1;
   
   -- write controller
   -- The initial state is only needed for sim
@@ -278,19 +279,20 @@ begin
   r_corrected_ew_even <= to_integer(signed(i_data_ew_even)) - mean_ew;
   r_corrected_ew_odd  <= to_integer(signed(i_data_ew_odd )) - mean_ew;
 
+  r_quiet_threshold <= to_integer(unsigned(i_quiet_thres));
 
   w_over_thres_ns <= '1' when (
     (
-      r_corrected_ns_odd > QUIET_THRESHOLD or r_corrected_ns_odd < -QUIET_THRESHOLD
+      r_corrected_ns_odd > r_quiet_threshold or r_corrected_ns_odd < -r_quiet_threshold
     ) or (
-      r_corrected_ns_even > QUIET_THRESHOLD or r_corrected_ns_even < -QUIET_THRESHOLD
+      r_corrected_ns_even > r_quiet_threshold or r_corrected_ns_even < -r_quiet_threshold
     )
   ) else '0';
   w_over_thres_ew <= '1' when (
     (
-      r_corrected_ew_odd > QUIET_THRESHOLD or r_corrected_ew_odd < -QUIET_THRESHOLD
+      r_corrected_ew_odd > r_quiet_threshold or r_corrected_ew_odd < -r_quiet_threshold
     ) or (
-      r_corrected_ew_even > QUIET_THRESHOLD or r_corrected_ew_even < -QUIET_THRESHOLD
+      r_corrected_ew_even > r_quiet_threshold or r_corrected_ew_even < -r_quiet_threshold
     )
     ) else '0';
 
