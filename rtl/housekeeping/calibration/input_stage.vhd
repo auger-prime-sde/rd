@@ -64,7 +64,7 @@ architecture behave of input_stage is
   
   -- write controller
   -- The initial state is only needed for sim
-  type t_write_state is (s_Write_initial, s_Write_Busy, s_Write_Idle);
+  type t_write_state is (s_Write_initial, s_Write_Busy, s_Write_Stretch, s_Write_Idle);
   signal r_write_state : t_write_state := s_write_initial;
   --signal r_write_addr : std_logic_vector(LOG2_FFT_LEN - 1 downto 0) := (others => '0');
   signal r_write_addr : integer range 0 to 2 ** LOG2_FFT_LEN - 1 := 0;
@@ -78,15 +78,10 @@ architecture behave of input_stage is
   signal r_window : std_logic_vector(2 * WINDOW_BITS - 1 downto 0);
   signal r_window_even, r_window_odd : signed(WINDOW_BITS - 1 downto 0);
   
-  --signal r_rdaddress : std_logic_vector(10 downto 0);
-  --signal r_wrAddress : std_logic_vector( 9 downto 0);
   -- signals between read and write clock:
   signal buffer_full : std_logic := '0';
   signal buffer_full_stretch : std_logic;
   signal buffer_full_sync : std_logic;
-  --signal rearm : std_logic := '0';
-  --signal rearm_sync : std_logic;
-  --signal r_write_enable : std_logic;
   
   type t_ram is array (0 to 2 ** LOG2_FFT_LEN - 1) of std_logic_vector(2 * g_ADC_BITS-1 downto 0);
   signal ram : t_ram;
@@ -201,9 +196,21 @@ architecture behave of input_stage is
       o_data : out std_logic
       );
   end component;
-  
+
+  component  long_stretch is
+    generic (
+      g_BITS : natural := 16
+      );
+    port (
+      i_clk  : in std_logic;
+      i_data : in std_logic;
+      o_data : out std_logic;
+      i_length : in std_logic_vector(g_BITS-1 downto 0)
+      );
+  end component;
+
 begin
-  
+
 
   running_avg_ns : running_avg
     generic map (
@@ -249,24 +256,26 @@ begin
 
   -- these stretch instances are not use for clock domain crossing but just to
   -- stretch the block-out window after a time-domain spike (broad spectrum noise)
-  stretch_over_thres_ns : stretch
+  stretch_over_thres_ns : long_stretch
     generic map (
-      g_LENGTH => 10 -- 10 clocks, 20 samples
+      g_BITS => 16
       )
     port map (
       i_clk => i_data_clk,
       i_data => w_over_thres_ns,
-      o_data => w_over_thres_ns_stretch
+      o_data => w_over_thres_ns_stretch,
+      i_length => i_quiet_stretch
       );
 
-  stretch_over_thres_ew : stretch
+  stretch_over_thres_ew : long_stretch
     generic map (
-      g_LENGTH => 10 -- 10 clocks, 20 samples
+      g_BITS => 16
       )
     port map (
       i_clk => i_data_clk,
       i_data => w_over_thres_ew,
-      o_data => w_over_thres_ew_stretch
+      o_data => w_over_thres_ew_stretch,
+      i_length => i_quiet_stretch
       );
 
   
@@ -318,9 +327,22 @@ begin
             r_write_addr <= 0;
           else
             ram(r_write_addr) <= w_write_data;
-            
             -- check if done, else increment
             if r_write_addr = 2 ** LOG2_FFT_LEN - 1 then
+              r_write_addr <= 0;
+              r_write_state <= s_Write_Stretch;
+            else
+              r_write_addr <=  r_write_addr + 1;
+            end if;
+          end if;
+        when s_Write_Stretch =>
+          buffer_full <= '0';
+          if w_over_thres = '1' then
+            -- reset
+            r_write_addr <= 0;
+            r_write_state <= s_Write_Busy;
+          else
+            if r_write_addr = 10 then
               r_write_addr <= 0;
               r_write_state <= s_Write_Idle;
               buffer_full <= '1';

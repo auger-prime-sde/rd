@@ -62,7 +62,6 @@ end output_stage;
 architecture behave of output_stage is
   constant FFT_LEN : natural := 2 ** LOG2_FFT_LEN;
 
-  -- TODO: prevent overflow and set a warning
   type t_ram is array (FFT_LEN - 1 downto 0) of std_logic_vector(g_SUM_WIDTH - 1 downto 0);
   
   function zeros
@@ -246,11 +245,6 @@ begin
           r_state <= s_Process;
         when s_Process =>
           r_power_read_addr <= r_count;
-          -- store the new sum
-          -- TODO: I think this can be simplified by having a single write data:
-                    
-          -- use Z*[N/2-k] and fudge factor to compute Xk and consequently r_pow
-
           -- advance count
           r_count <= (r_count + 1) mod FFT_LEN;
           
