@@ -26,8 +26,7 @@ architecture behave of calibration_tb is
       g_CONTROL_SUBSYSTEM_ADDR : std_logic_vector;
       g_READOUT_SUBSYSTEM_ADDR : std_logic_vector;
       g_ADC_BITS : natural := 12;
-      LOG2_FFT_LEN : integer := 5;
-      QUIET_THRESHOLD : integer := 50
+      LOG2_FFT_LEN : integer := 5
       );
     port (
       -- clk

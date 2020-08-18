@@ -122,7 +122,7 @@ architecture behave of output_stage is
 
 
   signal r_bitcount  : integer range 0 to g_SUM_WIDTH-1;
-  signal r_spi_ce_prev, r_spi_clk_prev : std_logic := '0';
+  signal r_spi_ce, r_spi_ce_prev, r_spi_clk, r_spi_clk_prev : std_logic := '0';
 
   signal r_power_read_addr : integer range 0 to FFT_LEN - 1;
   signal r_power_write_addr: integer range 0 to FFT_LEN - 1;
@@ -192,8 +192,11 @@ begin
     if rising_edge(i_clk) then
       
       r_fft_ready <= i_fft_ready;
-      r_spi_clk_prev <= i_spi_clk;
-      r_spi_ce_prev  <= i_spi_ce;
+      
+      r_spi_clk      <= i_spi_clk;
+      r_spi_clk_prev <= r_spi_clk;
+      r_spi_ce       <= i_spi_ce;
+      r_spi_ce_prev  <= r_spi_ce;
           
       
       
@@ -272,18 +275,16 @@ begin
             r_state <= s_Preload;
           end if;
 
-          -- In readout we pause the fft's and enable reading via spi
-          -- TODO: After readout an extra rearm pulse occurs, that makes the
-          -- input stage flip channel select
+        -- In readout we pause the fft's and enable reading via spi
         when s_Readout =>
           -- on falling CE rewind
-          if i_spi_ce = '0' and r_spi_ce_prev = '1' then
+          if r_spi_ce = '0' and r_spi_ce_prev = '1' then
             r_power_read_addr <= to_integer(unsigned(i_read_start_addr));
             r_bitcount <= 0;
           end if;
 
           -- write a bit on the falling spi clock edge
-          if i_spi_ce = '0' and i_spi_clk = '0' and r_spi_clk_prev = '1' then
+          if r_spi_ce_prev = '0' and r_spi_clk = '0' and r_spi_clk_prev = '1' then
             -- output bit
             if i_buffer_select = '0' then
               o_spi_miso <= r_power_ns_read_data(g_SUM_WIDTH-1-r_bitcount);
@@ -315,7 +316,6 @@ begin
             r_state <= s_Idle;
           end if;
 
-        -- TODO: I believe shifting the meaning of r_count by +1 would
         -- simplify things a lot.
         when s_Clear =>
           r_fft_count <= 0;

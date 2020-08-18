@@ -437,11 +437,18 @@ int main(int argc, char *argv[])
 		out_fd = open(output_file, O_WRONLY | O_CREAT | O_TRUNC, 0666);
 		if (out_fd < 0)
 			pabort("could not open output file");
+
+		// write a little header
+		write(out_fd, __DATE__, strlen(__DATE__));
+		write(out_fd, " ", 1);
+		write(out_fd, __TIME__, strlen(__TIME__));
 	}
 
 	// request the fft engine to pause making more fft during readout
 	status_reg = REQ_PAUSE;
 	update_control_register(fd);
+
+	printf("Number of fft's in these sums: %d\n", fft_count);
 
 	// in order to decode them we need to store all samples as raw binary first because we are going to get them as chunks
 	uint8_t * raw_data_ns = (uint8_t *) malloc(bin_width * num_bins / 8);
@@ -481,6 +488,25 @@ int main(int argc, char *argv[])
 
 	// write to file
 	if (output_file) {
+		// write the fft count
+		unsigned char bytes[4];
+		bytes[0] = fft_count >> 24 & 0xFF;
+		bytes[1] = fft_count >> 16 & 0xFF;
+		bytes[2] = fft_count >>  8 & 0xFF;
+		bytes[3] = fft_count >>  0 & 0xFF;
+		write(out_fd, bytes, 4);
+
+		// write the time
+		int now = time(NULL);
+		printf("Curring unix time: %d\n", now);
+		bytes[0] = now >> 24 & 0xFF;
+		bytes[1] = now >> 16 & 0xFF;
+		bytes[2] = now >>  8 & 0xFF;
+		bytes[3] = now >>  0 & 0xFF;
+		write(out_fd, bytes, 4);
+
+
+		// write the samples themselves
 		int numbytes = bin_width * num_bins / 8;
 		int ret;
 		ret = write(out_fd, raw_data_ns, numbytes);
