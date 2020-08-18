@@ -405,6 +405,23 @@ architecture behaviour of housekeeping is
     );
 
 
+   component dac is
+    generic (
+      g_SUBSYSTEM_ADDR : std_logic_vector;
+      g_CLK_DIV : natural := 125
+    );
+    port (
+      i_hk_fast_clk : in std_logic;
+      i_dev_select : in std_logic_vector(g_SUBSYSTEM_ADDR'length-1 downto 0);
+      -- spi port
+      i_spi_clk : in std_logic;
+      i_spi_mosi : in std_logic;
+      o_spi_miso: out std_logic;
+      -- i2c port:
+      sda : inout std_logic;
+      scl : inout std_logic
+      );
+  end component;
   
 begin
 
@@ -704,6 +721,20 @@ begin
       o_data(0) => o_bias_ns,
       o_data(1) => o_bias_ew,
       o_data(7 downto 2) => open
+      );
+
+  dac_1 : dac
+    generic map (
+      g_SUBSYSTEM_ADDR => "00001100"
+      )
+    port map (
+      i_hk_fast_clk => i_hk_fast_clk,
+      i_dev_select => r_subsystem_select,
+      i_spi_clk    => r_internal_clk,
+      i_spi_mosi   => r_internal_mosi,
+      o_spi_miso   => open,
+      sda => io_ads1015_sda,
+      scl => io_ads1015_scl
       );
   
 end behaviour;
