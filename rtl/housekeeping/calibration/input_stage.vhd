@@ -37,9 +37,6 @@ entity input_stage is
       );
 end input_stage;
 
--- TODO: quiet stretch should also be applied at the end of the window to wait
--- before starting the fft. This is much less likely to cause issues though. 
-
 architecture behave of input_stage is
 
   constant WINDOW_BITS : natural := 32;
@@ -380,16 +377,7 @@ begin
   p_read : process (i_fft_clk) is -- 100 MHz
   begin
     if rising_edge(i_fft_clk) then
-
-      -- TODO: I think we should shift our selection one to the right here so
-      -- as to discard 11 fractional bits and the duplicated sign bit. 
       o_addr <= std_logic_vector(to_unsigned(r_read_addr, o_addr'length));
-      --o_data_even <= std_logic_vector(to_signed(to_integer(signed(r_read_data_even)) * to_integer(signed(r_window_even)), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-1 downto g_ADC_BITS));
-      --o_data_odd  <= std_logic_vector(to_signed(to_integer(signed(r_read_data_odd )) * to_integer(signed(r_window_odd )), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-1 downto g_ADC_BITS));
-      --o_data_even <= std_logic_vector(to_signed(to_integer(signed(r_read_data_even)) * to_integer(signed(r_window_even)), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-2 downto g_ADC_BITS-1));
-      --o_data_odd  <= std_logic_vector(to_signed(to_integer(signed(r_read_data_odd )) * to_integer(signed(r_window_odd )), ICPX_WIDTH + g_ADC_BITS)(ICPX_WIDTH+g_ADC_BITS-2 downto g_ADC_BITS-1));
-      --o_data_even <= std_logic_vector(signed(r_read_data_even) * r_window_even);
-      --o_data_odd  <= std_logic_vector(signed(r_read_data_odd ) * r_window_odd );
       
       o_data_even <= data_with_window_even(g_ADC_BITS+WINDOW_BITS-2 downto g_ADC_BITS+WINDOW_BITS-ICPX_WIDTH+1-2);
       o_data_odd  <= data_with_window_odd (g_ADC_BITS+WINDOW_BITS-2 downto g_ADC_BITS+WINDOW_BITS-ICPX_WIDTH+1-2);
