@@ -55,7 +55,8 @@ entity output_stage is
     o_spi_miso : out std_logic;
     i_max_ffts : in std_logic_vector(31 downto 0);
     o_num_ffts : out std_logic_vector(31 downto 0);
-    i_read_start_addr : in std_logic_vector(15 downto 0)
+    i_read_start_addr : in std_logic_vector(15 downto 0);
+    o_timer : out std_logic_vector(31 downto 0)
     );
 end output_stage;
 
@@ -133,7 +134,26 @@ architecture behave of output_stage is
 
   signal r_fudge_load : std_logic_vector(2 * ICPX_WIDTH-1 downto 0);
 
+  signal r_fft_running : std_logic;
+  signal r_fft_running_sync : std_logic;
+  signal r_ms_count : natural range 0 to 2**31-1; -- note that naturals are 30
+                                                  -- bits long
+  signal r_time_count : natural range 0 to 100000-1;
+
   --signal test_power : integer range 0 to 2 ** (ICPX_WIDTH-1) - 1;
+
+
+  component sync_1bit is
+    generic (
+      g_NUM_STAGES : natural := 3
+      );
+    port (
+      i_clk : in std_logic;
+      i_data : in std_logic;
+      o_data : out std_logic
+      );
+  end component;
+
 begin
   --test_power <= to_integer(r_pow.Re);
     
@@ -184,8 +204,38 @@ begin
     r_power_ew_write_data <= (others => '0') when r_state = s_Clear else std_logic_vector(resize(r_pow + r_old_sum, g_SUM_WIDTH));
 --  end if;
 
-          
+
+  r_fft_running <= '0' when r_state = s_Idle or r_state = s_Readout else '1';
+  fft_running_sync : sync_1bit
+    port map (
+      i_clk => i_hk_fast_clk,
+      i_data => r_fft_running,
+      o_data => r_fft_running_sync
+      );
+  
+  
   o_num_ffts <= std_logic_vector(to_unsigned(r_fft_count, 32));
+  o_timer    <= std_logic_vector(to_unsigned(r_ms_count, 32));
+
+  p_time : process(i_hk_fast_clk) is
+  begin
+    if rising_edge(i_hk_fast_clk) then
+      if i_req_clear = '1' then
+        r_ms_count <= 0;
+        r_time_count <= 0;
+      elsif r_fft_running_sync = '1' then
+        if r_time_count = 100000 - 1 then --1ms ticks at 100MHz
+          r_time_count <= 0;
+          if r_ms_count /= 2**31-1 then
+            r_ms_count <= r_ms_count + 1;
+          end if;
+        else
+          r_time_count <= r_time_count + 1;
+        end if;
+      end if;
+    end if;
+  end process;
+  
   
   p_write : process(i_clk) is
   begin

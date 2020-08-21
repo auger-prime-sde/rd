@@ -41,15 +41,17 @@ static int num_bins  = 1024;
 static int bin_width = 18;
 static bool print_samples = false;
 
-static bool set_max   = false;
-static bool set_thres = false;
+static bool set_max     = false;
+static bool set_thres   = false;
+static bool set_stretch = false;
 
-static uint16_t quiet_thres = 7;
+static uint16_t quiet_thres   = 7;
 static uint16_t quiet_stretch = 0;
-static uint32_t fft_count = 0;
-static uint32_t max_fft = 2 * 1;
-static uint16_t read_offset = 0;
-static uint8_t  status_reg = 0x00;
+static uint32_t fft_count     = 0;
+static uint32_t max_fft       = 2 * 1;
+static uint32_t fft_timer     = 0;
+static uint16_t read_offset   = 0;
+static uint8_t  status_reg    = 0x00;
 
 #define STATUS_MASK 0b10000000
 #define REQ_PAUSE  (1 << 0)
@@ -61,19 +63,6 @@ static uint8_t  status_reg = 0x00;
 #define SUBSYSTEM_ADDR_CONTROL 0x0C
 #define SUBSYSTEM_ADDR_READOUT 0x0D
 
-
-//
-//struct control_reg_t {
-//	uint16_t quiet_thres;
-//	uint16_t quiet_stretch;
-//	uint32_t fft_count;
-//	uint32_t fft_max;
-//	uint16_t read_offset;
-//	uint8_t  ctrl;
-//};
-//
-//struct control_reg_t control_reg;
-//uint8_t * control_bytes;
 
 static void hex_dump(const void *src, size_t length, size_t line_size,
 		     char *prefix)
@@ -148,24 +137,25 @@ static void transfer(int fd, uint8_t const *tx, uint8_t const *rx, size_t len)
 
 static void print_usage(const char *prog)
 {
-	printf("Usage: %s [-DsbdlHOLC3vpNR24SI]\n", prog);
-	puts("  -D --device   device to use (default /dev/spidev1.1)\n"
-	     "  -s --speed    max speed (Hz)\n"
-	     "  -d --delay    delay (usec)\n"
-	     "  -b --bpw      bits per word\n"
-	     "  -o --output   output data to a file (e.g. \"results.bin\")\n"
-	     "  -H --cpha     clock phase\n"
-	     "  -O --cpol     clock polarity\n"
-	     "  -L --lsb      least significant bit first\n"
-	     "  -C --cs-high  chip select active high\n"
-	     "  -3 --3wire    SI/SO signals shared\n"
-	     "  -v --verbose  Verbose (show tx buffer)\n"
-	     "  -N --no-cs    no chip select\n"
-	     "  -S --size     number of bins to read\n"
-		 "  -W --width    number of bits per bin\n"
-	     "  -P --print    print decoded samples to stdout\n"
-		 "  -m --set-max  after the readout, set the number of fft's to collect\n"
-		 "  -t --set-thres set the threshold for quiet region selection\n");
+	printf("Usage: %s [-DsbdlHOLC3vpNR24SItT]\n", prog);
+	puts("  -D --device      device to use (default /dev/spidev1.1)\n"
+	     "  -s --speed       max speed (Hz)\n"
+	     "  -d --delay       delay (usec)\n"
+	     "  -b --bpw         bits per word\n"
+	     "  -o --output      output data to a file (e.g. \"results.bin\")\n"
+	     "  -H --cpha        clock phase\n"
+	     "  -O --cpol        clock polarity\n"
+	     "  -L --lsb         least significant bit first\n"
+	     "  -C --cs-high     chip select active high\n"
+	     "  -3 --3wire       SI/SO signals shared\n"
+	     "  -v --verbose     Verbose (show tx buffer)\n"
+	     "  -N --no-cs       no chip select\n"
+	     "  -S --size        number of bins to read\n"
+		 "  -W --width       number of bits per bin\n"
+	     "  -P --print       print decoded samples to stdout\n"
+		 "  -m --set-max     after the readout, set the number of fft's to collect\n"
+		 "  -t --set-thres   set the threshold for quiet region selection\n"
+         "  -T --set-stretch set the number of clock cycles to stretch the quiet area\n" );
 	exit(1);
 }
 
@@ -194,7 +184,7 @@ static void parse_opts(int argc, char *argv[])
 		};
 		int c;
 
-		c = getopt_long(argc, argv, "D:s:d:b:o:HOLC3NvS:W:Pm:t:",
+		c = getopt_long(argc, argv, "D:s:d:b:o:HOLC3NvS:W:Pm:t:T:",
 				lopts, NULL);
 
 		if (c == -1)
@@ -254,6 +244,10 @@ static void parse_opts(int argc, char *argv[])
 			quiet_thres = atoi(optarg);
 			set_thres = true;
 			break;
+        case 'T':
+			quiet_stretch = atoi(optarg);
+			set_stretch = true;
+			break;
 		default:
 			print_usage(argv[0]);
 			break;
@@ -267,9 +261,9 @@ static void parse_opts(int argc, char *argv[])
 	}
 }
 
-void update_control_register(int fd) {
+void update_control_register(int fd, bool verbose) {
 	// alocate buffer
-	uint8_t * buf = (uint8_t*)malloc(16);
+	uint8_t * buf = (uint8_t*)malloc(20);
 
 	// populate buffer
 	buf[ 0] = SUBSYSTEM_ADDR_CONTROL;        // select fft control registers
@@ -277,37 +271,69 @@ void update_control_register(int fd) {
 	buf[ 2] = (quiet_thres >> 0) & 0xFF;
 	buf[ 3] = (quiet_stretch >> 8) & 0xFF;
 	buf[ 4] = (quiet_stretch >> 0) & 0xFF;
-	buf[ 5] = 0; // read only anyway
-	buf[ 6] = 0; // read only anyway
-	buf[ 7] = 0; // read only anyway
-	buf[ 8] = 0; // read only anyway
-	buf[ 9] = (max_fft >> 24) & 0xFF;
-	buf[10] = (max_fft >> 16) & 0xFF;
-	buf[11] = (max_fft >>  8) & 0xFF;
-	buf[12] = (max_fft >>  0) & 0xFF;
-	buf[13] = (read_offset >> 8) & 0xFF;
-	buf[14] = (read_offset >> 0) & 0xFF;
-	buf[15] = status_reg;
+    buf[ 5] = (max_fft >> 24) & 0xFF;
+	buf[ 6] = (max_fft >> 16) & 0xFF;
+	buf[ 7] = (max_fft >>  8) & 0xFF;
+	buf[ 8] = (max_fft >>  0) & 0xFF;
+    buf[ 9] = 0; // count is read only anyway
+	buf[10] = 0; 
+	buf[11] = 0; 
+	buf[12] = 0; 
+    buf[13] = 0; // timer is read only anyway
+	buf[14] = 0;
+	buf[15] = 0;
+	buf[16] = 0;
+	buf[17] = (read_offset >> 8) & 0xFF;
+	buf[18] = (read_offset >> 0) & 0xFF;
+	buf[19] = status_reg;
 
 	// Do the actual transfer
-	transfer(fd, buf, buf, 16);
+	transfer(fd, buf, buf, 20);
 
 	// capture the old averages number if we are not going to overwrite it
-	if (!set_max) {
-		max_fft = (buf[9] << 24) | (buf[10] << 16) | (buf[11] << 8) | buf[12];
+    uint32_t oldmax = (buf[5] << 24) | (buf[6] << 16) | (buf[7] << 8) | buf[8];
+    uint32_t old_thres = (buf[1] << 8) | buf[2];
+    uint32_t old_stretch = (buf[3] << 8) | buf[4];
+    
+    if (set_max) {
+        if (verbose) {
+            printf("Updating max fft from %d to %d\n", oldmax, max_fft);
+        }
+    } else {
+		max_fft = oldmax;
+        if (verbose) {
+            printf("Leaving max fft at %d\n", oldmax);
+        }
 	}
 	// capture the old averages number if we are not going to overwrite it
-	if (!set_thres) {
-		quiet_thres = (buf[1] << 8) | buf[2];
+	if (set_thres) {
+        if (verbose) {
+            printf("Updating threshold from %d to %d\n", old_thres, quiet_thres);
+        }
+    } else {
+		quiet_thres = old_thres;
+        if (verbose) {
+            printf("Leaving threshold at %d\n", old_thres);
+        }
 	}
+    // capture the old quiet stretch if we are not going to overwrite it
+    if (set_stretch) {
+        if (verbose) {
+            printf("Updating stretch from %d to %d\n", old_stretch, quiet_stretch);
+        }
+    }else {
+        quiet_stretch = old_stretch;
+        printf("Leaving quiet stretch at %d\n", old_stretch);
+    }
+    
 	// capture the fft_count
-	fft_count = (buf[5] << 24) | (buf[6] << 16) | (buf[7] << 8) | buf[8];
-
-	// quiet stretch is not implemented on the fpga and likely to change meaning
-	// so we do nothing with it
-
+	fft_count = (buf[9] << 24) | (buf[10] << 16) | (buf[11] << 8) | buf[12];
+    
+    // capture timer counter
+    fft_timer = (buf[13] << 24) | (buf[14] << 16) | (buf[15] << 8) | buf[16];
+    
 	// capture busy bit
-	status_reg = (status_reg & ~STATUS_MASK) | (buf[15] & STATUS_MASK);
+	status_reg = (status_reg & ~STATUS_MASK) | (buf[19] & STATUS_MASK);
 
 	// should take effect almost immediately
 	// TODO: calculate worst possible delay
@@ -356,7 +382,7 @@ void read_samples(int fd, uint8_t* target_buffer, int offset, int count, int whi
 	// select channel and set read start offset
 	status_reg = REQ_PAUSE | which_buffer;
 	read_offset = offset;
-	update_control_register(fd);
+	update_control_register(fd, false);
 
 	// create a transfer buffer
 	uint8_t * buf = (uint8_t*) malloc(numbytes);
@@ -446,9 +472,18 @@ int main(int argc, char *argv[])
 
 	// request the fft engine to pause making more fft during readout
 	status_reg = REQ_PAUSE;
-	update_control_register(fd);
-
-	printf("Number of fft's in these sums: %d\n", fft_count);
+	update_control_register(fd, true);
+    if (verbose) {
+        printf("current settings:\n");
+        if (!set_max)
+            printf("  max fft: %d\n", max_fft);
+        if (!set_thres)
+            printf("  quiet thres: %d\n", quiet_thres);
+        if (!set_stretch)
+            printf("  quiet stretch: %d\n", quiet_stretch);
+    }
+    
+	printf("%d fft's captured in %d ms\n", fft_count, fft_timer);
 
 	// in order to decode them we need to store all samples as raw binary first because we are going to get them as chunks
 	uint8_t * raw_data_ns = (uint8_t *) malloc(bin_width * num_bins / 8);
@@ -521,11 +556,11 @@ int main(int argc, char *argv[])
 	// clear the fft buffer
 	// disable writing to spi capture buffer
 	status_reg = REQ_PAUSE | REQ_CLEAR; // NS and EW are cleared together
-	update_control_register(fd);
+	update_control_register(fd, false);
 
 	// unpause fft engine
 	status_reg = 0x00;
-	update_control_register(fd);
+	update_control_register(fd, false);
 
 	close(fd);
 

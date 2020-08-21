@@ -130,7 +130,8 @@ architecture behave of calibration is
       o_spi_miso : out std_logic;
       i_max_ffts : in std_logic_vector(31 downto 0);
       o_num_ffts : out std_logic_vector(31 downto 0);
-      i_read_start_addr : in std_logic_vector(15 downto 0)
+      i_read_start_addr : in std_logic_vector(15 downto 0);
+      o_timer :out std_logic_vector(31 downto 0)
       );
   end component;
 
@@ -172,10 +173,12 @@ architecture behave of calibration is
   signal addr, addr_out : integer;
   signal r_rearm, r_rearm_sync : std_logic;
   signal r_control_miso, r_readout_miso : std_logic;
-  signal r_control_reg : std_logic_vector(16 + 16 + 32 + 32 + 16 + 8 -1 downto 0);
+  signal r_control_reg : std_logic_vector(16 + 16 + 32 + 32 + 32 + 16 + 8 -1 downto 0);
   signal r_output_stage_busy : std_logic;
   signal r_readout_ce : std_logic;
   signal r_fft_count, not_fft_count : std_logic_vector(31 downto 0);
+  signal r_fft_timer, not_fft_timer : std_logic_vector(31 downto 0);
+  
 begin
 
 --  addr_counter : simple_counter
@@ -216,8 +219,8 @@ begin
       o_data_odd => fft_in_im,
       i_rearm => r_rearm_sync,
       o_channel => r_channel,
-      i_quiet_thres => r_control_reg(119 downto 104),
-      i_quiet_stretch => r_control_reg(103 downto 88)
+      i_quiet_thres => r_control_reg(151 downto 136),
+      i_quiet_stretch => r_control_reg(135 downto 120)
       );
 
   outp : output_stage
@@ -242,9 +245,10 @@ begin
       i_spi_clk => i_spi_clk,
       i_spi_ce => r_readout_ce,
       o_spi_miso => r_readout_miso,
-      i_max_ffts => r_control_reg(55 downto 24),
+      i_max_ffts => r_control_reg(119 downto 88),
       o_num_ffts => r_fft_count,
-      i_read_start_addr => r_control_reg(23 downto 8)
+      i_read_start_addr => r_control_reg(23 downto 8),
+      o_timer => r_fft_timer
       );
 
   enable_not <= not input_valid;
@@ -262,17 +266,20 @@ begin
   end generate;
 
 
+  -- needed because ghdl doesn't support vector-not in map
+  not_fft_count <= not r_fft_count;
+  not_fft_timer <= not r_fft_timer;
+
   
-  not_fft_count <= not r_fft_count;-- needed because ghdl doesn't support
-                                   -- vector-not in map
   control_reg : spi_register
     generic map (
       g_SUBSYSTEM_ADDR => g_CONTROL_SUBSYSTEM_ADDR,
-      g_REGISTER_WIDTH => 16 + 16 + 32 + 32 + 16 + 8,
+      g_REGISTER_WIDTH => 16 + 16 + 32 + 32 + 32 + 16 + 8,
       g_DEFAULT => std_logic_vector(to_unsigned( 7, 16)) -- quiet thres
                  & std_logic_vector(to_unsigned(10, 16)) -- quiet stretch
+                 & std_logic_vector(to_unsigned( 0, 32)) -- fft max
                  & std_logic_vector(to_unsigned( 0, 32)) -- fft count
-                 & std_logic_vector(to_unsigned( 1, 32)) -- fft max
+                 & std_logic_vector(to_unsigned( 1, 32)) -- fft timer
                  & std_logic_vector(to_unsigned( 0, 16)) -- start read offset
                  & std_logic_vector(to_unsigned( 0,  8)) -- control reg
       )
@@ -283,20 +290,24 @@ begin
       o_spi_miso          => r_control_miso,
       i_dev_select        => i_dev_select,
       -- set the '1' bits in R/O registers
-      i_set(119 downto 104) => (others => '0'),
-      i_set(103 downto 88) => (others => '0'),
-      i_set(87 downto 56) => r_fft_count,
-      i_set(55 downto 8)  => (others=>'0'),
-      i_set(7)            => r_output_stage_busy,
-      i_set(6 downto 0)   => (others=>'0'),
+      i_set(151 downto 136) => (others => '0'), -- quiet thres
+      i_set(135 downto 120) => (others => '0'), -- quiet stretch
+      i_set(119 downto 88)  => (others=>'0'),   -- fft max
+      i_set(87 downto 56)   => r_fft_count,     -- fft count
+      i_set(55 downto 24)   => r_fft_timer,     -- fft timer
+      i_set(23 downto 8)    => (others=>'0'),   -- read offset
+      i_set(7)              => r_output_stage_busy, -- busy flag
+      i_set(6 downto 0)     => (others=>'0'),   -- control bits
       -- clear the '0' bits in R/O registers
-      i_clr(119 downto 104) => (others => '0'),
-      i_clr(103 downto 88) => (others => '0'),
-      i_clr(87 downto 56) => not_fft_count,
-      i_clr(55 downto 8)  => (others=>'0'),
-      i_clr(7)            => not r_output_stage_busy,
-      i_clr(6 downto 0)   => (others=>'0'),
-      o_data              => r_control_reg
+      i_clr(151 downto 136) => (others => '0'), -- quiet thres
+      i_clr(135 downto 120) => (others => '0'), -- quiet stretch
+      i_clr(119 downto 88)  => (others=>'0'),   -- 
+      i_clr(87 downto 56)   => not_fft_count,
+      i_clr(55 downto 24)    => not_fft_timer,
+      i_clr(23 downto 8)    => (others => '0'),
+      i_clr(7)              => not r_output_stage_busy,
+      i_clr(6 downto 0)     => (others=>'0'),
+      o_data                => r_control_reg
       );
         
   
