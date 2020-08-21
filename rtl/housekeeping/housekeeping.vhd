@@ -515,7 +515,7 @@ begin
   
   clock_divider_reveal : clock_divider
     generic map (
-      g_MAX_COUNT => 10 -- from 100 MHz to 10 MHz
+      g_MAX_COUNT => 5 -- from 100 MHz to 20 MHz
       )
     port map (
       i_clk => i_hk_fast_clk,

@@ -29,16 +29,19 @@ begin
       if i_data = '1' then
         -- when triggered, rewind
         r_count <= 0;
+        o_data <= '1';
       elsif r_count < to_integer(unsigned(i_length)) then
         -- when not triggered, count towards max
         r_count <= r_count + 1;
+        o_data <= '1';
       else
+        o_data <= '0';
         -- when at max, stay there
       end if;
     end if;
   end process;
 
-  o_data <= '1' when r_count < to_integer(unsigned(i_length)) else '0';
+  --o_data <= '1' when r_count < to_integer(unsigned(i_length)) else '0';
 end behave;
 
     
