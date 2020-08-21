@@ -52,7 +52,7 @@ begin
     wait for 100 ns;
     assert o_data = '0' report "output high before input risen";
     i_data <= '1';
-    for i in 1 to 10 loop
+    for i in 1 to 11 loop
       wait for clk_period;
       i_data <= '0';
       assert o_data = '1' report "output not stretched long enough";
