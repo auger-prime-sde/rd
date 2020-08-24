@@ -36,10 +36,13 @@
 \acrodef{PGA}[PGA]{programmable-gain amplifier}
 \acrodef{MSB}[MSB]{most-significant bit}
 \acrodef{I2C}[$\text{I}^2\text{C}$]{}
+\acrodef{FFT}{fast fourrier transform}
+\acrodef{DAC}{digital-to-analog converter}
+
 \acused{I2C}
 %\newmdenv[linecolor=orange,backgroundcolor=orange!10]{warning}
 
-\newenvironment{warning}
+\newenvironment{warn}
 {\par\begin{mdframed}[linewidth=2pt,linecolor=orange,backgroundcolor=orange!10]%
     \begin{list}{}{\leftmargin=0mm}\item[\bf\danger{}~~Warning: ]}
   {\end{list}\end{mdframed}\par}
@@ -165,9 +168,9 @@ When the voltage is between 2.2 (V) and 2.6 (V) the LNA is considered to be in g
   Physical modules prior to hardware version 3 do not have leds on the front panel.
 \end{deprecation}
 
-\begin{warning}
+\begin{warn}
   It is planned but not yet implemented to make the LNA current configurable, in which case the thresholds will change as well.
-\end{warning}
+\end{warn}
 
 
 \section{Channel naming}
@@ -200,10 +203,10 @@ See Section \ref{sec:trigger_offset} for details.
 When the post-trigger samples have been recorded, the transfer is automatically initiated.
 Figures~\ref{fig:datatransferstart}~and~\ref{fig:datatransferfinish} show the data transfer protocol. 
 The transfer is clocked from the RD at 60 MHz. The clock is held high outside the transmission windows.
-\begin{warning}
+\begin{warn}
   The 60 MHz speed is subject to change.
   Due to the distribution of events, it is suspected that a small reduction  in transfer time could benefit the number of recorded events greatly.
-\end{warning}
+\end{warn}
 The transmission starts with a preamble consisting of 4 rising clock edges.
 After the preamble, the 2048 samples are transmitted. Data for the 2 channels is separately transmitted on the 2 data lines.
 Each sample is shifted out, most significant bit first, followed by a parity bit (odd parity). Finally, 11 trailing clock cycles are transmitted.
@@ -267,9 +270,9 @@ With the default trigger offset of 1024, all factors included, there are therefo
 Figure~\ref{fig:rd_timing} summarizes the delays and time-offsets between trigger input and the data capture window.
 Figures~\ref{fig:trigger_jitter} and \ref{fig:trigger_location} show experimentally determined trigger location in the trace window. Note that in this setup the trigger signal was picked up with an inductive probe and fed into the analog frontends of the RD board. This incurs additional delays which explains the (~20 ns) difference between the ideal trigger location (1041) and the start of the signal in Figure~\ref{fig:trigger_location} (1046). 
 
-\begin{warning}
+\begin{warn}
   In firmware versions prior to v4 the trigger was delayed by 4 samples due to clock synchonization. Including the 16 samples ADC latency, the trigger would fall on the 12th sample after the configured start offset instead of the 16th. There was also one additional sample jitter in the registration of the trigger which was removed in firmware version 4. 
-\end{warning}
+\end{warn}
 
 
 \subsection{\acs{SPI} housekeeping interface}
@@ -384,9 +387,9 @@ Note that a small gap is left unused between the calibration data and the jump c
 
 The provided \texttt{rd\_flash} tool will prohibit writes over the golden images, the jump command, or the calibration file. Note that the SPI flash interface itself provides no such protection. It is possible to brick the RD module if the sectors are erased.
 
-\begin{warning}
+\begin{warn}
   The first 6 RD module deployed in November 2019 are not equiped with a Golden Pattern or calibration section.
-\end{warning}
+\end{warn}
 
 
 
@@ -456,9 +459,9 @@ If the readout overlaps with a new measurement the readout is guaranteed to retu
 \subsubsection{SI7060 temperature sensor (address 0x05)}
 The Si7060 is an \ac{I2C} temperature sensor which measures the temperature inside the \ac{RD} enclosure.
 
-\begin{warning}
+\begin{warn}
   This behaviour is not yet implemented in firmware version 3. In this version a conversion is triggered after the sample buffer write cycle is completed. 
-\end{warning}
+\end{warn}
 
 Periodically (every 5 seconds), the controller for this \ac{I2C} chip will execute a fixed sequence of \ac{I2C} commands and stores the conversion result in a register. The register can be read via \ac{SPI} and contains two bytes:
 
@@ -518,6 +521,8 @@ The currently known version codes are:
     0x00 & legacy (version info not implemented) \\
     0x01, 0x02 & used during development \\
     0x03 & version shipped with \ac{RD} v3 units for the Malargue engineering array in November 2019\\
+    0x04 & used during development \\
+    0x05 & firmware for configureable LNA current and power spectrum calibration. Hardware v3.1\\
     0xFE & fallback image used in the golden pattern\\
     0xFF & may indicate SPI communication error on the UUB\\
     \hline
@@ -529,7 +534,7 @@ The currently known version codes are:
     clk  & HH32{C}HH \\
     ce   & HH32{L}HH \\
     mosi & UU16{D}{0x07 (select version)}16{U}UU \\
-    miso & UU16{U}16{D}{0x03 (version code)}UU \\
+    miso & UU16{U}16{D}{0x05 (version code)}UU \\
   \end{tikztimingtable}
   \captionof{figure}{Example version read.}
 \end{center}
@@ -554,9 +559,9 @@ The written number represents the position in the data trace where the trigger w
 \end{center}
 
 Values of 0, 1, 2047 and 2048 are not permissible.
-\begin{warning}
+\begin{warn}
   In the next firmware update this constraint will be dropped.
-\end{warning}
+\end{warn}
 
 
 \subsection{Do not use (address 0x09)}
@@ -588,10 +593,105 @@ The returned data is tightly packed (i.e., no aligned to bytes). Bits in the sam
 The oldest sample is transmitted first and the newest last.
 The samples from the NS and EW channel are interleaved, starting with a NS sample, followed by the corresponding EW sample.
 
-\begin{warning}
+\begin{warn}
   This sub-system was used for debugging and may or may not be included in releases.
   In some cases the available memory may be reduced to 2048 or 4096 samples if other modules require more memory.
-\end{warning}
+\end{warn}
+
+\subsection{Power spectrum calibration (addresses 0x0C and 0x0D)}
+To calibrate the sensitivity of the instrument the galactic background variations over sidereal time can be used. To this end the RD module contains an \acs{FFT} engine that computes highly smoothed and averaged power spectrums of the quiet radio background (in-between shower events).
+
+The calibration system implements a 1024-point real \acs{FFT}. Since the Fourier transform of a real-valued input is symmetrical this yield 512 complex \acs{FFT} bins representing the frequency spectrum from 0 to 125 MHz. The frequency resolution is therefore $\sim 0.24$ MHz. 
+
+The galactic plane variation calibration relies on minimizing the influence of terrestrial noise. Quiet windows are selected in the time-domain by comparing the input to a configurable threshold. To prevent the tails of a time-domain peak to be used in the \acs{FFT} input window, a configurable window around it are considered to be part of the peak. By default the threshold is set to 7 ADC counts above or below the running mean and the window size is 20 samples (80 ns) before and after the samples above the threshold. The running mean is subtracted because the \acs{ADC} can have a small DC offset. The \acs{FFT} is computed on the uncorrected input data.
+
+An \acs{FFT} conversion is initiated when 1024 consecutive samples do not contain a peak nor the tail of a peak.
+The input data is multiplied with a 7-term Blackman-Harris window:
+\begin{align*}
+  w[n] &= \sum_{k=0}^{6}a_k \cdot \cos\left(\frac{2\pi kn}{N}\right) \;\;\;\; n=0,1,\ldots,N-1\\
+\end{align*}
+with coefficients
+\begin{align*}
+  a_0 &= \phantom{-}0.27105140069342 \\
+  a_1 &= -0.43329793923448 \\
+  a_2 &= \phantom{-}0.21812299954311 \\
+  a_3 &= -0.06592544638803 \\
+  a_4 &= \phantom{-}0.01081174209837 \\
+  a_5 &= -0.00077658482522 \\
+  a_6 &= \phantom{-}0.00001388721735 \\
+\end{align*}
+
+The resulting Fourrier transform is squared to obtain the (again real-valued) power spectrum of the signal, which is then added to the summed power spectrum of the originating channel. The average power must be computed after readout by dividing the summed power spectrum by the number of summed \acp{FFT}. 
+
+To reduce resources only one \acs{FFT} engine is shared between the two channels. The engine will alternate between the two channels. Note that this implies that frequent pulses on one of the channels can prevent the computation of \acp{FFT} on the other channel, even if that other channel has no such patterns. However, this situation is unlikely to occur.
+
+All computations are performed on 32-bits integers, except the final squaring and summing, which is done in 64-bit integers to prevent arithmetic overflows.
+Of the 64 bits, 61 are fractional and 3 are the integer part. 
+
+
+To save power and prevent arithmetic overflows in the summing stage the \acs{FFT} engine is paused after a configurable number of \acp{FFT}. It is strongly recommended to always select an even number of \acp{FFT} because it can not be determined which of the two channels has the extra \acp{FFT} because of the alternating input selection.
+
+
+Two subsystem addresses are used to access the calibration sub-system. A control and status register can be read and written at address 0x0C. The data can be read on the sub-system at address 0x0D.
+
+The status and control register is read and written in one \ac{SPI} transaction. It is not possible to access individual fields or to read the register without writing. If the current values are not known, arbitrary values can be written and a second transaction is needed to reinstate the original values that should not have been updated. To update the status and control register, write the sub-system address (0x0C) followed by 19 data bytes (MSB first). The layout of 19 bytes in the status and control register is as follows:
+
+\begin{tabular}{|r|r|l|l|}
+  \hline
+  bits & size & R/W & function \\
+  \hline
+  %159 - 152 & sub-system address, not part of re
+  151 - 136 & 16 & R/W & threshold for quiet window \\
+  135 - 120 & 16 & R/W & peak width before and after threshold in multiples of 8 ns \\
+  119 -  88 & 32 & R/W & maximum number of \acp{FFT} before pause\\
+   87 -  56 & 32 & R/O & actual number of \acp{FFT} computed since last clear\\
+   55 -  24 & 32 & R/O & time in ms not paused since last clear\\
+   23 -   8 & 16 & R/W & read offset for data readout\\
+          7 &  1 & R/O & busy flag. High when computing, low when ready for readout or clear command\\
+    6 -   2 &  5 & N/A & not used\\
+          1 &  1 & R/W & request-clear\\
+          0 &  1 & R/W & request-pause\\
+  \hline
+\end{tabular}
+
+The data should not be read while the \acs{FFT} is busy because there is a risk to capture the summed power mid-update where half of the data is old and half of the data is new. Normally, the \acs{FFT} engine will automatically break after the maximum number of \acp{FFT} has been summed but depending on the noise on the input this could take very long. Without any peaks on the input it will take approximately 2 seconds to compute 8192 \acp{FFT}. To ensure the \acs{FFT} engine is paused, first write a one to the request-pause bit of the status and control register. If the calibration module is waiting for a suitable input window it will immediately break. If an \acs{FFT} was just started or squaring and summing is in progress, the current \acs{FFT} will be completed and added to the summed power before the system enters the readout state. When readout is complete (see details below) the buffer and counters can be cleared by setting the request-clear bit high. The engine continues making \acp{FFT} once the request-pause bit has been cleared. It is advisable to also set the request-clear bit to 0 in the same transaction.
+
+The data can be read using sub-system address 0x0D. To read the summed and squared \acs{FFT} data, first write the sub-system address. The first byte after the address will contain the beginning of the data. The first received bin can be set using the read offset value in the status and control register (see above). This is useful to avoid transferring bins outside the frequency range of interest. Note that the \acs{SPI} driver on the \acs{UUB} has a limited buffer size of 4096 bytes. This means that it is also necessary to split the readout into two parts if it is desired to read the full spectrum.
+
+\begin{center}
+  \begin{tikztimingtable}[timing/wscale=0.5]
+    clk  & HHCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCC \\
+    ce   & HHLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLL \\
+    mosi & UUDDDDDDDDDDDDDDDD{0x0D}UUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUUU \\
+    mosi & UUUUUUUUUUUUUUUUUUDDDDDDDDDDDDDDDD{sample[63:56]}DDDDDDDDDDDDDDDD{sample[55:48]}DDDDDDDDDDDDDDDD{sample[47:40]}DD \\
+  \end{tikztimingtable}
+  \captionof{figure}{Example of calibration data readout.}
+\end{center}
+
+
+An example program to read out the averaged power spectrum is present in the github repository \footnote{\url{http://github.com/auger-prime-sde/rd/tree/master/uub-linux-tools/rd_fft_readout}}.
+
+
+\subsection{LNA current setting}
+The LNA board is powered by a constant current driver for maximum temperature independence and minimum influence of cable variations.
+The current source has a configurable output which is set by an MCP47FEB21 \acs{DAC}. The \acs{DAC} is an \acs{I2C} device which shares an \acs{I2C} bus with the ADS1015. To address the \acs{DAC} a one-way \acs{SPI} to \acs{I2C} bridge is present in the RD firmware. It is at the time of this writing not possible to read the current configuration back from the device.
+
+\begin{warn}
+  The \acs{SPI} to \acs{I2C} bridge is device agnostic and can in theory be used to send write commands to the ADS1015. However, neither of the \acs{I2C} masters is equipped with multi-master mode logic, and doing so could interfere with the periodic readout of the ADS1015.
+\end{warn}
+
+The MCP36FEB21 has an internal voltage reference which is very stable and highly repeatable but not very precisely calibrated. Therefore, the target current needs to be set by varying the \acs{DAC} setpoint while measuring the LNA current using the ADS1015. The MCP47FEB21 features volatile and non-volatile configuration registers. Once tuned it should not be necessary to change the programmed value.
+
+
+\begin{center}
+  \begin{tikztimingtable}[timing/wscale=0.7]
+    clk  & HHCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCCHH \\
+    ce   & HHLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLLHH \\
+    mosi & UUDDDDDDDDDDDDDDDD{0x0E (select \ac{I2C} bridge)}DDDDDDDDDDDDDDDD{0xC0 \ac{I2C} address}DDDDDDDDDDDDDDDD{0x00 (volatile write)}UUUUUUUUDDDDDDDDDDDDDDDDDDDDDDDD{new value}UU\\
+  \end{tikztimingtable}
+  \captionof{figure}{Setting the \acs{DAC} output using \acs{SPI}.}
+\end{center}
+
 
 \subsection{Boot time and boot sequence}
 After power is applied the \ac{FPGA} loads its configuration from the SST26VF032B \ac{SPI} flash.

@@ -62,7 +62,7 @@
 \acused{I2C}
 %\newmdenv[linecolor=orange,backgroundcolor=orange!10]{warning}
 
-\newenvironment{warning}
+\newenvironment{warn}
 {\par\begin{mdframed}[linewidth=2pt,linecolor=orange,backgroundcolor=orange!10]%
     \begin{list}{}{\leftmargin=0mm}\item[\bf\danger{}~~Warning: ]}
   {\end{list}\end{mdframed}\par}
@@ -113,9 +113,9 @@
 
 \subsubsection{Raw data capture (0x0B)}
 
-\begin{warning}
+\begin{warn}
   This sub-system is not compiled in the default distributed firmware. It can be enabled in housekeeping.vhd.
-\end{warning}
+\end{warn}
 
 Raw data capture allows reading of the ADC data via the housekeeping interface.
 This is completely separate from the science acquisition process.
@@ -130,6 +130,38 @@ $$
 Each sample contains 13 bits. The first bit is the value of a digital pin on the \ac{FPGA} which can be used to calibrate the phase of the received signal. Note that these bits in channel B are sampled at the falling clock edges of the 250MHz sample clock and that the digital pin is effectively sampled at 500MHz. The last 12 bits are the sample value. Like the science data it is transferred MSB-first and in 2's-complement. 
 
 It is safe to abort the \ac{SPI} transfer before the end of the buffer. The capture will restart to run as soon as CE is released. Note that there is no mechanisms to prevent overlapping transfers from producing corrupted traces. I.e., to be sure to capture a clean trace, wait at least $8192/250 (MHz) \simeq 33 (us)$ after the release of the CE before pulling it low again (including the subsystem selection byte).
+
+\subsubsection{Galactic Background Noise Calibration (0x0C and 0x0D)}
+The calibration module adopts the \acs{FFT} engine from \url{https://opencores.org/projects/versatile_fft}. Minor modifications were made to the engine to make it synthesize efficiently by the Lattice Synthesis Engine. To save resources (mostly RAM blocks) we employ the single-butterfly implementation rather than the steaming implementation. 
+
+The input feeding into the FFT engine is handled by an \emph{input stage} whereas the output coming out of the FFT engine is handled by an \emph{output stage}. Both are controlled from a shared status and configuration register.
+
+The input stage is responsible for selecting quiet windows of data. It does so by subtracting the running mean. The true mean is hard to compute since that would involve storing all the values. Instead, the module that does this (\emph{running\_avg}), computes a number $X$ that is a large power of 2 times the mean, say 4096. The mean can easily be computed by discarding the lower 12 bits of $X$ (i.e. divide by 4096). Every newly arriving sample is added after subtracting the approximated mean itself. This yields converges to the mean quickly.
+
+The input stage also applies the 7-term Blackman-Harris window before writing the data into the memory block that is internal to the FFT engine. The window function gets pre-computed at compile time and saved in a ROM buffer at 32 bits resolution. Since all FFT computations are also performed on 32 bits integer it would not benefit the precision of the final result to save more bits. 
+
+The even and odd samples which are recorded at the same clock cycle (due to the clock speed reduction in the DDR driver) are written to the real and imaginary parts of the FFT input. This requires some processing in the output stage (see below) but it means we can compute a 512-point complex FFT rather than a 1024-point FFT with all imaginary parts set to zero.
+
+The input stage buffers the whole sample window because the FFT engine operates at a lower clock speed (20 MHz) than the data clock (125 MHz).
+
+The samples are continuously written to the input buffer, starting at address 0. Whenever the input (difference with the running average) exceeds the configured threshold the write address is reset to 0. If no peaks occur for sufficient time the last sample will be written to the input buffer. At that stage an extra number of input sample is compared to the threshold but not saved to the buffer. If also during that interval no sample exceeded the threshold, the samples are written out at the lower clock speed to the FFT engine while applying the window function. 
+
+Once all samples are written to the FFT engine it is signaled to start using the \emph{start} signal which triggers to FFT engine to start its computation. After this the input stage wait for a \emph{rearm} pulse before preparing the next window.
+
+The computation of one FFT takes approximately 5000 clock cycles (0.25 ms at 20 MHz). The FFT engine stores the result in a second internal buffer and signals the output stage that it is done using the \emph{ready} signal.
+When the FFT is computed the output stage will compute the power in each FFT bin. As mentioned, some post processing is needed because the even and odd samples of the input were stored in the real and imaginary parts of the complex inputs. See \url{http://www.robinscheibler.org/2013/02/13/real-fft.html} for details. To compute bin $k$ of the FFT, it is necessary to combine output bin $k$ with the complex conjugate of output bin $512-k$. Since we can only read one sample per clock cycle we preload one of the two and use the second clock cycle to do the actual computation, including the computation of the power from the complex FFT bin. We effectively visit each output bin twice. 
+
+
+
+\begin{center}
+  \includegraphics[width=0.8\textwidth]{img/outputstage.png}
+  \captionof{figure}{State diagram of the output stage.}\label{fig:outputstage_states}
+\end{center}
+
+\subsubsection{Configurable LNA current source (0x0E)}
+
+
+
 
 \subsection{\acs{ADC} driver}
 The adc\_driver converts the 12 \ac{DDR} 250 MHz data lines to 48 `normal' data lines at 125MHz.
@@ -165,9 +197,9 @@ The last sample (q[51]) is used to trigger the write\_controller.
 The second (q[25]) is used to determine if the even or odd sample will be used as the first (and last) sample in the trace.
 The sub-sample trigger information (q[12] \textbf{xor} q[25] \textbf{xor} q[36]) can be retrieved through the housekeeping \ac{SPI} interface.
 
-\begin{warning}
+\begin{warn}
   The retrieval of the sub-sample trigger information is not actually implemented at the time of this writing.
-\end{warning}
+\end{warn}
 
 
 
@@ -208,9 +240,9 @@ The sub-sample trigger information (q[12] \textbf{xor} q[25] \textbf{xor} q[36])
 
 
 \subsubsection{Trigger injection through housekeeping \ac{SPI}}
-\begin{warning}
+\begin{warn}
   In releases prior to firmware version 4 this system would trigger a readout of science data instead of housekeeping data.
-\end{warning}
+\end{warn}
 
 There is an \ac{SPI} sub-system at address 0x06 that can be used to inject extra triggers of housekeeping readout. This is useful for debugging.
 The inverted CE of this submodule is or'ed with the internal periodic trigger. It is not necessary to send any data for the trigger to work.
