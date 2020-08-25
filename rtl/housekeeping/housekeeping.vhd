@@ -725,7 +725,7 @@ begin
 
   dac_1 : dac
     generic map (
-      g_SUBSYSTEM_ADDR => "00001100"
+      g_SUBSYSTEM_ADDR => "00001110"
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
