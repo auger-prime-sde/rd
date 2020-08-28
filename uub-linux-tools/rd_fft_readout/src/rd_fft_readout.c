@@ -37,21 +37,39 @@ static char *output_file;
 static uint32_t speed = 500000;
 static uint16_t delay = 0;
 static int verbose;
-static int num_bins  = 1024;
-static int bin_width = 18;
+static int num_bins  = 512;
+static int bin_width = 64;
 static bool print_samples = false;
 
-static bool set_max     = false;
-static bool set_thres   = false;
-static bool set_stretch = false;
+static uint16_t * set_thres   = NULL;
+static uint16_t * set_stretch = NULL;
+static uint32_t * set_max     = NULL;
 
-static uint16_t quiet_thres   = 7;
-static uint16_t quiet_stretch = 0;
-static uint32_t fft_count     = 0;
-static uint32_t max_fft       = 2 * 1;
-static uint32_t fft_timer     = 0;
-static uint16_t read_offset   = 0;
-static uint8_t  status_reg    = 0x00;
+
+//static bool set_max     = false;
+//static bool set_thres   = false;
+//static bool set_stretch = false;
+//
+//static uint16_t quiet_thres   = 7;
+//static uint16_t quiet_stretch = 0;
+//static uint32_t fft_count     = 0;
+//static uint32_t max_fft       = 2 * 1;
+//static uint32_t fft_timer     = 0;
+//static uint16_t read_offset   = 0;
+//static uint8_t  status_reg    = 0x00;
+
+typedef struct {
+	uint16_t quiet_thres;
+	uint16_t quiet_stretch;
+	uint32_t fft_count;
+	uint32_t max_fft;
+	uint32_t fft_timer;
+	uint16_t read_offset;
+	uint8_t  status;
+} control_register_type;
+
+
+control_register_type old_control_register, new_control_register;
 
 #define STATUS_MASK 0b10000000
 #define REQ_PAUSE  (1 << 0)
@@ -237,16 +255,16 @@ static void parse_opts(int argc, char *argv[])
 			print_samples = true;
 			break;
 		case 'm':
-			max_fft = atoi(optarg);
-			set_max = true;
+			set_max = (uint32_t*)malloc(sizeof(uint32_t));
+			*set_max = atoi(optarg);
 			break;
 		case 't':
-			quiet_thres = atoi(optarg);
-			set_thres = true;
+			set_thres = (uint16_t*)malloc(sizeof(uint16_t));
+			*set_thres = atoi(optarg);
 			break;
         case 'T':
-			quiet_stretch = atoi(optarg);
-			set_stretch = true;
+			set_stretch = (uint16_t*)malloc(sizeof(uint16_t));
+			*set_stretch = atoi(optarg);
 			break;
 		default:
 			print_usage(argv[0]);
@@ -261,20 +279,27 @@ static void parse_opts(int argc, char *argv[])
 	}
 }
 
-void update_control_register(int fd, bool verbose) {
-	// alocate buffer
+
+void update_control_register(int fd, control_register_type * old, control_register_type * new) {
+	// allocate buffer
 	uint8_t * buf = (uint8_t*)malloc(20);
+
+	// allow empty new data
+	control_register_type default_values = {};
+	if (new == NULL) {
+		new = &default_values;
+	}
 
 	// populate buffer
 	buf[ 0] = SUBSYSTEM_ADDR_CONTROL;        // select fft control registers
-	buf[ 1] = (quiet_thres >> 8) & 0xFF;
-	buf[ 2] = (quiet_thres >> 0) & 0xFF;
-	buf[ 3] = (quiet_stretch >> 8) & 0xFF;
-	buf[ 4] = (quiet_stretch >> 0) & 0xFF;
-    buf[ 5] = (max_fft >> 24) & 0xFF;
-	buf[ 6] = (max_fft >> 16) & 0xFF;
-	buf[ 7] = (max_fft >>  8) & 0xFF;
-	buf[ 8] = (max_fft >>  0) & 0xFF;
+	buf[ 1] = (new->quiet_thres >> 8) & 0xFF;
+	buf[ 2] = (new->quiet_thres >> 0) & 0xFF;
+	buf[ 3] = (new->quiet_stretch >> 8) & 0xFF;
+	buf[ 4] = (new->quiet_stretch >> 0) & 0xFF;
+    buf[ 5] = (new->max_fft >> 24) & 0xFF;
+	buf[ 6] = (new->max_fft >> 16) & 0xFF;
+	buf[ 7] = (new->max_fft >>  8) & 0xFF;
+	buf[ 8] = (new->max_fft >>  0) & 0xFF;
     buf[ 9] = 0; // count is read only anyway
 	buf[10] = 0; 
 	buf[11] = 0; 
@@ -283,60 +308,24 @@ void update_control_register(int fd, bool verbose) {
 	buf[14] = 0;
 	buf[15] = 0;
 	buf[16] = 0;
-	buf[17] = (read_offset >> 8) & 0xFF;
-	buf[18] = (read_offset >> 0) & 0xFF;
-	buf[19] = status_reg;
+	buf[17] = (new->read_offset >> 8) & 0xFF;
+	buf[18] = (new->read_offset >> 0) & 0xFF;
+	buf[19] = new->status;
 
 	// Do the actual transfer
 	transfer(fd, buf, buf, 20);
 
-	// capture the old averages number if we are not going to overwrite it
-    uint32_t oldmax = (buf[5] << 24) | (buf[6] << 16) | (buf[7] << 8) | buf[8];
-    uint32_t old_thres = (buf[1] << 8) | buf[2];
-    uint32_t old_stretch = (buf[3] << 8) | buf[4];
-    
-    if (set_max) {
-        if (verbose) {
-            printf("Updating max fft from %d to %d\n", oldmax, max_fft);
-        }
-    } else {
-		max_fft = oldmax;
-        if (verbose) {
-            printf("Leaving max fft at %d\n", oldmax);
-        }
+	// Capture old values
+	if (old != NULL)
+	{
+		old->quiet_thres   = (buf[ 1] <<  8) | buf[2];
+		old->quiet_stretch = (buf[ 3] <<  8) | buf[4];
+		old->max_fft       = (buf[ 5] << 24) | (buf[ 6] << 16) | (buf[ 7] << 8) | buf[ 8];
+		old->fft_count     = (buf[ 9] << 24) | (buf[10] << 16) | (buf[11] << 8) | buf[12];
+		old->fft_timer     = (buf[13] << 24) | (buf[14] << 16) | (buf[15] << 8) | buf[16];
+		old->read_offset   = (buf[17] <<  8) | buf[18];
+		old->status        = buf[19];
 	}
-	// capture the old averages number if we are not going to overwrite it
-	if (set_thres) {
-        if (verbose) {
-            printf("Updating threshold from %d to %d\n", old_thres, quiet_thres);
-        }
-    } else {
-		quiet_thres = old_thres;
-        if (verbose) {
-            printf("Leaving threshold at %d\n", old_thres);
-        }
-	}
-    // capture the old quiet stretch if we are not going to overwrite it
-    if (set_stretch) {
-        if (verbose) {
-            printf("Updating stretch from %d to %d\n", old_stretch, quiet_stretch);
-        }
-    }else {
-        quiet_stretch = old_stretch;
-        printf("Leaving quiet stretch at %d\n", old_stretch);
-    }
-    
-	// capture the fft_count
-	fft_count = (buf[9] << 24) | (buf[10] << 16) | (buf[11] << 8) | buf[12];
-    
-    // capture timer counter
-    fft_timer = (buf[13] << 24) | (buf[14] << 16) | (buf[15] << 8) | buf[16];
-    
-	// capture busy bit
-	status_reg = (status_reg & ~STATUS_MASK) | (buf[19] & STATUS_MASK);
-
-	// should take effect almost immediately
-	// TODO: calculate worst possible delay
 
 	free(buf);
 }
@@ -380,9 +369,9 @@ void read_samples(int fd, uint8_t* target_buffer, int offset, int count, int whi
 	uint numbytes = 1 + bin_width * count / 8; // one extra for the address
 
 	// select channel and set read start offset
-	status_reg = REQ_PAUSE | which_buffer;
-	read_offset = offset;
-	update_control_register(fd, false);
+	new_control_register.status = REQ_PAUSE | which_buffer;
+	new_control_register.read_offset = offset;
+	update_control_register(fd, NULL, &new_control_register);
 
 	// create a transfer buffer
 	uint8_t * buf = (uint8_t*) malloc(numbytes);
@@ -471,19 +460,37 @@ int main(int argc, char *argv[])
 	}
 
 	// request the fft engine to pause making more fft during readout
-	status_reg = REQ_PAUSE;
-	update_control_register(fd, true);
+	new_control_register.status = REQ_PAUSE;
+	update_control_register(fd, &old_control_register, &new_control_register);
+
+	// copy old to new
+	new_control_register = old_control_register;
+
+	// apply requested changes
+	if (set_max != NULL)
+	{
+		new_control_register.max_fft = *set_max;
+	}
+	if (set_thres != NULL)
+	{
+		new_control_register.quiet_thres = *set_thres;
+	}
+	if (set_stretch != NULL)
+	{
+		new_control_register.quiet_stretch = *set_stretch;
+	}
+
+	// print what is happening
     if (verbose) {
-        printf("current settings:\n");
-        if (!set_max)
-            printf("  max fft: %d\n", max_fft);
-        if (!set_thres)
-            printf("  quiet thres: %d\n", quiet_thres);
-        if (!set_stretch)
-            printf("  quiet stretch: %d\n", quiet_stretch);
+        printf("Status register: old\tnew:\n");
+        printf("threshold:       %d\t%d\n", old_control_register.quiet_thres, new_control_register.quiet_thres);
+        printf("stretch:         %d\t%d\n", old_control_register.quiet_stretch, new_control_register.quiet_stretch);
+        printf("max fft's:       %d\t%d\n", old_control_register.max_fft, new_control_register.max_fft);
+        // for control only print the old value
+        printf("control:         0x%x\n", old_control_register.status);
     }
     
-	printf("%d fft's captured in %d ms\n", fft_count, fft_timer);
+	printf("%d fft's captured in %d ms\n", old_control_register.fft_count, old_control_register.fft_timer);
 
 	// in order to decode them we need to store all samples as raw binary first because we are going to get them as chunks
 	uint8_t * raw_data_ns = (uint8_t *) malloc(bin_width * num_bins / 8);
@@ -523,23 +530,18 @@ int main(int argc, char *argv[])
 
 	// write to file
 	if (output_file) {
-		// write the fft count
-		unsigned char bytes[4];
-		bytes[0] = fft_count >> 24 & 0xFF;
-		bytes[1] = fft_count >> 16 & 0xFF;
-		bytes[2] = fft_count >>  8 & 0xFF;
-		bytes[3] = fft_count >>  0 & 0xFF;
-		write(out_fd, bytes, 4);
-
-		// write the time
+		// write the time:
 		int now = time(NULL);
 		printf("Curring unix time: %d\n", now);
+		unsigned char bytes[4];
 		bytes[0] = now >> 24 & 0xFF;
 		bytes[1] = now >> 16 & 0xFF;
 		bytes[2] = now >>  8 & 0xFF;
 		bytes[3] = now >>  0 & 0xFF;
 		write(out_fd, bytes, 4);
 
+		// write the status and control reg, all of it for good measure:
+		write(out_fd, &old_control_register, sizeof(control_register_type));
 
 		// write the samples themselves
 		int numbytes = bin_width * num_bins / 8;
@@ -555,12 +557,12 @@ int main(int argc, char *argv[])
 
 	// clear the fft buffer
 	// disable writing to spi capture buffer
-	status_reg = REQ_PAUSE | REQ_CLEAR; // NS and EW are cleared together
-	update_control_register(fd, false);
+	new_control_register.status = REQ_PAUSE | REQ_CLEAR; // NS and EW are cleared together
+	update_control_register(fd, NULL, &new_control_register);
 
 	// unpause fft engine
-	status_reg = 0x00;
-	update_control_register(fd, false);
+	new_control_register.status = 0x00;
+	update_control_register(fd, NULL, &new_control_register);
 
 	close(fd);
 

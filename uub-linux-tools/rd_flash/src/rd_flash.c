@@ -69,6 +69,9 @@ static bool print_bpr = false;
 static bool print_firmwareid = false;
 static bool enable_dig_ifc = false;
 static bool do_write_jump_addr = false;
+static bool skip_if_not_newer = false;
+static uint8_t new_fw_version;
+
 
 static char *primary_input = NULL;
 static char *golden_input = NULL;
@@ -77,6 +80,7 @@ static char *primary_output = NULL;
 static char *golden_output = NULL;
 static char *userdata_output = NULL;
 static char *chip_output = NULL;
+
 
 
 
@@ -157,19 +161,20 @@ static void verify_chip_id(int fd)
 static void print_usage(const char *prog)
 {
 	printf("Usage: %s [-Dsvcibfrguaw]\n", prog);
-	puts("  -D --device         device to use (default /dev/spidev32765.0)\n"
-	     "  -s --speed          max speed (Hz)\n"
-	     "  -v --verbose        verbose output\n"
-		 "  -c --chunksize      chunksize (for reading only, default 1024)\n"
-		 "  -i --flashid        print flash id\n"
-	     "  -b --bpr            read and print the volatile block protection register\n"
-		 "  -f --firmwareid     print currently running RD firmware number\n"
-	     "     --enable-dig-ifc enable real pin io if not already enabled by writing bit 16 in DIG_IFC_CONTROL register\n"
-		 "  -r --dump-primary   file to write primary pattern to\n"
-		 "  -g --dump-golden    file to write golden pattern to\n"
-		 "  -u --dump-user      file to write user data to\n"
-		 "  -a --dump-all       dump entire memory including the golden image, user data and jump command\n"
-		 "  -w --prog-primary   overwrite primary pattern with file contents\n"
+	puts("  -D --device            device to use (default /dev/spidev32765.0)\n"
+	     "  -s --speed             max speed (Hz)\n"
+	     "  -v --verbose           verbose output\n"
+		 "  -c --chunksize         chunksize (for reading only, default 1024)\n"
+		 "  -i --flashid           print flash id\n"
+	     "  -b --bpr               read and print the volatile block protection register\n"
+		 "  -f --firmwareid        print currently running RD firmware number\n"
+	     "     --enable-dig-ifc    enable real pin io if not already enabled by writing bit 16 in DIG_IFC_CONTROL register\n"
+		 "  -r --dump-primary      file to write primary pattern to\n"
+		 "  -g --dump-golden       file to write golden pattern to\n"
+		 "  -u --dump-user         file to write user data to\n"
+		 "  -a --dump-all          dump entire memory including the golden image, user data and jump command\n"
+		 "  -w --prog-primary      overwrite primary pattern with file contents\n"
+         "  -n --skip-if-not-newer skip writing if the existing firmware version is not newer. Argument is new fw version.\n"
 		  );
 	exit(1);
 }
@@ -179,28 +184,29 @@ static void parse_opts(int argc, char *argv[])
 
 	while (1) {
 		static const struct option lopts[] = {
-			{ "device",        required_argument, NULL, 'D' },
-			{ "speed",         required_argument, NULL, 's' },
-			{ "verbose",       no_argument,       NULL, 'v' },
-			{ "chunksize",     required_argument, NULL, 'c' },
-			{ "flashid",       no_argument,       NULL, 'i' },
-			{ "bpr",           no_argument,       NULL, 'b' },
-			{ "firmareid",     no_argument,       NULL, 'f' },
-			{ "enable-dig-ifc",no_argument,       NULL, 'e' },
-			{ "dump-primary",  required_argument, NULL, 'r' },
-			{ "dump-golden",   required_argument, NULL, 'g' },
-			{ "dump-user",     required_argument, NULL, 'u' },
-			{ "dump-all",      required_argument, NULL, 'a' },
-			{ "prog-primary",  required_argument, NULL, 'w' },
+			{ "device",            required_argument, NULL, 'D' },
+			{ "speed",             required_argument, NULL, 's' },
+			{ "verbose",           no_argument,       NULL, 'v' },
+			{ "chunksize",         required_argument, NULL, 'c' },
+			{ "flashid",           no_argument,       NULL, 'i' },
+			{ "bpr",               no_argument,       NULL, 'b' },
+			{ "firmareid",         no_argument,       NULL, 'f' },
+			{ "enable-dig-ifc",    no_argument,       NULL, 'e' },
+			{ "dump-primary",      required_argument, NULL, 'r' },
+			{ "dump-golden",       required_argument, NULL, 'g' },
+			{ "dump-user",         required_argument, NULL, 'u' },
+			{ "dump-all",          required_argument, NULL, 'a' },
+			{ "prog-primary",      required_argument, NULL, 'w' },
+            { "skip-if-not-newer", required_argument, NULL, 'n' },
 			// some more undocumented methods for developers only
-			{ "prog-golden",   required_argument, NULL, 'G' },
-			{ "prog-user",     required_argument, NULL, 'U' },
-			{ "write-jump-cmd",no_argument,       NULL, 'J' },
-			{ NULL,            no_argument,       NULL, NULL}
+			{ "prog-golden",       required_argument, NULL, 'G' },
+			{ "prog-user",         required_argument, NULL, 'U' },
+			{ "write-jump-cmd",    no_argument,       NULL, 'J' },
+			{ NULL,                no_argument,       NULL, NULL}
 		};
 		int c;
 
-		c = getopt_long(argc, argv, "D:s:c:vibfr:g:u:w:a:G:U:J", lopts, NULL);
+		c = getopt_long(argc, argv, "D:s:c:vibfr:g:u:w:a:G:U:Jn:", lopts, NULL);
 
 		if (c == -1)
 			break;
@@ -254,6 +260,10 @@ static void parse_opts(int argc, char *argv[])
 		case 'J':
 			do_write_jump_addr = true;
 			break;
+        case 'n':
+            skip_if_not_newer = true;
+            new_fw_version = atoi(optarg);
+            break;
 		default:
 			print_usage(argv[0]);
 			break;
@@ -733,18 +743,18 @@ void verify_with_file(int fd, int start, int end, char * filename)
 	printf("\nVerification complete                                \n");
 }
 
-void print_firmware_version(int fd)
+uint8_t get_firmware_version(int fd)
 {
-	// prepare tx buffer (we use the same buffer for tx and rx)
-	uint8_t* buf = malloc(2); // 1 select byte, 1 command byte, 10 response bytes for 80 block protection bits
+    uint8_t buf[2];
 
 	buf[0] = 0x07; // select version number
 	buf[1] = 0x00; // empty space for result
 	transfer(fd, buf, buf, 2, verbose);
 
-	printf("Running firmware version: %d\n", buf[1]);
-	free(buf);
+    return buf[1];
 }
+
+
 
 void verify_block_protect_register(int fd)
 {
@@ -835,18 +845,33 @@ int main(int argc, char* argv[])
 		abort();
 	}
 
-	// print running firmware number
-	if (print_firmwareid)
-	{
-		print_firmware_version(fd);
-	}
-
+	
 	// check DIG_IFC_ENABLE and ask to enable
 	verify_dig_ifc();
 
 	// test connection by getting the spi flash id
 	verify_chip_id(fd);
 
+
+    // print running firmware number
+    uint8_t current_fw_version;
+	if (print_firmwareid || skip_if_not_newer)
+	{
+        current_fw_version = get_firmware_version(fd);
+        printf("Current firmware version: %d\n", current_fw_version);
+	}
+    if (skip_if_not_newer)
+	{
+    	printf("New firmware version: %d\n", new_fw_version);
+    	if (current_fw_version >= new_fw_version)
+    	{
+    		printf("Firmware already up to date. Skipping all further operations\n");
+    		close(fd);
+    		return 0;
+    	}
+    }
+
+    
 	// print and/or clear block protection register bits
 	verify_block_protect_register(fd);
 
