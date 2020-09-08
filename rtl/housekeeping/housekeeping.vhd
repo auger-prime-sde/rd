@@ -209,9 +209,11 @@ architecture behaviour of housekeeping is
 
   component  spi_wrapper is
     generic (
-      g_SUBSYSTEM_ADDR : std_logic_vector
+      g_SUBSYSTEM_ADDR : std_logic_vector;
+      g_CLK_POL : std_logic
       );
     port (
+      i_hk_fast_clk : in std_logic;
       -- interface in the direction of the uub
       i_clk        : in std_logic;
       i_mosi       : in std_logic;
@@ -327,7 +329,6 @@ architecture behaviour of housekeeping is
       i_spi_mosi     : in std_logic;
       o_spi_miso     : out std_logic );
   end component;
-
   
   constant c_ADS1015_READSEQUENCE : t_i2c_data := (
     -- write mux and trigger
@@ -449,9 +450,11 @@ begin
 
   spi_wrapper_flash : spi_wrapper
     generic map (
-      g_SUBSYSTEM_ADDR => "00000010"
+      g_SUBSYSTEM_ADDR => "00000010",
+      g_CLK_POL => '1'
       )
     port map (
+      i_hk_fast_clk    => i_hk_fast_clk,
       i_clk            => r_internal_clk,
       i_mosi           => r_internal_mosi,
       o_miso           => r_flash_miso,
@@ -471,10 +474,12 @@ begin
   -- diagrams in the ADC datasheet but it should not matter what the value is.
   spi_wrapper_adc : spi_wrapper
     generic map (
-      g_SUBSYSTEM_ADDR => "00000011"
+      g_SUBSYSTEM_ADDR => "00000011",
+      g_CLK_POL => '0'
       )
     port map (
-      i_clk            => r_adc_clk,
+      i_hk_fast_clk    => i_hk_fast_clk,
+      i_clk            => r_internal_clk,
       i_mosi           => r_internal_mosi,
       o_miso           => r_adc_miso,
       i_dev_select     => r_subsystem_select,
@@ -619,7 +624,7 @@ begin
   version_info_1 : version_info
     generic map (
       g_SUBSYSTEM_ADDR => "00000111",
-      g_VERSION => std_logic_vector(to_unsigned(5, 8))
+      g_VERSION => std_logic_vector(to_unsigned(6, 8))
       )
     port map (
       i_hk_fast_clk => i_hk_fast_clk,
